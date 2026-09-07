@@ -5,6 +5,19 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0-N17.1] - 2026-09-07
+### Added
+- WordPress-native Business Integration Framework Foundation:
+  - Integration interface `includes/Integrations/IntegrationInterface.php` declaring operational contracts (`get_id`, `get_name`, `get_description`, `is_available`, `is_enabled`, `get_actions`).
+  - Action interface `includes/Integrations/ActionInterface.php` with controlled risk classifications (`read`, `write`, `external`), input schemas, and execution contracts.
+  - Normalized action result value object `includes/Integrations/ActionResult.php` guaranteeing immutable outputs with zero credential leakage and zero raw stack traces.
+  - Action argument validator `includes/Integrations/ActionValidator.php` providing deterministic type validation (`string`, `integer`, `number`, `boolean`, `enum`), boundary enforcement, and rogue argument stripping.
+  - Centralized integration registry `includes/Integrations/IntegrationRegistry.php` with strict slug regex validation (`/^[a-z0-9_-]{2,50}$/`), action index mapping, duplicate registration rejection, and WordPress extensibility hook `do_action( 'gca_register_integrations', $registry )`.
+  - Secure action executor `includes/Integrations/ActionExecutor.php` verifying host integration availability, enabled status, input validation, and robust exception containment (`try / catch (\Throwable)`).
+  - WordPress Admin Integrations overview screen (`templates/admin/integrations.php`) accessible via submenu `Gemini Chat -> Integrations` (`gca-integrations`) under `manage_options` capability.
+  - Dashboard Quick Action link to Business Integrations and Roadmap preview card for Node N17.
+  - Comprehensive unit test suite in `tests/test-integrations-framework.php` validating interfaces, registries, validation rules, error sanitization, and security policies.
+
 ## [1.2.0-N16] - 2026-09-07
 ### Added
 - Native WordPress FAQ System:

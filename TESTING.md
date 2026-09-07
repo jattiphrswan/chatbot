@@ -33,6 +33,7 @@
 - **`test-knowledge-indexer.php`:** Verifies HTML tag stripping, shortcode stripping without execution, Gutenberg block comment removal, multibyte sentence chunking boundaries, chunk count limits, content deduplication via SHA-256 hashes, and non-public post status exclusion.
 - **`test-knowledge-retriever.php`:** Verifies query tokenization, stopword removal, candidate scoring (exact phrase matches, title matches, FAQ boosts), irrelevant query rejection, relevance thresholding, and budget enforcement.
 - **`test-rag-context.php`:** Verifies untrusted context framing delimiters, prompt-injection defense containment, source attribution formatting, HTML exclusion in context output, and seamless N15 AI Profile persona/rules preservation.
+- **`test-integrations-framework.php`:** Verifies Business Integration Framework contracts, ActionInterface schemas, ActionResult value objects, ActionValidator type checking & rogue argument stripping, ActionExecutor exception handling, duplicate registration protection, and risk classification metadata.
 
 ### 2.4 Static Analysis & Linting
 - **PHP_CodeSniffer (PHPCS):** WordPress-Core, WordPress-Extra, and WordPress-Docs standards.

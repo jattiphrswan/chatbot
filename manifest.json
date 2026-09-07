@@ -44,7 +44,7 @@
       "gca_db_version"
     ]
   },
-  "architecture": "Browser -> WordPress REST API -> PHP Service Layer (ChatService + ProfileService + RAG KnowledgeRetriever) -> Gemini API",
+  "architecture": "Browser -> WordPress REST API -> PHP Service Layer (ChatService + ProfileService + RAG KnowledgeRetriever + Business Integrations) -> Gemini API",
   "security": {
     "api_key_storage": "Server-side only (GEMINI_API_KEY env var or GCA_GEMINI_API_KEY wp-config constant). Never stored in DB or exposed to client.",
     "api_key_exposed_to_client": false,
@@ -52,7 +52,8 @@
     "nonce_verification": true,
     "capability_checks": true,
     "rate_limiting": true,
-    "prompt_injection_defense": true
+    "prompt_injection_defense": true,
+    "action_execution_containment": true
   },
-  "roadmap_current_node": "N16"
+  "roadmap_current_node": "N17 (N17.1 Framework Ready)"
 }

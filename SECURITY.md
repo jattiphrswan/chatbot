@@ -45,3 +45,12 @@
 - **Strict Content Exclusions:** Drafts, private posts, password-protected pages, trash items, revisions, and auto-drafts are unconditionally excluded from indexing.
 - **FAQ XSS Defense:** FAQ questions and answers are sanitized via `sanitize_text_field()` and `wp_kses_post()` during persistence. Public chat widget renders FAQ answers safely via DOM `textContent` (zero `innerHTML` injection).
 - **Administrative Access:** All index manipulation operations (batch sync, index clear, test retrieval, FAQ CRUD) require `manage_options` capabilities and valid WordPress security nonces.
+
+## 7. Business Integrations Security Policy (Node N17.1)
+- **No Public Generic Action Execution:** The integration framework does NOT expose generic action execution endpoints to public visitors or REST clients. Actions can only be invoked by authorized internal services with explicit parameter schemas.
+- **Strict Identifier Pattern Enforcement:** Integration slugs must match `/^[a-z0-9_-]{2,50}$/` and Action slugs must match `/^[a-z0-9_-]+\.[a-z0-9_-]+$/`. Path traversal sequences (`..`), script tags, spaces, or dynamic class/function calls are unconditionally rejected.
+- **Rogue Argument Rejection:** Every action defines a strict, declarative input schema. Unknown arguments are rejected with an `INVALID_ACTION_ARGUMENTS` error code, preventing unexpected parameter tampering or injection.
+- **Risk Classification & Policies:** Every action declares a risk category (`read`, `write`, `external`), laying the groundwork for granular permission policies and confirmation requirements in subsequent subnodes.
+- **Robust Exception Containment:** `ActionExecutor` wraps all action executions in `try / catch (\Throwable)`. Exceptions return sanitized `ACTION_FAILED` results; raw PHP exception messages, stack traces, and database/server credentials are never exposed.
+- **Zero External Credential Storage in N17.1:** No external API keys, tokens, or webhook secrets are stored in the database or exposed via options in N17.1.
+- **No Multi-Provider AI Architecture:** Integrations represent business services only. Multi-provider AI abstractions remain strictly forbidden; Gemini remains the sole AI model provider.

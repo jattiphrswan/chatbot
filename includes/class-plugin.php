@@ -140,6 +140,14 @@ class Plugin {
 		// Public Frontend UI & Shortcode.
 		require_once GCA_PLUGIN_DIR . 'includes/class-assets.php';
 		require_once GCA_PLUGIN_DIR . 'includes/class-shortcode.php';
+
+		// Business Integrations Framework (N17.1).
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/ActionResult.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/ActionInterface.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/IntegrationInterface.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/ActionValidator.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/IntegrationRegistry.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/ActionExecutor.php';
 	}
 
 	/**
@@ -422,6 +430,19 @@ class Plugin {
 	}
 
 	/**
+	 * Accessor to IntegrationRegistry.
+	 *
+	 * @return \SkyFish\GeminiChat\Integrations\IntegrationRegistry
+	 */
+	public function get_integration_registry(): \SkyFish\GeminiChat\Integrations\IntegrationRegistry {
+		static $registry = null;
+		if ( null === $registry ) {
+			$registry = new \SkyFish\GeminiChat\Integrations\IntegrationRegistry();
+		}
+		return $registry;
+	}
+
+	/**
 	 * Defines the locale for this plugin for internationalization.
 	 */
 	private function set_locale(): void {
@@ -446,6 +467,9 @@ class Plugin {
 		// Initialize automatic knowledge sync hooks (save_post, before_delete_post, transition_post_status)
 		$this->get_knowledge_indexer()->init_hooks();
 
+		// Initialize business integrations registry
+		$this->get_integration_registry()->init();
+
 		if ( is_admin() ) {
 			$this->admin_menu = new AdminMenu(
 				$this->get_conversation_repository(),
@@ -456,7 +480,8 @@ class Plugin {
 				$this->get_faq_repository(),
 				$this->get_knowledge_repository(),
 				$this->get_knowledge_indexer(),
-				$this->get_knowledge_retriever()
+				$this->get_knowledge_retriever(),
+				$this->get_integration_registry()
 			);
 			$this->admin_menu->init();
 		}

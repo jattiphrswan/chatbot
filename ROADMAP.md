@@ -41,6 +41,8 @@ flowchart TD
     N6 --> N16
     N10 --> N16
     N15 --> N16
+    N1 --> N17[N17: Integrations]
+    N10 --> N17
 ```
 
 ## 2. Approved Node Breakdown
@@ -64,3 +66,4 @@ flowchart TD
 | **N14** | **Leads & Pre-Chat Capture** | Configurable pre-chat lead capture form (name, email, phone, requirement), server/client validation, Leads database table (`gca_leads`), LeadRepository, LeadService, REST `/prechat` endpoint, conversation association, Admin Leads management (`gca-leads`). | **COMPLETED** |
 | **N15** | **AI Profiles & Custom Prompts** | WordPress-native AI Profile and Prompt Management system (AI Assistant submenu `gca-ai-assistant`, Options API storage `gca_ai_profiles`, active profile selection, role, instructions, tone, response style, rules, fallback message, duplicate, safe delete, migration from legacy system_instruction, centralized prompt builder in `ProfileService`, ChatService integration). | **COMPLETED** |
 | **N16** | **FAQ + Website Knowledge/RAG** | WordPress-native FAQ system (Admin `gca-faqs`, public widget Home quick help items, zero-token static reading, `gca_faqs` table, `FaqRepository`), and Website Knowledge Grounding / RAG (`gca_knowledge_sources`, `gca_knowledge_chunks` tables, `KnowledgeRepository`, `KnowledgeIndexer` with multibyte sentence chunking and SHA-256 deduplication, `KnowledgeRetriever` lexical search and scoring, `KnowledgeContextBuilder` with prompt-injection defense, Admin `gca-knowledge` dashboard, and `ChatService` RAG integration). | **COMPLETED** |
+| **N17** | **Integrations** | WordPress-native business integration framework (`IntegrationInterface`, `ActionInterface`, `ActionResult`, `ActionValidator`, `ActionExecutor`, `IntegrationRegistry`, Admin `gca-integrations`). Subnode N17.1 (Framework Foundation) = COMPLETED. Planned future subnodes: N17.2 (WooCommerce Read), N17.3 (Human Handoff), N17.4 (Email Alerts), N17.5 (Direct Contact Channels). | **IN PROGRESS** |

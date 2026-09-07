@@ -22,6 +22,13 @@ SkyFish\GeminiChat
 │   ├── KnowledgeIndexer: Content extraction, normalization, hashing, multibyte chunking, and sync hooks.
 │   ├── KnowledgeRetriever: Lexical tokenization, candidate scoring, top-K clamping, and budget limits.
 │   └── KnowledgeContextBuilder: Structured untrusted reference framing and prompt-injection defense.
+├── Integrations/
+│   ├── IntegrationInterface: Operational contract for WordPress business integrations.
+│   ├── ActionInterface: Declarative contract for executable business actions with risk levels.
+│   ├── ActionResult: Normalized result object guaranteeing zero raw stack traces or leaks.
+│   ├── ActionValidator: Deterministic argument type and bounds validator.
+│   ├── IntegrationRegistry: Central registry with ID regex validation and extensibility hook.
+│   └── ActionExecutor: Controlled execution pipeline with availability and enabled checks.
 ├── Services/
 │   ├── GeminiClient: HTTP transport wrapper for Google Gemini REST API.
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.

@@ -327,6 +327,16 @@ $active_profile_name = $active_profile['name'] ?? __( 'General Assistant', 'gemi
 					</div>
 					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
 				</a>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-integrations' ) ); ?>" class="gca-admin-action-item">
+					<div class="gca-admin-action-item__icon" aria-hidden="true">
+						<span class="dashicons dashicons-networking"></span>
+					</div>
+					<div class="gca-admin-action-item__text">
+						<strong><?php esc_html_e( 'Business Integrations', 'gemini-chat-assistant' ); ?></strong>
+						<span><?php esc_html_e( 'Inspect integration framework status, action registries, and planned modules.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
+				</a>
 				<a href="<?php echo esc_url( $settings_url ); ?>" class="gca-admin-action-item">
 					<div class="gca-admin-action-item__icon" aria-hidden="true">
 						<span class="dashicons dashicons-admin-generic"></span>
@@ -438,6 +448,19 @@ $active_profile_name = $active_profile['name'] ?? __( 'General Assistant', 'gemi
 					</a>
 				</h4>
 				<p class="gca-admin-card__desc"><?php esc_html_e( 'Quick help static FAQs and WordPress website knowledge grounding via RAG.', 'gemini-chat-assistant' ); ?></p>
+			</div>
+
+			<div class="gca-admin-card">
+				<div class="gca-admin-card__header">
+					<span class="dashicons dashicons-networking" style="color: #2271b1;"></span>
+					<span class="gca-admin-pill gca-admin-pill--info"><?php esc_html_e( 'Node N17 • In Progress', 'gemini-chat-assistant' ); ?></span>
+				</div>
+				<h4>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-integrations' ) ); ?>" style="text-decoration: none; color: inherit;">
+						<?php esc_html_e( 'Integrations (N17.1 Framework Ready)', 'gemini-chat-assistant' ); ?> &rarr;
+					</a>
+				</h4>
+				<p class="gca-admin-card__desc"><?php esc_html_e( 'Safe business integration framework, action registries, and planned WooCommerce/handoff modules.', 'gemini-chat-assistant' ); ?></p>
 			</div>
 
 			<div class="gca-admin-card gca-admin-card--future">

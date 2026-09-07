@@ -39,6 +39,13 @@ gemini-chat-assistant/
 │   │   ├── KnowledgeIndexer.php
 │   │   ├── KnowledgeRetriever.php
 │   │   └── KnowledgeContextBuilder.php
+│   ├── Integrations/
+│   │   ├── IntegrationInterface.php
+│   │   ├── ActionInterface.php
+│   │   ├── ActionResult.php
+│   │   ├── ActionValidator.php
+│   │   ├── IntegrationRegistry.php
+│   │   └── ActionExecutor.php
 │   ├── REST/
 │   │   ├── RestServer.php
 │   │   ├── ChatController.php
@@ -67,6 +74,7 @@ gemini-chat-assistant/
 │   │   ├── analytics.php
 │   │   ├── faqs.php
 │   │   ├── knowledge.php
+│   │   ├── integrations.php
 │   │   ├── dashboard.php
 │   │   ├── settings.php
 │   │   ├── logs.php
@@ -88,6 +96,7 @@ gemini-chat-assistant/
 │   ├── test-knowledge-indexer.php
 │   ├── test-knowledge-retriever.php
 │   ├── test-rag-context.php
+│   ├── test-integrations-framework.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig

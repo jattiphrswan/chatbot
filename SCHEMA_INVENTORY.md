@@ -276,3 +276,30 @@
   }
 }
 ```
+
+---
+
+## 5. Integration Framework ActionResult Schema (Node N17.1)
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ActionResult",
+  "type": "object",
+  "required": ["success", "data", "message", "error"],
+  "properties": {
+    "success": { "type": "boolean" },
+    "data": {},
+    "message": { "type": ["string", "null"] },
+    "error": {
+      "type": ["object", "null"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "required": ["code", "message"]
+    }
+  },
+  "additionalProperties": false
+}
+```

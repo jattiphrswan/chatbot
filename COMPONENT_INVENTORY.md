@@ -16,6 +16,12 @@
 | `KnowledgeIndexer` | `SkyFish\GeminiChat\Knowledge` | Content extraction, normalization, hashing, multibyte chunking, and sync hooks. | `KnowledgeRepository`, `FaqRepository`, `SettingsService` |
 | `KnowledgeRetriever` | `SkyFish\GeminiChat\Knowledge` | Lexical search, candidate scoring, top-K clamping, and budget limits. | `KnowledgeRepository`, `SettingsService` |
 | `KnowledgeContextBuilder` | `SkyFish\GeminiChat\Knowledge` | Structured untrusted reference context framing and prompt-injection defense. | None |
+| `IntegrationInterface` | `SkyFish\GeminiChat\Integrations` | Operational contract for business integrations. | None |
+| `ActionInterface` | `SkyFish\GeminiChat\Integrations` | Declarative contract for executable business actions with risk levels. | None |
+| `ActionResult` | `SkyFish\GeminiChat\Integrations` | Normalized result object with safe error codes and zero raw traces. | None |
+| `ActionValidator` | `SkyFish\GeminiChat\Integrations` | Deterministic parameter validation, type casting, and rogue argument rejection. | None |
+| `IntegrationRegistry` | `SkyFish\GeminiChat\Integrations` | Central registry for approved business integrations with duplicate protection. | `gca_register_integrations` hook |
+| `ActionExecutor` | `SkyFish\GeminiChat\Integrations` | Safe execution pipeline enforcing availability, enabled state, and exception safety. | `IntegrationRegistry`, `ActionValidator` |
 | `LogRepository` | `SkyFish\GeminiChat\Database` | Writes logs to `wp_gca_logs`. | `$wpdb` |
 | `GeminiClient` | `SkyFish\GeminiChat\Services` | Makes HTTP calls to Google Gemini API endpoints. | `wp_remote_post`, `Encryption` |
 | `ContextManager` | `SkyFish\GeminiChat\Services` | Compiles conversation history into Gemini format. | `MessageRepository`, `TokenCounter` |

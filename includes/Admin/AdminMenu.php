@@ -34,6 +34,7 @@ class AdminMenu {
 	public const APPEARANCE_MENU_SLUG    = 'gca-appearance';
 	public const FAQS_MENU_SLUG          = 'gca-faqs';
 	public const KNOWLEDGE_MENU_SLUG     = 'gca-knowledge';
+	public const INTEGRATIONS_MENU_SLUG  = 'gca-integrations';
 	public const SETTINGS_MENU_SLUG      = 'gca-settings';
 
 	private ConversationRepository $conversation_repo;
@@ -45,6 +46,7 @@ class AdminMenu {
 	private KnowledgeRepository $knowledge_repo;
 	private ?KnowledgeIndexer $knowledge_indexer;
 	private ?KnowledgeRetriever $knowledge_retriever;
+	private ?\SkyFish\GeminiChat\Integrations\IntegrationRegistry $integration_registry;
 
 	/**
 	 * AdminMenu constructor.
@@ -58,6 +60,7 @@ class AdminMenu {
 	 * @param KnowledgeRepository|null    $knowledge_repo     Optional knowledge repository.
 	 * @param KnowledgeIndexer|null       $knowledge_indexer  Optional knowledge indexer.
 	 * @param KnowledgeRetriever|null     $knowledge_retriever Optional knowledge retriever.
+	 * @param \SkyFish\GeminiChat\Integrations\IntegrationRegistry|null $integration_registry Optional integration registry.
 	 */
 	public function __construct(
 		?ConversationRepository $conversation_repo = null,
@@ -68,7 +71,8 @@ class AdminMenu {
 		?FaqRepository $faq_repo = null,
 		?KnowledgeRepository $knowledge_repo = null,
 		?KnowledgeIndexer $knowledge_indexer = null,
-		?KnowledgeRetriever $knowledge_retriever = null
+		?KnowledgeRetriever $knowledge_retriever = null,
+		?\SkyFish\GeminiChat\Integrations\IntegrationRegistry $integration_registry = null
 	) {
 		$this->conversation_repo   = $conversation_repo ?? new ConversationRepository();
 		$this->message_repo        = $message_repo ?? new MessageRepository();
@@ -79,6 +83,7 @@ class AdminMenu {
 		$this->knowledge_repo      = $knowledge_repo ?? new KnowledgeRepository();
 		$this->knowledge_indexer   = $knowledge_indexer ?? new KnowledgeIndexer( $this->knowledge_repo, $this->faq_repo );
 		$this->knowledge_retriever = $knowledge_retriever ?? new KnowledgeRetriever( $this->knowledge_repo );
+		$this->integration_registry = $integration_registry;
 	}
 
 	/**
@@ -208,6 +213,15 @@ class AdminMenu {
 
 		add_submenu_page(
 			self::MAIN_MENU_SLUG,
+			__( 'Integrations', 'gemini-chat-assistant' ),
+			__( 'Integrations', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::INTEGRATIONS_MENU_SLUG,
+			[ $this, 'render_integrations_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
 			__( 'Settings', 'gemini-chat-assistant' ),
 			__( 'Settings', 'gemini-chat-assistant' ),
 			'manage_options',
@@ -253,6 +267,8 @@ class AdminMenu {
 			'gemini-chat-assistant_page_' . self::FAQS_MENU_SLUG,
 			'gemini-chat_page_' . self::KNOWLEDGE_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::KNOWLEDGE_MENU_SLUG,
+			'gemini-chat_page_' . self::INTEGRATIONS_MENU_SLUG,
+			'gemini-chat-assistant_page_' . self::INTEGRATIONS_MENU_SLUG,
 			'gemini-chat_page_' . self::SETTINGS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::SETTINGS_MENU_SLUG,
 		];
@@ -982,5 +998,18 @@ class AdminMenu {
 
 		wp_safe_redirect( add_query_arg( [ 'page' => self::KNOWLEDGE_MENU_SLUG, 'saved' => 1 ], admin_url( 'admin.php' ) ) );
 		exit;
+	}
+
+	/**
+	 * Renders the business integrations management overview page.
+	 */
+	public function render_integrations_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$integration_registry = $this->integration_registry;
+
+		include GCA_PLUGIN_DIR . 'templates/admin/integrations.php';
 	}
 }
