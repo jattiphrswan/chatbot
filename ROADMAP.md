@@ -28,8 +28,8 @@ flowchart TD
 | :--- | :--- | :--- | :--- |
 | **N0** | **Documentation Baseline** | Establish & cross-validate all 20 specification and architecture documents. Zero application code. | **COMPLETED** |
 | **N1** | **WordPress Plugin Foundation** | Plugin entrypoint (`gemini-chat-assistant.php`), lifecycle hooks (`class-activator.php`, `class-deactivator.php`, `class-plugin.php`), security index guards. | **COMPLETED** |
-| **N2** | **Admin Settings System** | Settings storage, admin menu, configuration screens (API key, model selection, system prompt, temperature, tokens). | **READY / NEXT** |
-| **N3** | **Data & Session Foundation** | Custom database schema (`wp_gca_conversations`, `wp_gca_messages`, `wp_gca_logs`), `Migrator`, and repositories. | Planned |
+| **N2** | **Admin Settings System** | Settings storage, admin menu, configuration screens (API key status, model selection, system prompt, limits, privacy). | **COMPLETED** |
+| **N3** | **Data & Session Foundation** | Custom database schema (`gca_conversations`, `gca_messages`), `Migrator`, repositories, and session service. | **IN PROGRESS** |
 | **N4** | **Gemini Client** | Gemini API client service (`GeminiClient`), payload builders, token estimation, and error normalizers. | Planned |
 | **N5** | **WordPress REST API** | REST route registration (`gca/v1`), `/chat`, `/reset`, `/health` controllers, and schema validators. | Planned |
 | **N6** | **Public Chat UI** | `[gemini_chat]` shortcode, frontend HTML/CSS chat widget, responsive styling. | Planned |

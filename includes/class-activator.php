@@ -7,6 +7,8 @@
 
 namespace SkyFish\GeminiChat;
 
+use SkyFish\GeminiChat\Database\Migrator;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -76,13 +78,13 @@ class Activator {
 	 * and version tracking.
 	 */
 	public static function activate(): void {
+		// Run database migrations.
+		require_once GCA_PLUGIN_DIR . 'includes/Database/Migrator.php';
+		Migrator::migrate();
+
 		// Set default settings if not already present.
 		if ( ! get_option( 'gca_settings' ) ) {
 			add_option( 'gca_settings', self::get_default_settings() );
-		}
-
-		if ( ! get_option( 'gca_db_version' ) ) {
-			add_option( 'gca_db_version', '1.0.0' );
 		}
 	}
 }

@@ -9,6 +9,10 @@ namespace SkyFish\GeminiChat;
 
 use SkyFish\GeminiChat\Admin\AdminMenu;
 use SkyFish\GeminiChat\Admin\SettingsService;
+use SkyFish\GeminiChat\Database\ConversationRepository;
+use SkyFish\GeminiChat\Database\MessageRepository;
+use SkyFish\GeminiChat\Database\Migrator;
+use SkyFish\GeminiChat\Database\SessionService;
 use SkyFish\GeminiChat\Providers\ClaudeProvider;
 use SkyFish\GeminiChat\Providers\GeminiProvider;
 use SkyFish\GeminiChat\Providers\OpenAIProvider;
@@ -46,6 +50,27 @@ class Plugin {
 	private ?AdminMenu $admin_menu = null;
 
 	/**
+	 * Session service instance.
+	 *
+	 * @var SessionService|null
+	 */
+	private ?SessionService $session_service = null;
+
+	/**
+	 * Conversation repository instance.
+	 *
+	 * @var ConversationRepository|null
+	 */
+	private ?ConversationRepository $conversation_repo = null;
+
+	/**
+	 * Message repository instance.
+	 *
+	 * @var MessageRepository|null
+	 */
+	private ?MessageRepository $message_repo = null;
+
+	/**
 	 * Gets the singleton instance.
 	 *
 	 * @return Plugin
@@ -70,6 +95,12 @@ class Plugin {
 	 * Loads required dependencies.
 	 */
 	private function load_dependencies(): void {
+		// Database & Repositories.
+		require_once GCA_PLUGIN_DIR . 'includes/Database/Migrator.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Database/ConversationRepository.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Database/MessageRepository.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Database/SessionService.php';
+
 		// Admin & Settings Services.
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/SettingsService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/AdminMenu.php';
@@ -108,6 +139,45 @@ class Plugin {
 			$this->init_providers();
 		}
 		return $this->provider_registry;
+	}
+
+	/**
+	 * Accessor to SessionService.
+	 *
+	 * @return SessionService
+	 */
+	public function get_session_service(): SessionService {
+		if ( null === $this->session_service ) {
+			$this->session_service = new SessionService(
+				$this->get_conversation_repository(),
+				$this->get_message_repository()
+			);
+		}
+		return $this->session_service;
+	}
+
+	/**
+	 * Accessor to ConversationRepository.
+	 *
+	 * @return ConversationRepository
+	 */
+	public function get_conversation_repository(): ConversationRepository {
+		if ( null === $this->conversation_repo ) {
+			$this->conversation_repo = new ConversationRepository();
+		}
+		return $this->conversation_repo;
+	}
+
+	/**
+	 * Accessor to MessageRepository.
+	 *
+	 * @return MessageRepository
+	 */
+	public function get_message_repository(): MessageRepository {
+		if ( null === $this->message_repo ) {
+			$this->message_repo = new MessageRepository();
+		}
+		return $this->message_repo;
 	}
 
 	/**

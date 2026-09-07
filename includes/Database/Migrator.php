@@ -1,0 +1,96 @@
+<?php
+/**
+ * Database Migration Engine for Gemini Chat Assistant.
+ *
+ * @package SkyFish\GeminiChat\Database
+ */
+
+namespace SkyFish\GeminiChat\Database;
+
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Class Migrator
+ *
+ * Handles creation and schema versioning for custom plugin tables using dbDelta().
+ */
+class Migrator {
+
+	/**
+	 * Target database schema version.
+	 */
+	public const SCHEMA_VERSION = '1.0.0';
+
+	/**
+	 * Option key storing installed schema version.
+	 */
+	public const VERSION_OPTION = 'gca_db_version';
+
+	/**
+	 * Executes schema migrations if schema is new or outdated.
+	 *
+	 * @return bool True if migration executed successfully.
+	 */
+	public static function migrate(): bool {
+		global $wpdb;
+
+		$installed_version = get_option( self::VERSION_OPTION, '0.0.0' );
+
+		// Only run migration if installed version is lower than target schema version.
+		if ( version_compare( $installed_version, self::SCHEMA_VERSION, '>=' ) ) {
+			return true;
+		}
+
+		$charset_collate = $wpdb->get_charset_collate();
+		$conversations   = $wpdb->prefix . 'gca_conversations';
+		$messages        = $wpdb->prefix . 'gca_messages';
+
+		// Schema definitions formatted strictly according to dbDelta specifications.
+		$sql = "CREATE TABLE {$conversations} (
+id bigint(20) unsigned not null auto_increment,
+session_id varchar(64) not null,
+user_id bigint(20) unsigned default 0,
+ip_hash varchar(64) not null,
+status varchar(20) default 'active' not null,
+metadata longtext default null,
+created_at datetime default current_timestamp not null,
+updated_at datetime default current_timestamp not null,
+PRIMARY KEY  (id),
+UNIQUE KEY uk_session_id (session_id),
+KEY idx_user_id (user_id),
+KEY idx_created_at (created_at)
+) {$charset_collate};
+CREATE TABLE {$messages} (
+id bigint(20) unsigned not null auto_increment,
+conversation_id bigint(20) unsigned not null,
+role varchar(20) not null,
+content longtext not null,
+tokens int(10) unsigned default 0,
+finish_reason varchar(32) default null,
+created_at datetime default current_timestamp not null,
+PRIMARY KEY  (id),
+KEY idx_conversation_id (conversation_id),
+KEY idx_created_at (created_at)
+) {$charset_collate};";
+
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta( $sql );
+
+		update_option( self::VERSION_OPTION, self::SCHEMA_VERSION );
+
+		return true;
+	}
+
+	/**
+	 * Checks if migration is needed during runtime.
+	 */
+	public static function check_updates(): void {
+		$installed_version = get_option( self::VERSION_OPTION, '0.0.0' );
+		if ( version_compare( $installed_version, self::SCHEMA_VERSION, '<' ) ) {
+			self::migrate();
+		}
+	}
+}
