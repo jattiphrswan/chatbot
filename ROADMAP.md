@@ -23,9 +23,9 @@ flowchart TD
 
 | Node | Name | Focus & Deliverables | Status |
 | :--- | :--- | :--- | :--- |
-| **N0** | **Documentation Validation** | Establish & cross-validate all 20 specification and architecture documents. Zero application code. | **IN PROGRESS** |
-| **N1** | **Plugin Scaffold & Setup** | Create plugin entrypoint (`gemini-chat-assistant.php`), PSR-4 autoloading, composer manifest, base classes. | Planned |
-| **N2** | **Database & Migrations** | Implement `Migrator`, `wp_gca_conversations`, `wp_gca_messages`, `wp_gca_logs` table creation routines. | Planned |
+| **N0** | **Documentation Validation** | Establish & cross-validate all 20 specification and architecture documents. Zero application code. | **COMPLETED** |
+| **N1** | **Plugin Scaffold & Setup** | Create plugin entrypoint (`gemini-chat-assistant.php`), PSR-4 autoloading, composer manifest, base classes. | **COMPLETED** |
+| **N2** | **Database & Migrations** | Implement `Migrator`, `wp_gca_conversations`, `wp_gca_messages`, `wp_gca_logs` table creation routines. | **READY / NEXT** |
 | **N3** | **Gemini Service Layer** | Build `GeminiClient`, token estimation, payload builders, and Google Gemini API communication. | Planned |
 | **N4** | **REST API Controllers** | Register `gca/v1` routes: `/chat`, `/reset`, and `/health` with full validation callbacks. | Planned |
 | **N5** | **Admin Dashboard Modules** | Build Settings UI, Logs & Analytics viewer, and Health self-test diagnostic module. | Planned |
