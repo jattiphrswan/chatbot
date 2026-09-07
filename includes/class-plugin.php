@@ -124,6 +124,13 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Database/LeadRepository.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/AnalyticsRepository.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/SessionService.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Database/FaqRepository.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Database/KnowledgeRepository.php';
+
+		// Knowledge & RAG Engine (N16).
+		require_once GCA_PLUGIN_DIR . 'includes/Knowledge/KnowledgeIndexer.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Knowledge/KnowledgeRetriever.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Knowledge/KnowledgeContextBuilder.php';
 
 		// Admin & Settings Services.
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/SettingsService.php';
@@ -271,7 +278,9 @@ class Plugin {
 				$this->get_conversation_repository(),
 				$this->get_message_repository(),
 				$this->get_gemini_client(),
-				$this->get_profile_service()
+				$this->get_profile_service(),
+				$this->get_knowledge_retriever(),
+				$this->get_knowledge_context_builder()
 			);
 		}
 		return $this->chat_service;
@@ -390,6 +399,76 @@ class Plugin {
 	}
 
 	/**
+	 * Accessor to FaqRepository.
+	 *
+	 * @return \SkyFish\GeminiChat\Database\FaqRepository
+	 */
+	public function get_faq_repository(): \SkyFish\GeminiChat\Database\FaqRepository {
+		static $faq_repo = null;
+		if ( null === $faq_repo ) {
+			$faq_repo = new \SkyFish\GeminiChat\Database\FaqRepository();
+		}
+		return $faq_repo;
+	}
+
+	/**
+	 * Accessor to KnowledgeRepository.
+	 *
+	 * @return \SkyFish\GeminiChat\Database\KnowledgeRepository
+	 */
+	public function get_knowledge_repository(): \SkyFish\GeminiChat\Database\KnowledgeRepository {
+		static $knowledge_repo = null;
+		if ( null === $knowledge_repo ) {
+			$knowledge_repo = new \SkyFish\GeminiChat\Database\KnowledgeRepository();
+		}
+		return $knowledge_repo;
+	}
+
+	/**
+	 * Accessor to KnowledgeIndexer.
+	 *
+	 * @return \SkyFish\GeminiChat\Knowledge\KnowledgeIndexer
+	 */
+	public function get_knowledge_indexer(): \SkyFish\GeminiChat\Knowledge\KnowledgeIndexer {
+		static $indexer = null;
+		if ( null === $indexer ) {
+			$indexer = new \SkyFish\GeminiChat\Knowledge\KnowledgeIndexer(
+				$this->get_knowledge_repository(),
+				$this->get_faq_repository()
+			);
+		}
+		return $indexer;
+	}
+
+	/**
+	 * Accessor to KnowledgeRetriever.
+	 *
+	 * @return \SkyFish\GeminiChat\Knowledge\KnowledgeRetriever
+	 */
+	public function get_knowledge_retriever(): \SkyFish\GeminiChat\Knowledge\KnowledgeRetriever {
+		static $retriever = null;
+		if ( null === $retriever ) {
+			$retriever = new \SkyFish\GeminiChat\Knowledge\KnowledgeRetriever(
+				$this->get_knowledge_repository()
+			);
+		}
+		return $retriever;
+	}
+
+	/**
+	 * Accessor to KnowledgeContextBuilder.
+	 *
+	 * @return \SkyFish\GeminiChat\Knowledge\KnowledgeContextBuilder
+	 */
+	public function get_knowledge_context_builder(): \SkyFish\GeminiChat\Knowledge\KnowledgeContextBuilder {
+		static $builder = null;
+		if ( null === $builder ) {
+			$builder = new \SkyFish\GeminiChat\Knowledge\KnowledgeContextBuilder();
+		}
+		return $builder;
+	}
+
+	/**
 	 * Defines the locale for this plugin for internationalization.
 	 */
 	private function set_locale(): void {
@@ -411,8 +490,21 @@ class Plugin {
 	 * Runs the loader to execute all of the hooks with WordPress.
 	 */
 	public function run(): void {
+		// Initialize automatic knowledge sync hooks (save_post, before_delete_post, transition_post_status)
+		$this->get_knowledge_indexer()->init_hooks();
+
 		if ( is_admin() ) {
-			$this->admin_menu = new AdminMenu();
+			$this->admin_menu = new AdminMenu(
+				$this->get_conversation_repository(),
+				$this->get_message_repository(),
+				null,
+				$this->get_lead_repository(),
+				$this->get_profile_service(),
+				$this->get_faq_repository(),
+				$this->get_knowledge_repository(),
+				$this->get_knowledge_indexer(),
+				$this->get_knowledge_retriever()
+			);
 			$this->admin_menu->init();
 		}
 

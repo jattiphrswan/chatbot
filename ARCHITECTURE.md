@@ -130,4 +130,37 @@ ProviderInterface
 The system employs a provider abstraction layer decoupling conversational controllers from concrete AI vendor SDKs. The `ProviderRegistry` resolves implementations of `ProviderInterface` (`GeminiProvider`, `OpenAIProvider`, `ClaudeProvider`) dynamically based on administrator configuration, ensuring normalized input formatting and response structures via `ProviderResponse`.
 
 > **V1 IMPLEMENTATION STATUS:**
-> In production v1 (N0 through N15), `ChatService` operates strictly and exclusively with Google Gemini through `GeminiClient`. Multi-provider routing, external OpenAI/Claude keys, and non-Gemini SDKs are not active in runtime.
+> In production v1 (N0 through N16), `ChatService` operates strictly and exclusively with Google Gemini through `GeminiClient`. Multi-provider routing, external OpenAI/Claude keys, and non-Gemini SDKs are not active in runtime.
+
+## 5. FAQ & WordPress-Native RAG Architecture (Node N16)
+
+```
+Visitor Question
+       ↓
+ChatService
+       ├── ProfileService (Active N15 AI Profile)
+       └── KnowledgeRetriever (when knowledge_enabled = true)
+                 ↓
+           Tokenize & Filter Stopwords
+                 ↓
+           MySQL Candidate Search (gca_knowledge_chunks)
+                 ↓
+           Lexical Scoring (Term freq, Phrase match, FAQ boost)
+                 ↓
+           Top-K Clamping (1–8) & Context Budget (500–12000 chars)
+                 ↓
+           KnowledgeContextBuilder (Untrusted Reference Data Framing)
+                 ↓
+Combined Prompt: [AI Profile Instructions] + [Website Reference Context]
+                 ↓
+           GeminiClient -> Google Gemini API
+                 ↓
+           Grounded Conversational Response
+```
+
+### Key RAG Tenets in N16:
+1. **Gemini-First WordPress-Native:** No external vector databases (Pinecone, Weaviate, Qdrant) or external runtime servers required. Fully runs inside standard WordPress hosting.
+2. **Zero-Token Static FAQs:** Clicking quick help FAQ items on Chatbot Home renders local text instantly with zero Gemini API calls.
+3. **Strict Source Eligibility:** Only published, public, non-password-protected WordPress Pages, Posts, and active FAQs are indexed.
+4. **WooCommerce Text-Only:** When WooCommerce is active, only textual titles and descriptions are indexed; live prices, stock, and cart actions are reserved for N17.
+5. **Prompt-Injection Defense:** Website content is framed as untrusted reference data with explicit instructions commanding the model to treat it as passive factual data and ignore any embedded override instructions.

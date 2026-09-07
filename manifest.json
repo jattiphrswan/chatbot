@@ -33,7 +33,10 @@
       "wp_gca_conversations",
       "wp_gca_messages",
       "wp_gca_leads",
-      "wp_gca_logs"
+      "wp_gca_logs",
+      "wp_gca_faqs",
+      "wp_gca_knowledge_sources",
+      "wp_gca_knowledge_chunks"
     ],
     "options": [
       "gca_settings",
@@ -41,14 +44,15 @@
       "gca_db_version"
     ]
   },
-  "architecture": "Browser -> WordPress REST API -> PHP Service Layer -> Gemini API",
+  "architecture": "Browser -> WordPress REST API -> PHP Service Layer (ChatService + ProfileService + RAG KnowledgeRetriever) -> Gemini API",
   "security": {
     "api_key_storage": "Server-side only (GEMINI_API_KEY env var or GCA_GEMINI_API_KEY wp-config constant). Never stored in DB or exposed to client.",
     "api_key_exposed_to_client": false,
     "api_key_stored_in_db": false,
     "nonce_verification": true,
     "capability_checks": true,
-    "rate_limiting": true
+    "rate_limiting": true,
+    "prompt_injection_defense": true
   },
-  "roadmap_current_node": "N4"
+  "roadmap_current_node": "N16"
 }

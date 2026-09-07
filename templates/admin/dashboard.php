@@ -307,6 +307,26 @@ $active_profile_name = $active_profile['name'] ?? __( 'General Assistant', 'gemi
 					</div>
 					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
 				</a>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-faqs' ) ); ?>" class="gca-admin-action-item">
+					<div class="gca-admin-action-item__icon" aria-hidden="true">
+						<span class="dashicons dashicons-format-chat"></span>
+					</div>
+					<div class="gca-admin-action-item__text">
+						<strong><?php esc_html_e( 'Manage FAQs', 'gemini-chat-assistant' ); ?></strong>
+						<span><?php esc_html_e( 'Create quick help answers and chatbot Home questions.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
+				</a>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-knowledge' ) ); ?>" class="gca-admin-action-item">
+					<div class="gca-admin-action-item__icon" aria-hidden="true">
+						<span class="dashicons dashicons-book"></span>
+					</div>
+					<div class="gca-admin-action-item__text">
+						<strong><?php esc_html_e( 'Website Knowledge / RAG', 'gemini-chat-assistant' ); ?></strong>
+						<span><?php esc_html_e( 'Synchronize WordPress pages, posts, and FAQs for grounded answers.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
+				</a>
 				<a href="<?php echo esc_url( $settings_url ); ?>" class="gca-admin-action-item">
 					<div class="gca-admin-action-item__icon" aria-hidden="true">
 						<span class="dashicons dashicons-admin-generic"></span>
@@ -407,13 +427,17 @@ $active_profile_name = $active_profile['name'] ?? __( 'General Assistant', 'gemi
 				<p class="gca-admin-card__desc"><?php esc_html_e( 'Persona management, active profile selection, role guidance, tone, rules, and prompt builder.', 'gemini-chat-assistant' ); ?></p>
 			</div>
 
-			<div class="gca-admin-card gca-admin-card--future">
+			<div class="gca-admin-card">
 				<div class="gca-admin-card__header">
-					<span class="dashicons dashicons-book"></span>
-					<span class="gca-admin-pill gca-admin-pill--planned"><?php esc_html_e( 'Node N16', 'gemini-chat-assistant' ); ?></span>
+					<span class="dashicons dashicons-book" style="color: #2271b1;"></span>
+					<span class="gca-admin-pill gca-admin-pill--success"><?php esc_html_e( 'Node N16 • Active', 'gemini-chat-assistant' ); ?></span>
 				</div>
-				<h4><?php esc_html_e( 'FAQ & Knowledge Hub', 'gemini-chat-assistant' ); ?></h4>
-				<p><?php esc_html_e( 'Manage quick suggested questions and custom business knowledge grounding.', 'gemini-chat-assistant' ); ?></p>
+				<h4>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-knowledge' ) ); ?>" style="text-decoration: none; color: inherit;">
+						<?php esc_html_e( 'FAQ & Knowledge Hub (RAG)', 'gemini-chat-assistant' ); ?> &rarr;
+					</a>
+				</h4>
+				<p class="gca-admin-card__desc"><?php esc_html_e( 'Quick help static FAQs and WordPress website knowledge grounding via RAG.', 'gemini-chat-assistant' ); ?></p>
 			</div>
 
 			<div class="gca-admin-card gca-admin-card--future">

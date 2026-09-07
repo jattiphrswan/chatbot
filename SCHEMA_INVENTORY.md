@@ -178,7 +178,74 @@
 
 ---
 
-## 3. Gemini Client Internal Normalized Response Schema
+## 3. Node N16 Database Tables (Schema Version 1.2.0)
+
+### 3.1 `{$wpdb->prefix}gca_faqs` Schema
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GcaFaqRecord",
+  "type": "object",
+  "required": ["id", "public_id", "question", "answer", "is_active", "show_on_home", "sort_order", "created_at", "updated_at"],
+  "properties": {
+    "id": { "type": "integer" },
+    "public_id": { "type": "string", "pattern": "^faq_[a-f0-9]{32}$" },
+    "question": { "type": "string", "maxLength": 300 },
+    "answer": { "type": "string", "maxLength": 5000 },
+    "category": { "type": "string", "maxLength": 100 },
+    "sort_order": { "type": "integer" },
+    "is_active": { "type": "integer", "enum": [0, 1] },
+    "show_on_home": { "type": "integer", "enum": [0, 1] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}
+```
+
+### 3.2 `{$wpdb->prefix}gca_knowledge_sources` Schema
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GcaKnowledgeSourceRecord",
+  "type": "object",
+  "required": ["id", "source_type", "source_id", "title", "url", "content_hash", "chunk_count", "status", "indexed_at"],
+  "properties": {
+    "id": { "type": "integer" },
+    "source_type": { "type": "string", "enum": ["post", "page", "product", "faq"] },
+    "source_id": { "type": "integer" },
+    "title": { "type": "string", "maxLength": 255 },
+    "url": { "type": "string", "maxLength": 500 },
+    "content_hash": { "type": "string", "maxLength": 64 },
+    "chunk_count": { "type": "integer" },
+    "status": { "type": "string", "enum": ["indexed", "pending", "failed"] },
+    "indexed_at": { "type": "string", "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}
+```
+
+### 3.3 `{$wpdb->prefix}gca_knowledge_chunks` Schema
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GcaKnowledgeChunkRecord",
+  "type": "object",
+  "required": ["id", "source_id", "chunk_index", "content", "token_estimate", "created_at"],
+  "properties": {
+    "id": { "type": "integer" },
+    "source_id": { "type": "integer" },
+    "chunk_index": { "type": "integer" },
+    "content": { "type": "string" },
+    "token_estimate": { "type": "integer" },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}
+```
+
+---
+
+## 4. Gemini Client Internal Normalized Response Schema
 
 ```json
 {

@@ -39,6 +39,13 @@ $collect_phone       = ! empty( $settings['collect_phone'] );
 $require_phone       = ! empty( $settings['require_phone'] );
 $collect_requirement = ! empty( $settings['collect_requirement'] );
 $require_requirement = ! empty( $settings['require_requirement'] );
+$faq_enabled         = ! empty( $settings['faq_enabled'] );
+$faq_home_limit      = absint( $settings['faq_home_limit'] ?? 6 );
+$home_faqs           = [];
+if ( $faq_enabled ) {
+	$faq_repo  = new \SkyFish\GeminiChat\Database\FaqRepository();
+	$home_faqs = $faq_repo->get_home_faqs( $faq_home_limit );
+}
 ?>
 
 <?php if ( 'floating' === $mode ) : ?>
@@ -171,8 +178,56 @@ $require_requirement = ! empty( $settings['require_requirement'] );
 					</span>
 				</button>
 
-				<!-- FAQ Slot Placeholder (Reserved for future N16) -->
-				<div class="gca-faq-slot" aria-hidden="true"></div>
+				<!-- Quick Help FAQ Area (N16) -->
+				<?php if ( $faq_enabled && ! empty( $home_faqs ) ) : ?>
+					<div class="gca-quick-help" role="region" aria-label="<?php esc_attr_e( 'Quick Help', 'gemini-chat-assistant' ); ?>">
+						<h3 class="gca-quick-help__title"><?php esc_html_e( 'Quick Help', 'gemini-chat-assistant' ); ?></h3>
+						<div class="gca-quick-help__list">
+							<?php foreach ( $home_faqs as $faq ) : ?>
+								<div class="gca-quick-help__item">
+									<button
+										type="button"
+										class="gca-faq-trigger"
+										data-faq-id="<?php echo esc_attr( (string) $faq['public_id'] ); ?>"
+										data-question="<?php echo esc_attr( (string) $faq['question'] ); ?>"
+										aria-label="<?php echo esc_attr( sprintf( __( 'Read FAQ: %s', 'gemini-chat-assistant' ), $faq['question'] ) ); ?>"
+									>
+										<span class="gca-faq-trigger__text"><?php echo esc_html( (string) $faq['question'] ); ?></span>
+										<svg class="gca-faq-trigger__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+											<polyline points="9 18 15 12 9 6"></polyline>
+										</svg>
+									</button>
+									<template class="gca-faq-template-answer"><?php echo esc_html( (string) $faq['answer'] ); ?></template>
+								</div>
+							<?php endforeach; ?>
+						</div>
+					</div>
+				<?php endif; ?>
+			</div>
+		</section>
+
+		<!-- Screen: FAQ Detail View (N16) -->
+		<section class="gca-screen gca-screen--faq" aria-label="<?php esc_attr_e( 'FAQ Detail Screen', 'gemini-chat-assistant' ); ?>">
+			<div class="gca-faq-detail">
+				<div class="gca-faq-detail__header">
+					<button type="button" class="gca-faq-detail__back" aria-label="<?php esc_attr_e( 'Back to Home screen', 'gemini-chat-assistant' ); ?>">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<line x1="19" y1="12" x2="5" y2="12"></line>
+							<polyline points="12 19 5 12 12 5"></polyline>
+						</svg>
+						<span><?php esc_html_e( 'Home', 'gemini-chat-assistant' ); ?></span>
+					</button>
+				</div>
+				<div class="gca-faq-detail__body">
+					<h2 class="gca-faq-detail__question" tabindex="-1"></h2>
+					<div class="gca-faq-detail__answer"></div>
+				</div>
+				<div class="gca-faq-detail__footer">
+					<p class="gca-faq-detail__cta-text"><?php esc_html_e( 'Still have questions?', 'gemini-chat-assistant' ); ?></p>
+					<button type="button" class="gca-btn gca-btn--primary gca-faq-detail__start-btn">
+						<?php esc_html_e( 'Start a Conversation', 'gemini-chat-assistant' ); ?>
+					</button>
+				</div>
 			</div>
 		</section>
 

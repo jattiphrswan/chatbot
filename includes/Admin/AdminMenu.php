@@ -9,6 +9,10 @@ namespace SkyFish\GeminiChat\Admin;
 
 use SkyFish\GeminiChat\Database\ConversationRepository;
 use SkyFish\GeminiChat\Database\MessageRepository;
+use SkyFish\GeminiChat\Database\FaqRepository;
+use SkyFish\GeminiChat\Database\KnowledgeRepository;
+use SkyFish\GeminiChat\Knowledge\KnowledgeIndexer;
+use SkyFish\GeminiChat\Knowledge\KnowledgeRetriever;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -28,6 +32,8 @@ class AdminMenu {
 	public const LEADS_MENU_SLUG         = 'gca-leads';
 	public const ANALYTICS_MENU_SLUG     = 'gca-analytics';
 	public const APPEARANCE_MENU_SLUG    = 'gca-appearance';
+	public const FAQS_MENU_SLUG          = 'gca-faqs';
+	public const KNOWLEDGE_MENU_SLUG     = 'gca-knowledge';
 	public const SETTINGS_MENU_SLUG      = 'gca-settings';
 
 	private ConversationRepository $conversation_repo;
@@ -35,28 +41,44 @@ class AdminMenu {
 	private AnalyticsService $analytics_service;
 	private LeadRepository $lead_repo;
 	private ProfileService $profile_service;
+	private FaqRepository $faq_repo;
+	private KnowledgeRepository $knowledge_repo;
+	private ?KnowledgeIndexer $knowledge_indexer;
+	private ?KnowledgeRetriever $knowledge_retriever;
 
 	/**
 	 * AdminMenu constructor.
 	 *
-	 * @param ConversationRepository|null $conversation_repo Optional conversation repository.
-	 * @param MessageRepository|null      $message_repo      Optional message repository.
-	 * @param AnalyticsService|null       $analytics_service Optional analytics service.
-	 * @param LeadRepository|null         $lead_repo         Optional lead repository.
-	 * @param ProfileService|null         $profile_service   Optional profile service.
+	 * @param ConversationRepository|null $conversation_repo  Optional conversation repository.
+	 * @param MessageRepository|null      $message_repo       Optional message repository.
+	 * @param AnalyticsService|null       $analytics_service  Optional analytics service.
+	 * @param LeadRepository|null         $lead_repo          Optional lead repository.
+	 * @param ProfileService|null         $profile_service    Optional profile service.
+	 * @param FaqRepository|null          $faq_repo           Optional FAQ repository.
+	 * @param KnowledgeRepository|null    $knowledge_repo     Optional knowledge repository.
+	 * @param KnowledgeIndexer|null       $knowledge_indexer  Optional knowledge indexer.
+	 * @param KnowledgeRetriever|null     $knowledge_retriever Optional knowledge retriever.
 	 */
 	public function __construct(
 		?ConversationRepository $conversation_repo = null,
 		?MessageRepository $message_repo = null,
 		?AnalyticsService $analytics_service = null,
 		?LeadRepository $lead_repo = null,
-		?ProfileService $profile_service = null
+		?ProfileService $profile_service = null,
+		?FaqRepository $faq_repo = null,
+		?KnowledgeRepository $knowledge_repo = null,
+		?KnowledgeIndexer $knowledge_indexer = null,
+		?KnowledgeRetriever $knowledge_retriever = null
 	) {
-		$this->conversation_repo = $conversation_repo ?? new ConversationRepository();
-		$this->message_repo      = $message_repo ?? new MessageRepository();
-		$this->analytics_service = $analytics_service ?? new AnalyticsService();
-		$this->lead_repo         = $lead_repo ?? new LeadRepository();
-		$this->profile_service   = $profile_service ?? new ProfileService();
+		$this->conversation_repo   = $conversation_repo ?? new ConversationRepository();
+		$this->message_repo        = $message_repo ?? new MessageRepository();
+		$this->analytics_service   = $analytics_service ?? new AnalyticsService();
+		$this->lead_repo           = $lead_repo ?? new LeadRepository();
+		$this->profile_service     = $profile_service ?? new ProfileService();
+		$this->faq_repo            = $faq_repo ?? new FaqRepository();
+		$this->knowledge_repo      = $knowledge_repo ?? new KnowledgeRepository();
+		$this->knowledge_indexer   = $knowledge_indexer ?? new KnowledgeIndexer( $this->knowledge_repo, $this->faq_repo );
+		$this->knowledge_retriever = $knowledge_retriever ?? new KnowledgeRetriever( $this->knowledge_repo );
 	}
 
 	/**
@@ -85,6 +107,17 @@ class AdminMenu {
 		add_action( 'admin_post_gca_duplicate_profile', [ $this, 'handle_duplicate_profile' ] );
 		add_action( 'admin_post_gca_delete_profile', [ $this, 'handle_delete_profile' ] );
 		add_action( 'admin_post_gca_activate_profile', [ $this, 'handle_activate_profile' ] );
+
+		// Admin post action hooks for FAQs (N16)
+		add_action( 'admin_post_gca_create_faq', [ $this, 'handle_create_faq' ] );
+		add_action( 'admin_post_gca_update_faq', [ $this, 'handle_update_faq' ] );
+		add_action( 'admin_post_gca_delete_faq', [ $this, 'handle_delete_faq' ] );
+		add_action( 'admin_post_gca_toggle_faq_active', [ $this, 'handle_toggle_faq_active' ] );
+
+		// Admin post action hooks for Knowledge (N16)
+		add_action( 'admin_post_gca_sync_knowledge', [ $this, 'handle_sync_knowledge' ] );
+		add_action( 'admin_post_gca_clear_knowledge', [ $this, 'handle_clear_knowledge' ] );
+		add_action( 'admin_post_gca_save_knowledge_settings', [ $this, 'handle_save_knowledge_settings' ] );
 	}
 
 	/**
@@ -157,6 +190,24 @@ class AdminMenu {
 
 		add_submenu_page(
 			self::MAIN_MENU_SLUG,
+			__( 'FAQs', 'gemini-chat-assistant' ),
+			__( 'FAQs', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::FAQS_MENU_SLUG,
+			[ $this, 'render_faqs_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
+			__( 'Knowledge', 'gemini-chat-assistant' ),
+			__( 'Knowledge', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::KNOWLEDGE_MENU_SLUG,
+			[ $this, 'render_knowledge_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
 			__( 'Settings', 'gemini-chat-assistant' ),
 			__( 'Settings', 'gemini-chat-assistant' ),
 			'manage_options',
@@ -198,6 +249,10 @@ class AdminMenu {
 			'gemini-chat-assistant_page_' . self::ANALYTICS_MENU_SLUG,
 			'gemini-chat_page_' . self::APPEARANCE_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::APPEARANCE_MENU_SLUG,
+			'gemini-chat_page_' . self::FAQS_MENU_SLUG,
+			'gemini-chat-assistant_page_' . self::FAQS_MENU_SLUG,
+			'gemini-chat_page_' . self::KNOWLEDGE_MENU_SLUG,
+			'gemini-chat-assistant_page_' . self::KNOWLEDGE_MENU_SLUG,
 			'gemini-chat_page_' . self::SETTINGS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::SETTINGS_MENU_SLUG,
 		];
@@ -674,6 +729,258 @@ class AdminMenu {
 		}
 
 		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'activated' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Renders the FAQs management page.
+	 */
+	public function render_faqs_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$action    = isset( $_GET['action'] ) ? sanitize_text_field( (string) $_GET['action'] ) : 'list'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$edit_id   = isset( $_GET['faq_id'] ) ? sanitize_text_field( (string) $_GET['faq_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$page      = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$per_page  = 20;
+		$search    = isset( $_GET['s'] ) ? sanitize_text_field( (string) $_GET['s'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$category  = isset( $_GET['category'] ) ? sanitize_text_field( (string) $_GET['category'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		$editing_faq = null;
+		if ( 'edit' === $action && ! empty( $edit_id ) ) {
+			$editing_faq = $this->faq_repo->get_by_public_id( $edit_id );
+		}
+
+		$filters = [
+			'search'   => $search,
+			'category' => $category,
+		];
+
+		$pagination = $this->faq_repo->paginate( $page, $per_page, $filters );
+		$categories = $this->faq_repo->get_categories();
+		$base_url   = admin_url( 'admin.php?page=' . self::FAQS_MENU_SLUG );
+
+		include GCA_PLUGIN_DIR . 'templates/admin/faqs.php';
+	}
+
+	/**
+	 * Handles POST action to create a new FAQ.
+	 */
+	public function handle_create_faq(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		check_admin_referer( 'gca_create_faq' );
+
+		$question     = isset( $_POST['question'] ) ? mb_substr( sanitize_text_field( (string) $_POST['question'] ), 0, 500, 'UTF-8' ) : '';
+		$answer       = isset( $_POST['answer'] ) ? mb_substr( sanitize_textarea_field( (string) $_POST['answer'] ), 0, 10000, 'UTF-8' ) : '';
+		$category     = ! empty( $_POST['category'] ) ? sanitize_text_field( (string) $_POST['category'] ) : null;
+		$is_active    = ! empty( $_POST['is_active'] ) ? 1 : 0;
+		$show_on_home = ! empty( $_POST['show_on_home'] ) ? 1 : 0;
+		$sort_order   = isset( $_POST['sort_order'] ) ? (int) $_POST['sort_order'] : 0;
+
+		if ( empty( $question ) || empty( $answer ) ) {
+			wp_die( esc_html__( 'Question and answer are required.', 'gemini-chat-assistant' ) );
+		}
+
+		$faq = $this->faq_repo->create( [
+			'question'     => $question,
+			'answer'       => $answer,
+			'category'     => $category,
+			'is_active'    => $is_active,
+			'show_on_home' => $show_on_home,
+			'sort_order'   => $sort_order,
+		] );
+
+		if ( $faq && $this->knowledge_indexer ) {
+			$this->knowledge_indexer->index_faq( $faq );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::FAQS_MENU_SLUG, 'created' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to update an existing FAQ.
+	 */
+	public function handle_update_faq(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$public_id = isset( $_POST['faq_id'] ) ? sanitize_text_field( (string) $_POST['faq_id'] ) : '';
+		check_admin_referer( 'gca_update_faq_' . $public_id );
+
+		$existing = $this->faq_repo->get_by_public_id( $public_id );
+		if ( ! $existing ) {
+			wp_die( esc_html__( 'FAQ not found.', 'gemini-chat-assistant' ) );
+		}
+
+		$question     = isset( $_POST['question'] ) ? mb_substr( sanitize_text_field( (string) $_POST['question'] ), 0, 500, 'UTF-8' ) : '';
+		$answer       = isset( $_POST['answer'] ) ? mb_substr( sanitize_textarea_field( (string) $_POST['answer'] ), 0, 10000, 'UTF-8' ) : '';
+		$category     = array_key_exists( 'category', $_POST ) ? sanitize_text_field( (string) $_POST['category'] ) : null;
+		$is_active    = ! empty( $_POST['is_active'] ) ? 1 : 0;
+		$show_on_home = ! empty( $_POST['show_on_home'] ) ? 1 : 0;
+		$sort_order   = isset( $_POST['sort_order'] ) ? (int) $_POST['sort_order'] : 0;
+
+		$this->faq_repo->update( (int) $existing['id'], [
+			'question'     => $question,
+			'answer'       => $answer,
+			'category'     => $category,
+			'is_active'    => $is_active,
+			'show_on_home' => $show_on_home,
+			'sort_order'   => $sort_order,
+		] );
+
+		$updated_faq = $this->faq_repo->get_by_id( (int) $existing['id'] );
+		if ( $updated_faq && $this->knowledge_indexer ) {
+			$this->knowledge_indexer->index_faq( $updated_faq );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::FAQS_MENU_SLUG, 'updated' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to delete an FAQ.
+	 */
+	public function handle_delete_faq(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$public_id = isset( $_POST['faq_id'] ) ? sanitize_text_field( (string) $_POST['faq_id'] ) : '';
+		check_admin_referer( 'gca_delete_faq_' . $public_id );
+
+		if ( ! empty( $public_id ) ) {
+			$this->faq_repo->delete_by_public_id( $public_id );
+			if ( $this->knowledge_repo ) {
+				$this->knowledge_repo->delete_source_by_faq( $public_id );
+			}
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::FAQS_MENU_SLUG, 'deleted' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to toggle active status of an FAQ.
+	 */
+	public function handle_toggle_faq_active(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$public_id = isset( $_POST['faq_id'] ) ? sanitize_text_field( (string) $_POST['faq_id'] ) : '';
+		check_admin_referer( 'gca_toggle_faq_' . $public_id );
+
+		$existing = $this->faq_repo->get_by_public_id( $public_id );
+		if ( $existing ) {
+			$new_active = ! empty( $existing['is_active'] ) ? 0 : 1;
+			$this->faq_repo->update( (int) $existing['id'], [ 'is_active' => $new_active ] );
+
+			$updated = $this->faq_repo->get_by_id( (int) $existing['id'] );
+			if ( $updated && $this->knowledge_indexer ) {
+				$this->knowledge_indexer->index_faq( $updated );
+			}
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::FAQS_MENU_SLUG, 'toggled' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Renders the Knowledge Management and Indexing page.
+	 */
+	public function render_knowledge_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$counts      = $this->knowledge_repo->get_counts();
+		$settings    = SettingsService::get_all();
+		$base_url    = admin_url( 'admin.php?page=' . self::KNOWLEDGE_MENU_SLUG );
+		$search_test = isset( $_GET['test_query'] ) ? sanitize_text_field( (string) $_GET['test_query'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		$test_results = [];
+		if ( '' !== $search_test && $this->knowledge_retriever ) {
+			$test_results = $this->knowledge_retriever->retrieve( $search_test );
+		}
+
+		include GCA_PLUGIN_DIR . 'templates/admin/knowledge.php';
+	}
+
+	/**
+	 * Handles POST action to synchronize knowledge index.
+	 */
+	public function handle_sync_knowledge(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		check_admin_referer( 'gca_sync_knowledge' );
+
+		$result = [ 'indexed' => 0, 'total_chunks' => 0 ];
+		if ( $this->knowledge_indexer ) {
+			$result = $this->knowledge_indexer->sync_all();
+		}
+
+		wp_safe_redirect( add_query_arg( [
+			'page'    => self::KNOWLEDGE_MENU_SLUG,
+			'synced'  => 1,
+			'indexed' => $result['indexed'] ?? 0,
+			'chunks'  => $result['total_chunks'] ?? 0,
+		], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to clear the knowledge index.
+	 */
+	public function handle_clear_knowledge(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		check_admin_referer( 'gca_clear_knowledge' );
+
+		if ( $this->knowledge_repo ) {
+			$this->knowledge_repo->clear_index();
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::KNOWLEDGE_MENU_SLUG, 'cleared' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to save knowledge configuration settings.
+	 */
+	public function handle_save_knowledge_settings(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		check_admin_referer( 'gca_save_knowledge_settings' );
+
+		$current = SettingsService::get_all();
+
+		$current['knowledge_enabled']          = ! empty( $_POST['knowledge_enabled'] );
+		$current['knowledge_pages_enabled']    = ! empty( $_POST['knowledge_pages_enabled'] );
+		$current['knowledge_posts_enabled']    = ! empty( $_POST['knowledge_posts_enabled'] );
+		$current['knowledge_products_enabled'] = ! empty( $_POST['knowledge_products_enabled'] );
+		$current['knowledge_faqs_enabled']     = ! empty( $_POST['knowledge_faqs_enabled'] );
+
+		$max_chunks = isset( $_POST['knowledge_max_chunks'] ) ? absint( $_POST['knowledge_max_chunks'] ) : 4;
+		$current['knowledge_max_chunks'] = max( 1, min( 8, $max_chunks ) );
+
+		$max_chars = isset( $_POST['knowledge_max_context_chars'] ) ? absint( $_POST['knowledge_max_context_chars'] ) : 6000;
+		$current['knowledge_max_context_chars'] = max( 500, min( 12000, $max_chars ) );
+
+		update_option( SettingsService::OPTION_KEY, $current );
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::KNOWLEDGE_MENU_SLUG, 'saved' => 1 ], admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }

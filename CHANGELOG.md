@@ -5,6 +5,27 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0-N16] - 2026-09-07
+### Added
+- Native WordPress FAQ System:
+  - Database table `{$wpdb->prefix}gca_faqs` managed via `Migrator` (schema v1.2.0) supporting question, answer, category, sort order, active status, and home visibility.
+  - Data access layer `includes/Database/FaqRepository.php` providing CRUD operations, pagination, search, category filtering, active FAQs listing, and home FAQs retrieval.
+  - WordPress Admin FAQ Management module (`templates/admin/faqs.php`) accessible via submenu `Gemini Chat -> FAQs` (`gca-faqs`) with search, filter by category, inline add/edit modal, active status toggle, and deletion.
+  - Public chat widget Home screen integration: renders active "Quick Help" FAQ buttons. Clicking opens Screen 4 (`gca-screen--faq`) displaying the full answer with static zero-token DOM rendering (zero Gemini API calls).
+- Native WordPress Website Knowledge / RAG Engine:
+  - Database tables `{$wpdb->prefix}gca_knowledge_sources` and `{$wpdb->prefix}gca_knowledge_chunks` with compound indexing and foreign key cascade deletion.
+  - Data access layer `includes/Database/KnowledgeRepository.php` handling source sync, chunk insertion/querying, candidate lexical search, and total chunk/source statistics.
+  - Native Indexer `includes/Knowledge/KnowledgeIndexer.php`: content normalization (strips shortcodes without execution, removes HTML and Gutenberg comments), SHA-256 deduplication, multibyte sentence-aware chunking (target ~1,600 chars, 200 overlap), and lifecycle hooks on `save_post`, `before_delete_post`, and `transition_post_status`. Only published, public, non-password-protected Pages/Posts/FAQs/Products (textual only) are indexed.
+  - Deterministic Lexical Retriever `includes/Knowledge/KnowledgeRetriever.php`: MySQL-based lexical candidate matching with stopword filtering, term frequency scoring, exact phrase boosting, title matching, FAQ item boost, relevance thresholding, top-K clamping (1–8), and context budget enforcement (500–12000 chars).
+  - Knowledge Context Builder `includes/Knowledge/KnowledgeContextBuilder.php`: formats retrieved chunks into untrusted reference data blocks enclosed in explicit safety delimiters, with instructions compelling the LLM to treat content as passive facts, resist prompt-injection overrides, and provide clean source attribution.
+  - ChatService integration: automatically grounds system prompt with retrieved context when `knowledge_enabled = true`, seamlessly preserving active N15 AI Profile persona and rules.
+  - WordPress Admin Knowledge screen (`templates/admin/knowledge.php`) accessible via submenu `Gemini Chat -> Knowledge` (`gca-knowledge`) with live chunk counts, source toggles, manual sync, index clearing, and retrieval test tool.
+- Comprehensive test suites:
+  - `tests/test-faqs.php`: repository CRUD, XSS protection, length capping, sort ordering, search, and home filtering.
+  - `tests/test-knowledge-indexer.php`: normalization, shortcode stripping, chunking boundaries, SHA-256 deduplication, status/password exclusions.
+  - `tests/test-knowledge-retriever.php`: query tokenization, stopwords, candidate scoring, FAQ boost, phrase match boost, thresholding.
+  - `tests/test-rag-context.php`: untrusted framing delimiters, prompt-injection defense containment, attribution formatting, zero HTML, N15 profile preservation.
+
 ## [1.0.0-N15] - 2026-09-07
 ### Added
 - WordPress-native AI Profiles & Custom Prompts module (`includes/Admin/ProfileService.php`, `templates/admin/ai-assistant.php`, `templates/admin/ai-profile-edit.php`) accessible via submenu `Gemini Chat -> AI Assistant` (`gca-ai-assistant`).

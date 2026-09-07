@@ -28,7 +28,13 @@
 - **`DatabaseMigrationTest.php`:** Runs `Migrator::migrate()` against a test database and asserts that table structures, indexes, and foreign keys are created correctly.
 - **`ShortcodeTest.php`:** Verifies that `[gemini_chat]` properly enqueues styles and scripts with localized nonces.
 
-### 2.3 Static Analysis & Linting
+### 2.3 Knowledge & FAQ Test Suites (`tests/`)
+- **`test-faqs.php`:** Verifies FAQ Repository CRUD, table constants, XSS sanitization (`wp_kses_post`), question/category length capping, active/home filtering, sort ordering, and search filtering.
+- **`test-knowledge-indexer.php`:** Verifies HTML tag stripping, shortcode stripping without execution, Gutenberg block comment removal, multibyte sentence chunking boundaries, chunk count limits, content deduplication via SHA-256 hashes, and non-public post status exclusion.
+- **`test-knowledge-retriever.php`:** Verifies query tokenization, stopword removal, candidate scoring (exact phrase matches, title matches, FAQ boosts), irrelevant query rejection, relevance thresholding, and budget enforcement.
+- **`test-rag-context.php`:** Verifies untrusted context framing delimiters, prompt-injection defense containment, source attribution formatting, HTML exclusion in context output, and seamless N15 AI Profile persona/rules preservation.
+
+### 2.4 Static Analysis & Linting
 - **PHP_CodeSniffer (PHPCS):** WordPress-Core, WordPress-Extra, and WordPress-Docs standards.
 - **PHPStan:** Level 8 static analysis for strict typing and null safety.
 - **ESLint / Prettier:** Linting and formatting for JavaScript and CSS assets.

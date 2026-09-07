@@ -30,7 +30,15 @@ gemini-chat-assistant/
 │   │   ├── Migrator.php
 │   │   ├── ConversationRepository.php
 │   │   ├── MessageRepository.php
-│   │   └── LogRepository.php
+│   │   ├── LogRepository.php
+│   │   ├── LeadRepository.php
+│   │   ├── AnalyticsRepository.php
+│   │   ├── FaqRepository.php
+│   │   └── KnowledgeRepository.php
+│   ├── Knowledge/
+│   │   ├── KnowledgeIndexer.php
+│   │   ├── KnowledgeRetriever.php
+│   │   └── KnowledgeContextBuilder.php
 │   ├── REST/
 │   │   ├── RestServer.php
 │   │   ├── ChatController.php
@@ -51,6 +59,14 @@ gemini-chat-assistant/
 │   ├── admin/
 │   │   ├── ai-assistant.php
 │   │   ├── ai-profile-edit.php
+│   │   ├── appearance.php
+│   │   ├── conversations.php
+│   │   ├── conversation-detail.php
+│   │   ├── leads.php
+│   │   ├── lead-detail.php
+│   │   ├── analytics.php
+│   │   ├── faqs.php
+│   │   ├── knowledge.php
 │   │   ├── dashboard.php
 │   │   ├── settings.php
 │   │   ├── logs.php
@@ -68,6 +84,10 @@ gemini-chat-assistant/
 │   │   ├── RestRoutesTest.php
 │   │   ├── ShortcodeTest.php
 │   │   └── DatabaseMigrationTest.php
+│   ├── test-faqs.php
+│   ├── test-knowledge-indexer.php
+│   ├── test-knowledge-retriever.php
+│   ├── test-rag-context.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig

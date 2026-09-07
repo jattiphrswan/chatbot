@@ -1001,6 +1001,201 @@
 	border: 0;
 }
 
+/* -------------------------------------------------------------------------
+ * Quick Help FAQs & FAQ Detail Screen (N16)
+ * ------------------------------------------------------------------------- */
+.gca-quick-help {
+	margin-top: 20px;
+}
+
+.gca-quick-help__title {
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--gca-text-muted);
+	margin: 0 0 10px 0;
+}
+
+.gca-quick-help__list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.gca-quick-help__item {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.gca-faq-trigger {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 14px;
+	border: 1px solid var(--gca-border);
+	border-radius: var(--gca-radius-sm);
+	background-color: var(--gca-surface);
+	color: var(--gca-text-primary);
+	font-size: 13.5px;
+	font-weight: 500;
+	text-align: left;
+	cursor: pointer;
+	transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+	outline: none;
+	font-family: inherit;
+}
+
+.gca-faq-trigger:hover {
+	background-color: var(--gca-ai-bubble-bg);
+	border-color: var(--gca-primary);
+	transform: translateY(-1px);
+}
+
+.gca-faq-trigger:focus-visible {
+	outline: 2px solid var(--gca-primary);
+	outline-offset: 1px;
+}
+
+.gca-faq-trigger__text {
+	flex: 1;
+	padding-right: 8px;
+	line-height: 1.35;
+}
+
+.gca-faq-trigger__arrow {
+	flex-shrink: 0;
+	color: var(--gca-text-muted);
+	transition: transform 0.15s ease;
+}
+
+.gca-faq-trigger:hover .gca-faq-trigger__arrow {
+	transform: translateX(2px);
+	color: var(--gca-primary);
+}
+
+/* FAQ Detail Screen */
+.gca-screen--faq {
+	display: none;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+
+.gca-screen--faq.gca-screen--active {
+	display: flex;
+}
+
+.gca-faq-detail {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+	background-color: var(--gca-surface);
+}
+
+.gca-faq-detail__header {
+	padding: 10px 16px;
+	border-bottom: 1px solid var(--gca-border-subtle);
+	flex-shrink: 0;
+}
+
+.gca-faq-detail__back {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: transparent;
+	border: none;
+	padding: 4px 8px;
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--gca-primary);
+	cursor: pointer;
+	border-radius: var(--gca-radius-sm);
+	transition: background-color 0.15s ease;
+	font-family: inherit;
+}
+
+.gca-faq-detail__back:hover {
+	background-color: var(--gca-border-subtle);
+}
+
+.gca-faq-detail__back:focus-visible {
+	outline: 2px solid var(--gca-primary);
+	outline-offset: 1px;
+}
+
+.gca-faq-detail__body {
+	flex: 1;
+	padding: 18px 20px;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.gca-faq-detail__question {
+	font-size: 16.5px;
+	font-weight: 700;
+	color: var(--gca-text-primary);
+	margin: 0 0 14px 0;
+	line-height: 1.4;
+	outline: none;
+}
+
+.gca-faq-detail__answer {
+	font-size: 14px;
+	color: var(--gca-text-secondary);
+	line-height: 1.6;
+	word-break: break-word;
+}
+
+.gca-faq-detail__answer p {
+	margin: 0 0 12px 0;
+}
+
+.gca-faq-detail__answer p:last-child {
+	margin-bottom: 0;
+}
+
+.gca-faq-detail__footer {
+	padding: 14px 20px;
+	border-top: 1px solid var(--gca-border-subtle);
+	background-color: var(--gca-surface);
+	flex-shrink: 0;
+	text-align: center;
+}
+
+.gca-faq-detail__cta-text {
+	font-size: 12px;
+	color: var(--gca-text-muted);
+	margin: 0 0 8px 0;
+}
+
+.gca-faq-detail__start-btn {
+	width: 100%;
+	padding: 10px 16px;
+	font-size: 13.5px;
+	font-weight: 600;
+	border-radius: var(--gca-radius-sm);
+	background-color: var(--gca-primary);
+	color: #ffffff;
+	border: none;
+	cursor: pointer;
+	transition: background-color 0.15s ease, opacity 0.15s ease;
+	font-family: inherit;
+}
+
+.gca-faq-detail__start-btn:hover {
+	opacity: 0.92;
+}
+
+.gca-faq-detail__start-btn:focus-visible {
+	outline: 2px solid var(--gca-primary);
+	outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.gca-widget,
 	.gca-launcher,
@@ -1010,12 +1205,14 @@
 	.gca-composer__send,
 	.gca-scroll-bottom,
 	.gca-confirm-dialog__card,
-	.gca-launcher__badge {
+	.gca-launcher__badge,
+	.gca-faq-trigger {
 		transition: none !important;
 		animation: none !important;
 	}
 
-	.gca-messages {
+	.gca-messages,
+	.gca-faq-detail__body {
 		scroll-behavior: auto !important;
 	}
 }

@@ -128,9 +128,16 @@
 		const screenHome = widgetElem.querySelector('.gca-screen--home');
 		const screenPrechat = widgetElem.querySelector('.gca-screen--prechat');
 		const screenChat = widgetElem.querySelector('.gca-screen--chat');
+		const screenFaq = widgetElem.querySelector('.gca-screen--faq');
 		const navBtnHome = widgetElem.querySelector('.gca-nav__btn--home');
 		const navBtnChat = widgetElem.querySelector('.gca-nav__btn--chat');
 		const startCard = widgetElem.querySelector('.gca-start-card');
+
+		// FAQ Elements (N16)
+		const faqBackBtn = screenFaq ? screenFaq.querySelector('.gca-faq-detail__back') : null;
+		const faqQuestionElem = screenFaq ? screenFaq.querySelector('.gca-faq-detail__question') : null;
+		const faqAnswerElem = screenFaq ? screenFaq.querySelector('.gca-faq-detail__answer') : null;
+		const faqStartBtn = screenFaq ? screenFaq.querySelector('.gca-faq-detail__start-btn') : null;
 
 		// Pre-chat Elements
 		const prechatForm = widgetElem.querySelector('.gca-prechat-form');
@@ -159,7 +166,7 @@
 		/**
 		 * Switches active screen view.
 		 *
-		 * @param {'home'|'prechat'|'chat'} targetScreen
+		 * @param {'home'|'prechat'|'chat'|'faq'} targetScreen
 		 */
 		function switchScreen(targetScreen) {
 			state.activeScreen = targetScreen;
@@ -167,6 +174,7 @@
 			if (screenHome) screenHome.classList.remove('gca-screen--active');
 			if (screenPrechat) screenPrechat.classList.remove('gca-screen--active');
 			if (screenChat) screenChat.classList.remove('gca-screen--active');
+			if (screenFaq) screenFaq.classList.remove('gca-screen--active');
 
 			if (targetScreen === 'chat') {
 				if (screenChat) screenChat.classList.add('gca-screen--active');
@@ -200,6 +208,21 @@
 							firstInput.focus();
 						}, 100);
 					}
+				}
+			} else if (targetScreen === 'faq') {
+				if (screenFaq) screenFaq.classList.add('gca-screen--active');
+				if (navBtnHome) {
+					navBtnHome.classList.add('gca-nav__btn--active');
+					navBtnHome.removeAttribute('aria-current');
+				}
+				if (navBtnChat) {
+					navBtnChat.classList.remove('gca-nav__btn--active');
+					navBtnChat.removeAttribute('aria-current');
+				}
+				if (faqBackBtn) {
+					setTimeout(function () {
+						faqBackBtn.focus();
+					}, 100);
 				}
 			} else {
 				if (screenHome) screenHome.classList.add('gca-screen--active');
@@ -898,6 +921,51 @@
 				const prechat = config.prechat || {};
 				if (prechat.enabled && !state.prechatCompleted) {
 					switchScreen('prechat');
+				} else {
+					switchScreen('chat');
+				}
+			});
+		}
+
+		// Quick Help FAQ Trigger Listeners (N16)
+		const faqTriggers = widgetElem.querySelectorAll('.gca-faq-trigger');
+		faqTriggers.forEach(function (trigger) {
+			trigger.addEventListener('click', function () {
+				const question = trigger.dataset.question || (trigger.querySelector('.gca-faq-trigger__text') ? trigger.querySelector('.gca-faq-trigger__text').textContent : '');
+				const template = trigger.parentElement ? trigger.parentElement.querySelector('.gca-faq-template-answer') : null;
+				const rawAnswer = template ? (template.textContent || template.innerHTML || '') : '';
+
+				if (faqQuestionElem) {
+					faqQuestionElem.textContent = question;
+				}
+				if (faqAnswerElem) {
+					faqAnswerElem.textContent = '';
+					const paragraphs = rawAnswer.split(/\n\s*\n/);
+					paragraphs.forEach(function (pText) {
+						pText = pText.trim();
+						if (!pText) return;
+						const p = document.createElement('p');
+						p.textContent = pText;
+						faqAnswerElem.appendChild(p);
+					});
+				}
+
+				switchScreen('faq');
+			});
+		});
+
+		// FAQ Back Button Listener
+		if (faqBackBtn) {
+			faqBackBtn.addEventListener('click', function () {
+				switchScreen('home');
+			});
+		}
+
+		// FAQ Detail CTA "Start a Conversation" Button
+		if (faqStartBtn) {
+			faqStartBtn.addEventListener('click', function () {
+				if (startCard) {
+					startCard.click();
 				} else {
 					switchScreen('chat');
 				}

@@ -9,6 +9,13 @@
 | `Migrator` | `SkyFish\GeminiChat\Database` | Runs `dbDelta()` to create or upgrade `wp_gca_*` tables. | `$wpdb`, `wp-admin/includes/upgrade.php` |
 | `ConversationRepository` | `SkyFish\GeminiChat\Database` | Handles CRUD operations for `wp_gca_conversations`. | `$wpdb` |
 | `MessageRepository` | `SkyFish\GeminiChat\Database` | Handles CRUD operations for `wp_gca_messages`. | `$wpdb` |
+| `LeadRepository` | `SkyFish\GeminiChat\Database` | Handles CRUD operations for `wp_gca_leads`. | `$wpdb` |
+| `AnalyticsRepository` | `SkyFish\GeminiChat\Database` | Computes KPIs and trends across conversations and messages. | `$wpdb` |
+| `FaqRepository` | `SkyFish\GeminiChat\Database` | Handles CRUD, search, pagination, and Home queries for `wp_gca_faqs`. | `$wpdb` |
+| `KnowledgeRepository` | `SkyFish\GeminiChat\Database` | Handles sources, chunks, and candidate search for `wp_gca_knowledge_*`. | `$wpdb` |
+| `KnowledgeIndexer` | `SkyFish\GeminiChat\Knowledge` | Content extraction, normalization, hashing, multibyte chunking, and sync hooks. | `KnowledgeRepository`, `FaqRepository`, `SettingsService` |
+| `KnowledgeRetriever` | `SkyFish\GeminiChat\Knowledge` | Lexical search, candidate scoring, top-K clamping, and budget limits. | `KnowledgeRepository`, `SettingsService` |
+| `KnowledgeContextBuilder` | `SkyFish\GeminiChat\Knowledge` | Structured untrusted reference context framing and prompt-injection defense. | None |
 | `LogRepository` | `SkyFish\GeminiChat\Database` | Writes logs to `wp_gca_logs`. | `$wpdb` |
 | `GeminiClient` | `SkyFish\GeminiChat\Services` | Makes HTTP calls to Google Gemini API endpoints. | `wp_remote_post`, `Encryption` |
 | `ContextManager` | `SkyFish\GeminiChat\Services` | Compiles conversation history into Gemini format. | `MessageRepository`, `TokenCounter` |

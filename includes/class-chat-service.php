@@ -32,16 +32,20 @@ class ChatService {
 	private MessageRepository $message_repo;
 	private GeminiClient $gemini_client;
 	private ProfileService $profile_service;
+	private ?Knowledge\KnowledgeRetriever $knowledge_retriever;
+	private ?Knowledge\KnowledgeContextBuilder $context_builder;
 
 	/**
 	 * ChatService constructor.
 	 *
-	 * @param SettingsService|null        $settings_service  Optional settings service.
-	 * @param SessionService|null         $session_service   Optional session service.
-	 * @param ConversationRepository|null $conversation_repo Optional conversation repository.
-	 * @param MessageRepository|null      $message_repo      Optional message repository.
-	 * @param GeminiClient|null           $gemini_client     Optional Gemini client.
-	 * @param ProfileService|null         $profile_service   Optional profile service.
+	 * @param SettingsService|null                    $settings_service    Optional settings service.
+	 * @param SessionService|null                     $session_service     Optional session service.
+	 * @param ConversationRepository|null             $conversation_repo   Optional conversation repository.
+	 * @param MessageRepository|null                  $message_repo        Optional message repository.
+	 * @param GeminiClient|null                       $gemini_client       Optional Gemini client.
+	 * @param ProfileService|null                     $profile_service     Optional profile service.
+	 * @param Knowledge\KnowledgeRetriever|null       $knowledge_retriever Optional knowledge retriever.
+	 * @param Knowledge\KnowledgeContextBuilder|null  $context_builder     Optional knowledge context builder.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
@@ -49,14 +53,18 @@ class ChatService {
 		?ConversationRepository $conversation_repo = null,
 		?MessageRepository $message_repo = null,
 		?GeminiClient $gemini_client = null,
-		?ProfileService $profile_service = null
+		?ProfileService $profile_service = null,
+		?Knowledge\KnowledgeRetriever $knowledge_retriever = null,
+		?Knowledge\KnowledgeContextBuilder $context_builder = null
 	) {
-		$this->settings_service  = $settings_service ?? SettingsService::get_instance();
-		$this->conversation_repo = $conversation_repo ?? new ConversationRepository();
-		$this->message_repo      = $message_repo ?? new MessageRepository();
-		$this->session_service   = $session_service ?? new SessionService( $this->conversation_repo, $this->message_repo );
-		$this->gemini_client     = $gemini_client ?? new GeminiClient( $this->settings_service );
-		$this->profile_service   = $profile_service ?? new ProfileService( $this->settings_service );
+		$this->settings_service    = $settings_service ?? SettingsService::get_instance();
+		$this->conversation_repo   = $conversation_repo ?? new ConversationRepository();
+		$this->message_repo        = $message_repo ?? new MessageRepository();
+		$this->session_service     = $session_service ?? new SessionService( $this->conversation_repo, $this->message_repo );
+		$this->gemini_client       = $gemini_client ?? new GeminiClient( $this->settings_service );
+		$this->profile_service     = $profile_service ?? new ProfileService( $this->settings_service );
+		$this->knowledge_retriever = $knowledge_retriever ?? new Knowledge\KnowledgeRetriever();
+		$this->context_builder     = $context_builder ?? new Knowledge\KnowledgeContextBuilder();
 	}
 
 	/**
@@ -109,6 +117,17 @@ class ChatService {
 		// 6. Prepare Gemini client request.
 		$model              = SettingsService::get_model();
 		$system_instruction = $this->profile_service->get_effective_system_instruction();
+
+		// Ground system instruction with retrieved website knowledge context (N16 RAG).
+		if ( (bool) $this->settings_service->get( 'knowledge_enabled', false ) && null !== $this->knowledge_retriever && null !== $this->context_builder ) {
+			$chunks = $this->knowledge_retriever->retrieve( $message );
+			if ( ! empty( $chunks ) ) {
+				$rag_context = $this->context_builder->build( $chunks );
+				if ( ! empty( $rag_context ) ) {
+					$system_instruction .= "\n\n" . $rag_context;
+				}
+			}
+		}
 
 		$start_time  = microtime( true );
 		$ai_response = $this->gemini_client->create_interaction(

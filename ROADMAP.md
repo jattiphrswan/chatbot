@@ -35,6 +35,12 @@ flowchart TD
     N2 --> N15[N15: AI Profiles & Custom Prompts]
     N4 --> N15
     N10 --> N15
+    N2 --> N16[N16: FAQ + Website Knowledge/RAG]
+    N3 --> N16
+    N4 --> N16
+    N6 --> N16
+    N10 --> N16
+    N15 --> N16
 ```
 
 ## 2. Approved Node Breakdown
@@ -57,3 +63,4 @@ flowchart TD
 | **N13** | **Appearance Builder** | WordPress-native visual customizer (`gca-appearance`), live mock preview, avatar upload via Media Library, color palette, dimensions/radius clamping, launcher icons, device visibility, safe CSS variable injection, reset to defaults. | **COMPLETED** |
 | **N14** | **Leads & Pre-Chat Capture** | Configurable pre-chat lead capture form (name, email, phone, requirement), server/client validation, Leads database table (`gca_leads`), LeadRepository, LeadService, REST `/prechat` endpoint, conversation association, Admin Leads management (`gca-leads`). | **COMPLETED** |
 | **N15** | **AI Profiles & Custom Prompts** | WordPress-native AI Profile and Prompt Management system (AI Assistant submenu `gca-ai-assistant`, Options API storage `gca_ai_profiles`, active profile selection, role, instructions, tone, response style, rules, fallback message, duplicate, safe delete, migration from legacy system_instruction, centralized prompt builder in `ProfileService`, ChatService integration). | **COMPLETED** |
+| **N16** | **FAQ + Website Knowledge/RAG** | WordPress-native FAQ system (Admin `gca-faqs`, public widget Home quick help items, zero-token static reading, `gca_faqs` table, `FaqRepository`), and Website Knowledge Grounding / RAG (`gca_knowledge_sources`, `gca_knowledge_chunks` tables, `KnowledgeRepository`, `KnowledgeIndexer` with multibyte sentence chunking and SHA-256 deduplication, `KnowledgeRetriever` lexical search and scoring, `KnowledgeContextBuilder` with prompt-injection defense, Admin `gca-knowledge` dashboard, and `ChatService` RAG integration). | **COMPLETED** |

@@ -13,7 +13,15 @@ SkyFish\GeminiChat
 │   ├── Migrator: Manages SQL table creations and version bumps via dbDelta.
 │   ├── ConversationRepository: CRUD operations for `wp_gca_conversations`.
 │   ├── MessageRepository: CRUD operations for `wp_gca_messages`.
+│   ├── LeadRepository: CRUD operations for `wp_gca_leads`.
+│   ├── AnalyticsRepository: Metrics aggregator across messages and conversations.
+│   ├── FaqRepository: CRUD operations, sorting, and Home visibility for `wp_gca_faqs`.
+│   ├── KnowledgeRepository: Sources, chunks, and candidate queries for `wp_gca_knowledge_*`.
 │   └── LogRepository: Append-only logger for `wp_gca_logs`.
+├── Knowledge/
+│   ├── KnowledgeIndexer: Content extraction, normalization, hashing, multibyte chunking, and sync hooks.
+│   ├── KnowledgeRetriever: Lexical tokenization, candidate scoring, top-K clamping, and budget limits.
+│   └── KnowledgeContextBuilder: Structured untrusted reference framing and prompt-injection defense.
 ├── Services/
 │   ├── GeminiClient: HTTP transport wrapper for Google Gemini REST API.
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.
@@ -37,9 +45,10 @@ SkyFish\GeminiChat
 ```
 
 ## 2. Frontend Component Map
-- **ChatWidgetContainer (`frontend-chat.js` / `frontend-chat.css`):**
+- **ChatWidgetContainer (`chat.js` / `chat.css`):**
   - Floating trigger button & badge.
   - Chat window modal with header (bot name, status, reset button, close button).
-  - Message stream list (user bubbles, assistant bubbles, markdown rendered blocks).
-  - Typing / streaming status indicator.
-  - Input form with text input, send button, and keyboard shortcuts (`Enter` to send, `Shift+Enter` for newline).
+  - Home Screen: Greeting, Start a Conversation card, Quick Help FAQ list.
+  - FAQ Detail Screen: Dedicated question view, multiline answer, and "Start a Conversation" CTA.
+  - Pre-Chat Screen: Contact inquiry form with validation and honeypot protection.
+  - Chat Screen: Message stream list, typing status indicator, composer input, autoscroll.

@@ -149,9 +149,24 @@ class SettingsService {
 		$sanitized['collect_requirement'] = ! empty( $input['collect_requirement'] );
 		$sanitized['require_requirement'] = ! empty( $input['require_requirement'] );
 
-		// FAQ.
+		// FAQ (N16).
 		$sanitized['faq_enabled']   = ! empty( $input['faq_enabled'] );
 		$sanitized['faq_show_home'] = ! empty( $input['faq_show_home'] );
+		$faq_limit                  = isset( $input['faq_home_limit'] ) ? absint( $input['faq_home_limit'] ) : ( $defaults['faq_home_limit'] ?? 6 );
+		$sanitized['faq_home_limit'] = max( 1, min( 20, $faq_limit ) );
+
+		// Website Knowledge / RAG (N16).
+		$sanitized['knowledge_enabled']          = ! empty( $input['knowledge_enabled'] );
+		$sanitized['knowledge_pages_enabled']    = ! empty( $input['knowledge_pages_enabled'] );
+		$sanitized['knowledge_posts_enabled']    = ! empty( $input['knowledge_posts_enabled'] );
+		$sanitized['knowledge_products_enabled'] = ! empty( $input['knowledge_products_enabled'] );
+		$sanitized['knowledge_faqs_enabled']     = ! empty( $input['knowledge_faqs_enabled'] );
+
+		$max_chunks = isset( $input['knowledge_max_chunks'] ) ? absint( $input['knowledge_max_chunks'] ) : ( $defaults['knowledge_max_chunks'] ?? 4 );
+		$sanitized['knowledge_max_chunks'] = max( 1, min( 8, $max_chunks ) );
+
+		$max_chars = isset( $input['knowledge_max_context_chars'] ) ? absint( $input['knowledge_max_context_chars'] ) : ( $defaults['knowledge_max_context_chars'] ?? 6000 );
+		$sanitized['knowledge_max_context_chars'] = max( 500, min( 12000, $max_chars ) );
 
 		// Access.
 		$sanitized['guest_access'] = ! empty( $input['guest_access'] );

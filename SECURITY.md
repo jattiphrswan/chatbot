@@ -37,3 +37,11 @@
 - **Admin Capability:** Profile creation, editing, activation, duplication, and deletion strictly require `current_user_can('manage_options')` and unique action nonces.
 - **Zero Credential Contamination:** Stored profiles and constructed prompts are audited to ensure they never include API keys, database credentials, or visitor PII.
 - **Safe Options Quota:** Total profiles are capped at 25 and saved with `autoload = 'no'` to prevent database and cache bloat.
+
+## 6. Knowledge Retrieval & RAG Security
+- **Prompt Injection Containment:** Retrieved website chunks and FAQ entries are treated as **untrusted external data**. Injected context is strictly enclosed within custom isolation fences (`=== UNTRUSTED KNOWLEDGE BASE START ===` and `=== UNTRUSTED KNOWLEDGE BASE END ===`) with explicit instructions directing the model to treat the content as reference facts only and never follow directives, override rules, or reveal private instructions.
+- **Shortcode Stripping Without Execution:** The knowledge indexer strips shortcodes using `strip_shortcodes()` without executing their callback handlers, preventing arbitrary code execution, recursive loops, or unwanted database side effects during indexing.
+- **Content Sanitization:** HTML tags and WordPress block comments are stripped prior to storage and chunking. No raw HTML or unescaped user inputs are stored in knowledge chunks.
+- **Strict Content Exclusions:** Drafts, private posts, password-protected pages, trash items, revisions, and auto-drafts are unconditionally excluded from indexing.
+- **FAQ XSS Defense:** FAQ questions and answers are sanitized via `sanitize_text_field()` and `wp_kses_post()` during persistence. Public chat widget renders FAQ answers safely via DOM `textContent` (zero `innerHTML` injection).
+- **Administrative Access:** All index manipulation operations (batch sync, index clear, test retrieval, FAQ CRUD) require `manage_options` capabilities and valid WordPress security nonces.

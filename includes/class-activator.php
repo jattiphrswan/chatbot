@@ -54,9 +54,19 @@ class Activator {
 			'collect_requirement'   => false,
 			'require_requirement'   => false,
 
-			// FAQ.
-			'faq_enabled'           => false,
-			'faq_show_home'         => false,
+			// FAQ (N16).
+			'faq_enabled'                => false,
+			'faq_show_home'              => false,
+			'faq_home_limit'             => 6,
+
+			// Website Knowledge / RAG (N16).
+			'knowledge_enabled'          => false,
+			'knowledge_pages_enabled'    => true,
+			'knowledge_posts_enabled'    => true,
+			'knowledge_products_enabled' => false,
+			'knowledge_faqs_enabled'     => true,
+			'knowledge_max_chunks'       => 4,
+			'knowledge_max_context_chars'=> 6000,
 
 			// Access.
 			'guest_access'          => true,
