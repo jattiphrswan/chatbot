@@ -7,6 +7,11 @@
 
 namespace SkyFish\GeminiChat;
 
+use SkyFish\GeminiChat\Providers\ClaudeProvider;
+use SkyFish\GeminiChat\Providers\GeminiProvider;
+use SkyFish\GeminiChat\Providers\OpenAIProvider;
+use SkyFish\GeminiChat\Providers\ProviderRegistry;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -23,6 +28,13 @@ class Plugin {
 	 * @var Plugin|null
 	 */
 	private static ?Plugin $instance = null;
+
+	/**
+	 * The AI provider registry.
+	 *
+	 * @var ProviderRegistry|null
+	 */
+	private ?ProviderRegistry $provider_registry = null;
 
 	/**
 	 * Gets the singleton instance.
@@ -42,13 +54,47 @@ class Plugin {
 	private function __construct() {
 		$this->load_dependencies();
 		$this->set_locale();
+		$this->init_providers();
 	}
 
 	/**
 	 * Loads required dependencies.
 	 */
 	private function load_dependencies(): void {
-		// Future node classes will be loaded here.
+		// Load Provider Abstraction.
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderInterface.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderResponse.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderException.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderRegistry.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/GeminiProvider.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIProvider.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ClaudeProvider.php';
+	}
+
+	/**
+	 * Initializes and registers default AI providers.
+	 */
+	private function init_providers(): void {
+		if ( null !== $this->provider_registry ) {
+			return;
+		}
+
+		$this->provider_registry = new ProviderRegistry();
+		$this->provider_registry->register( new GeminiProvider() );
+		$this->provider_registry->register( new OpenAIProvider() );
+		$this->provider_registry->register( new ClaudeProvider() );
+	}
+
+	/**
+	 * Safe accessor to the AI provider registry.
+	 *
+	 * @return ProviderRegistry
+	 */
+	public function get_provider_registry(): ProviderRegistry {
+		if ( null === $this->provider_registry ) {
+			$this->init_providers();
+		}
+		return $this->provider_registry;
 	}
 
 	/**

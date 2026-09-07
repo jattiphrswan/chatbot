@@ -105,3 +105,21 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 | - Generates completions based on system + conversation data |
 +-------------------------------------------------------------+
 ```
+
+## 4. Multi-Provider AI Architecture
+
+```
+Browser
+  ↓
+WordPress Chat Layer
+  ↓
+ProviderRegistry
+  ↓
+ProviderInterface
+  ├── GeminiProvider
+  ├── OpenAIProvider
+  └── ClaudeProvider
+```
+
+The system employs a provider abstraction layer decoupling conversational controllers from concrete AI vendor SDKs. The `ProviderRegistry` resolves implementations of `ProviderInterface` (`GeminiProvider`, `OpenAIProvider`, `ClaudeProvider`) dynamically based on administrator configuration, ensuring normalized input formatting and response structures via `ProviderResponse`.
+
