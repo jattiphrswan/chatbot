@@ -1,6 +1,6 @@
 <?php
 /**
- * OpenAI Provider Adapter.
+ * OpenAI Provider Adapter (N16 Placeholder).
  *
  * @package SkyFish\GeminiChat\Providers
  */
@@ -15,7 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class OpenAIProvider
  *
- * Adapter for OpenAI models (GPT-4o, GPT-4o-mini).
+ * Adapter placeholder for OpenAI models (GPT-4o, GPT-4o-mini).
+ * In N16, live outbound HTTP calls are intentionally disabled and deferred.
  */
 class OpenAIProvider implements ProviderInterface {
 
@@ -36,32 +37,49 @@ class OpenAIProvider implements ProviderInterface {
 	}
 
 	/**
-	 * Returns array of supported OpenAI models with metadata.
+	 * Returns array of supported OpenAI models with normalized metadata.
 	 *
-	 * @return array<int, array{id: string, name: string, context_window: int, max_output_tokens: int, description: string}>
+	 * @return array<int, array{
+	 *     id: string,
+	 *     name: string,
+	 *     provider: string,
+	 *     capabilities: string[],
+	 *     context_window: int,
+	 *     max_output_tokens: int,
+	 *     supports_streaming: bool,
+	 *     supports_images: bool,
+	 *     supports_tools: bool,
+	 *     status: string,
+	 *     description: string
+	 * }>
 	 */
 	public function get_models(): array {
 		return [
 			[
-				'id'                => 'gpt-4o',
-				'name'              => 'GPT-4o',
-				'context_window'    => 128000,
-				'max_output_tokens' => 4096,
-				'description'       => 'Flagship omni-model for complex tasks and fast general intelligence.',
+				'id'                 => 'gpt-4o',
+				'name'               => 'GPT-4o',
+				'provider'           => self::PROVIDER_ID,
+				'capabilities'       => [ 'chat', 'multimodal' ],
+				'context_window'     => 128000,
+				'max_output_tokens'  => 4096,
+				'supports_streaming' => false,
+				'supports_images'    => true,
+				'supports_tools'     => false,
+				'status'             => 'placeholder',
+				'description'        => 'Flagship omni-model for general intelligence (placeholder in N16).',
 			],
 			[
-				'id'                => 'gpt-4o-mini',
-				'name'              => 'GPT-4o mini',
-				'context_window'    => 128000,
-				'max_output_tokens' => 4096,
-				'description'       => 'Cost-effective small model for lightweight conversational workflows.',
-			],
-			[
-				'id'                => 'gpt-4-turbo',
-				'name'              => 'GPT-4 Turbo',
-				'context_window'    => 128000,
-				'max_output_tokens' => 4096,
-				'description'       => 'High-intelligence model for vision and broad reasoning tasks.',
+				'id'                 => 'gpt-4o-mini',
+				'name'               => 'GPT-4o mini',
+				'provider'           => self::PROVIDER_ID,
+				'capabilities'       => [ 'chat' ],
+				'context_window'     => 128000,
+				'max_output_tokens'  => 4096,
+				'supports_streaming' => false,
+				'supports_images'    => true,
+				'supports_tools'     => false,
+				'status'             => 'placeholder',
+				'description'        => 'Cost-effective small model for lightweight workflows (placeholder in N16).',
 			],
 		];
 	}
@@ -69,7 +87,7 @@ class OpenAIProvider implements ProviderInterface {
 	/**
 	 * Processes a chat interaction.
 	 *
-	 * In Node 1 foundation, network communication is intentionally unconfigured.
+	 * In N16 foundation, network communication is intentionally unconfigured.
 	 *
 	 * @param array<int, array{role: string, content: string}> $messages Message history.
 	 * @param array<string, mixed>                            $options  Request options.
@@ -79,7 +97,7 @@ class OpenAIProvider implements ProviderInterface {
 	public function chat( array $messages, array $options = [] ): ProviderResponse {
 		throw ProviderException::not_configured(
 			$this->get_id(),
-			'OpenAI API client is not configured yet in Node 1 foundation.'
+			__( 'OpenAI API client is not configured yet in N16 multi-provider foundation. Live integration is deferred.', 'gemini-chat-assistant' )
 		);
 	}
 
@@ -92,7 +110,7 @@ class OpenAIProvider implements ProviderInterface {
 	public function test_connection(): bool {
 		throw ProviderException::not_configured(
 			$this->get_id(),
-			'OpenAI API connection test is not configured yet in Node 1 foundation.'
+			__( 'OpenAI connection testing is deferred to a future node.', 'gemini-chat-assistant' )
 		);
 	}
 }

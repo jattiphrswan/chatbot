@@ -115,19 +115,22 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 ## 4. Multi-Provider AI Architecture
 
 ```
-Browser
-  ↓
-WordPress Chat Layer
-  ↓
-ProviderRegistry
-  ↓
-ProviderInterface
-  ├── GeminiProvider
-  ├── OpenAIProvider
-  └── ClaudeProvider
+                         ProviderRegistry
+                               |
+             +-----------------+-----------------+
+             |                 |                 |
+      GeminiProvider      OpenAIProvider    ClaudeProvider
+             |             (Placeholder)     (Placeholder)
+        GeminiClient
+             |
+        Gemini API
 ```
 
 The system employs a provider abstraction layer decoupling conversational controllers from concrete AI vendor SDKs. The `ProviderRegistry` resolves implementations of `ProviderInterface` (`GeminiProvider`, `OpenAIProvider`, `ClaudeProvider`) dynamically based on administrator configuration, ensuring normalized input formatting and response structures via `ProviderResponse`.
 
-> **V1 IMPLEMENTATION STATUS:**
-> In production v1 (N0 through N15), `ChatService` operates strictly and exclusively with Google Gemini through `GeminiClient`. Multi-provider routing, external OpenAI/Claude keys, and non-Gemini SDKs are not active in runtime.
+- **GeminiProvider:** Wraps `GeminiClient`, adapting normalized messages and runtime options to Google Gemini Interactions API (v1). Retains active production status and serves as the default provider.
+- **OpenAIProvider:** Architectural placeholder in N16. Implements `ProviderInterface`, provides model metadata, and throws controlled `ProviderException::not_configured`. Zero live outbound HTTP requests are performed.
+- **ClaudeProvider:** Architectural placeholder in N16. Implements `ProviderInterface`, provides model metadata, and throws controlled `ProviderException::not_configured`. Zero live outbound HTTP requests are performed.
+
+> **N16 IMPLEMENTATION STATUS:**
+> In N16, `ChatService` routes through `ProviderRegistry`. Google Gemini is the default active provider (`selected_provider = 'gemini'`). Live network integrations for OpenAI and Claude are intentionally deferred to future nodes.

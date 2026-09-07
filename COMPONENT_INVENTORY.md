@@ -14,6 +14,13 @@
 | `ContextManager` | `SkyFish\GeminiChat\Services` | Compiles conversation history into Gemini format. | `MessageRepository`, `TokenCounter` |
 | `TokenCounter` | `SkyFish\GeminiChat\Services` | Estimates token consumption. | None |
 | `PromptBuilder` | `SkyFish\GeminiChat\Services` | Builds prompt with system instructions and page context. | None |
+| `ProviderInterface` | `SkyFish\GeminiChat\Providers` | Contract declaring normalized provider operations. | None |
+| `ProviderRegistry` | `SkyFish\GeminiChat\Providers` | Registers and resolves AI provider adapters. | `ProviderInterface`, `ProviderException` |
+| `ProviderResponse` | `SkyFish\GeminiChat\Providers` | Value object normalizing AI provider completion data. | None |
+| `ProviderException` | `SkyFish\GeminiChat\Providers` | Standardized error encapsulation for provider failures. | `\Exception` |
+| `GeminiProvider` | `SkyFish\GeminiChat\Providers` | Adapts GeminiClient to ProviderInterface. | `GeminiClient`, `ProviderResponse` |
+| `OpenAIProvider` | `SkyFish\GeminiChat\Providers` | Placeholder adapter for OpenAI models (N16). | `ProviderInterface`, `ProviderResponse` |
+| `ClaudeProvider` | `SkyFish\GeminiChat\Providers` | Placeholder adapter for Anthropic Claude models (N16). | `ProviderInterface`, `ProviderResponse` |
 | `Encryption` | `SkyFish\GeminiChat\Security` | Encrypts/decrypts API key using `openssl_encrypt`. | `AUTH_KEY`, `SECURE_AUTH_KEY` |
 | `RateLimiter` | `SkyFish\GeminiChat\Security` | Enforces request rate limits via transients. | WordPress Transients API |
 | `NonceValidator` | `SkyFish\GeminiChat\Security` | Validates `X-WP-Nonce` and capabilities. | `wp_verify_nonce` |

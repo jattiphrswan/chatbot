@@ -1,6 +1,6 @@
 <?php
 /**
- * Anthropic Claude Provider Adapter.
+ * Anthropic Claude Provider Adapter (N16 Placeholder).
  *
  * @package SkyFish\GeminiChat\Providers
  */
@@ -15,7 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class ClaudeProvider
  *
- * Adapter for Anthropic Claude models (Claude 3.5 Sonnet, Haiku, Opus).
+ * Adapter placeholder for Anthropic Claude models (Claude 3.5 Sonnet, Claude 3.5 Haiku).
+ * In N16, live outbound HTTP calls are intentionally disabled and deferred.
  */
 class ClaudeProvider implements ProviderInterface {
 
@@ -36,32 +37,49 @@ class ClaudeProvider implements ProviderInterface {
 	}
 
 	/**
-	 * Returns array of supported Anthropic Claude models with metadata.
+	 * Returns array of supported Anthropic Claude models with normalized metadata.
 	 *
-	 * @return array<int, array{id: string, name: string, context_window: int, max_output_tokens: int, description: string}>
+	 * @return array<int, array{
+	 *     id: string,
+	 *     name: string,
+	 *     provider: string,
+	 *     capabilities: string[],
+	 *     context_window: int,
+	 *     max_output_tokens: int,
+	 *     supports_streaming: bool,
+	 *     supports_images: bool,
+	 *     supports_tools: bool,
+	 *     status: string,
+	 *     description: string
+	 * }>
 	 */
 	public function get_models(): array {
 		return [
 			[
-				'id'                => 'claude-3-5-sonnet-20241022',
-				'name'              => 'Claude 3.5 Sonnet',
-				'context_window'    => 200000,
-				'max_output_tokens' => 8192,
-				'description'       => 'High-intelligence model with strong reasoning, coding, and comprehension.',
+				'id'                 => 'claude-3-5-sonnet-20241022',
+				'name'               => 'Claude 3.5 Sonnet',
+				'provider'           => self::PROVIDER_ID,
+				'capabilities'       => [ 'chat', 'multimodal' ],
+				'context_window'     => 200000,
+				'max_output_tokens'  => 8192,
+				'supports_streaming' => false,
+				'supports_images'    => true,
+				'supports_tools'     => false,
+				'status'             => 'placeholder',
+				'description'        => 'High-intelligence model with strong reasoning (placeholder in N16).',
 			],
 			[
-				'id'                => 'claude-3-5-haiku-20241022',
-				'name'              => 'Claude 3.5 Haiku',
-				'context_window'    => 200000,
-				'max_output_tokens' => 8192,
-				'description'       => 'Ultra-fast lightweight model for low-latency chat interactions.',
-			],
-			[
-				'id'                => 'claude-3-opus-20240229',
-				'name'              => 'Claude 3 Opus',
-				'context_window'    => 200000,
-				'max_output_tokens' => 4096,
-				'description'       => 'Powerful model for deep analysis and nuanced tasks.',
+				'id'                 => 'claude-3-5-haiku-20241022',
+				'name'               => 'Claude 3.5 Haiku',
+				'provider'           => self::PROVIDER_ID,
+				'capabilities'       => [ 'chat' ],
+				'context_window'     => 200000,
+				'max_output_tokens'  => 8192,
+				'supports_streaming' => false,
+				'supports_images'    => true,
+				'supports_tools'     => false,
+				'status'             => 'placeholder',
+				'description'        => 'Ultra-fast lightweight model for low-latency chat (placeholder in N16).',
 			],
 		];
 	}
@@ -69,7 +87,7 @@ class ClaudeProvider implements ProviderInterface {
 	/**
 	 * Processes a chat interaction.
 	 *
-	 * In Node 1 foundation, network communication is intentionally unconfigured.
+	 * In N16 foundation, network communication is intentionally unconfigured.
 	 *
 	 * @param array<int, array{role: string, content: string}> $messages Message history.
 	 * @param array<string, mixed>                            $options  Request options.
@@ -79,7 +97,7 @@ class ClaudeProvider implements ProviderInterface {
 	public function chat( array $messages, array $options = [] ): ProviderResponse {
 		throw ProviderException::not_configured(
 			$this->get_id(),
-			'Anthropic Claude API client is not configured yet in Node 1 foundation.'
+			__( 'Anthropic Claude API client is not configured yet in N16 multi-provider foundation. Live integration is deferred.', 'gemini-chat-assistant' )
 		);
 	}
 
@@ -92,7 +110,7 @@ class ClaudeProvider implements ProviderInterface {
 	public function test_connection(): bool {
 		throw ProviderException::not_configured(
 			$this->get_id(),
-			'Anthropic Claude API connection test is not configured yet in Node 1 foundation.'
+			__( 'Anthropic Claude connection testing is deferred to a future node.', 'gemini-chat-assistant' )
 		);
 	}
 }

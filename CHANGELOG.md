@@ -5,6 +5,20 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N16] - 2026-09-07
+### Added
+- Multi-AI Provider Architecture layer in `includes/Providers/`:
+  - `ProviderInterface`: Normalized contract declaring `get_id()`, `get_name()`, `get_models()`, `chat()`, and `test_connection()`.
+  - `ProviderRegistry`: Central provider resolver managing registration, retrieval, and validation of AI providers.
+  - `ProviderResponse`: Provider-agnostic response object encapsulating generated text, tokens, finish reasons, trace request IDs, and safe metadata.
+  - `ProviderException`: Structured error classifier with standardized error categories (`auth_failed`, `rate_limited`, `timeout`, `invalid_request`, `model_unavailable`, `provider_unavailable`, `malformed_response`, `not_configured`, `generic_error`) with zero secret leakage.
+  - `GeminiProvider`: Full production adapter wrapping `GeminiClient`, translating normalized message history and options, normalizing tokens and finish reasons into `ProviderResponse`, and maintaining default active provider status.
+  - `OpenAIProvider`: Architectural placeholder implementing `ProviderInterface` for OpenAI models (`gpt-4o`, `gpt-4o-mini`), reporting normalized model metadata, throwing controlled `not_configured` exceptions, and performing zero outbound network calls.
+  - `ClaudeProvider`: Architectural placeholder implementing `ProviderInterface` for Anthropic Claude models (`claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`), reporting normalized model metadata, throwing controlled `not_configured` exceptions, and performing zero outbound network calls.
+- Refactored `ChatService`: Resolves active provider via `ProviderRegistry` (`ai_provider` default `'gemini'`) and executes turns through `ProviderInterface`, retaining existing conversation memory, stale interaction recovery, and public REST response contracts.
+- Integrated `ProviderRegistry` into `Plugin` coordinator with `get_provider_registry()` accessor and registered providers (`gemini`, `openai`, `claude`).
+- Full unit test suite in `tests/test-providers.php` covering all 23 provider contract, resolution, exception, security, and compatibility requirements.
+
 ## [1.0.0-N15] - 2026-09-07
 ### Added
 - WordPress-native AI Profiles & Custom Prompts module (`includes/Admin/ProfileService.php`, `templates/admin/ai-assistant.php`, `templates/admin/ai-profile-edit.php`) accessible via submenu `Gemini Chat -> AI Assistant` (`gca-ai-assistant`).
