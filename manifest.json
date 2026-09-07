@@ -55,5 +55,5 @@
     "prompt_injection_defense": true,
     "action_execution_containment": true
   },
-  "roadmap_current_node": "N17 (N17.1 Framework Ready)"
+  "roadmap_current_node": "N17 (N17.2 WooCommerce Read Ready)"
 }

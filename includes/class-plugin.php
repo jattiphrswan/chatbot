@@ -148,6 +148,13 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Integrations/ActionValidator.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Integrations/IntegrationRegistry.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Integrations/ActionExecutor.php';
+
+		// WooCommerce Integration (N17.2).
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/WooCommerce/WooCommerceFormatter.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/WooCommerce/SearchProductsAction.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/WooCommerce/GetProductAction.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/WooCommerce/SearchByCategoryAction.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/WooCommerce/WooCommerceIntegration.php';
 	}
 
 	/**
@@ -438,6 +445,8 @@ class Plugin {
 		static $registry = null;
 		if ( null === $registry ) {
 			$registry = new \SkyFish\GeminiChat\Integrations\IntegrationRegistry();
+			// Register WooCommerce business integration (N17.2).
+			$registry->register( new \SkyFish\GeminiChat\Integrations\WooCommerce\WooCommerceIntegration() );
 		}
 		return $registry;
 	}

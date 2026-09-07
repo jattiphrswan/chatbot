@@ -145,7 +145,7 @@ Combined Prompt: [AI Profile Instructions] + [Website Reference Context]
 4. **WooCommerce Text-Only:** When WooCommerce is active, only textual titles and descriptions are indexed; live prices, stock, and cart actions are reserved for N17.
 5. **Prompt-Injection Defense:** Website content is framed as untrusted reference data with explicit instructions commanding the model to treat it as passive factual data and ignore any embedded override instructions.
 
-## 5. Business Integrations Framework (Node N17.1)
+## 5. Business Integrations Framework & WooCommerce Read Integration (Nodes N17.1 & N17.2)
 
 ```
 External Business Event or Intent
@@ -153,26 +153,28 @@ External Business Event or Intent
     ActionExecutor
              ↓
     IntegrationRegistry
-             ↓
-   Host Integration (IntegrationInterface)
-     - is_available(): bool
-     - is_enabled(): bool
+             ├── WooCommerceIntegration ('woocommerce')
+             │     ├── SearchProductsAction ('woocommerce.search_products') [READ]
+             │     ├── GetProductAction ('woocommerce.get_product') [READ]
+             │     └── SearchByCategoryAction ('woocommerce.search_by_category') [READ]
              ↓
    Input Validation (ActionValidator)
      - string, int, number, bool, enum
      - Discards/rejects rogue arguments
              ↓
    Action Execution (ActionInterface)
-     - Risk: READ | WRITE | EXTERNAL
+     - Native WooCommerce functions (wc_get_products, wc_get_product)
+     - Zero external HTTP APIs, zero credentials
              ↓
-   ActionResult (Normalized Output)
-     - Success / Failure
-     - Zero stack traces, zero credential leakage
+   ActionResult (Normalized Output via WooCommerceFormatter)
+     - Safe arrays: id, name, url, sku, price, sale_price, stock_status, category
+     - Zero stack traces, zero database errors
 ```
 
-### Core Tenets of N17.1:
+### Core Tenets of N17.1 & N17.2:
 1. **Business Services Only:** Integrations connect WordPress services (WooCommerce, handoff, email, contact links), never AI model providers. Gemini remains the sole AI model provider.
 2. **Deterministic Declarative Schemas:** Actions strictly define argument types and bounds. Rogue arguments are rejected before execution.
 3. **Safe Exception Containment:** All action executions are trapped and normalized into `ActionResult` objects. No raw database, HTTP, or PHP exceptions are ever returned to callers.
-4. **No Auto-Execution in N17.1:** The framework establishes contracts and safe pipelines. Autonomous tool-calling loops by Gemini are not active in N17.1.
-5. **Extensibility:** Third-party WordPress plugins can safely register approved integrations using the `gca_register_integrations` action hook.
+4. **No Auto-Execution in N17.1/N17.2:** The framework establishes contracts and safe pipelines. Autonomous tool-calling loops by Gemini are not active.
+5. **Read-Only Scope (N17.2):** Strictly read-only product and catalog queries. Cart, checkout, payment, and order modifications are strictly prohibited.
+6. **Zero External APIs:** WooCommerce queries use native PHP functions (`wc_get_products()`, `wc_get_product()`) without outbound REST HTTP requests.

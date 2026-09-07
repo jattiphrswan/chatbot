@@ -54,3 +54,10 @@
 - **Robust Exception Containment:** `ActionExecutor` wraps all action executions in `try / catch (\Throwable)`. Exceptions return sanitized `ACTION_FAILED` results; raw PHP exception messages, stack traces, and database/server credentials are never exposed.
 - **Zero External Credential Storage in N17.1:** No external API keys, tokens, or webhook secrets are stored in the database or exposed via options in N17.1.
 - **No Multi-Provider AI Architecture:** Integrations represent business services only. Multi-provider AI abstractions remain strictly forbidden; Gemini remains the sole AI model provider.
+
+## 8. WooCommerce Read-Only Integration Security Policy (Node N17.2)
+- **Strict Read-Only Enforcement:** Only `RISK_READ` catalog query actions are provided (`woocommerce.search_products`, `woocommerce.get_product`, `woocommerce.search_by_category`). Operations that mutate WooCommerce state (cart additions, checkout, order generation, payment processing, customer modification) are strictly excluded from the codebase.
+- **Zero Credentials & Native API Calls:** All product queries use WordPress-native PHP functions (`wc_get_products()`, `wc_get_product()`). No WooCommerce REST API consumer keys or secrets are required, stored, or exposed.
+- **Publication Status Filtering:** Only products with `publish` status are returned. Drafts, private products, and trashed items are unconditionally excluded from lookups.
+- **Query Bounds & Denial-of-Service Defense:** Search queries are limited to a maximum of 200 characters and category terms to 100 characters. Result sets are clamped to a hard ceiling of 10 items to prevent memory exhaustion and expensive database joins.
+- **Sanitized Output Normalization:** Output data is filtered through `WooCommerceFormatter`, which strips all HTML tags, sanitizes text fields, formats prices, and produces clean JSON-serializable associative arrays with zero internal objects or sensitive properties exposed.

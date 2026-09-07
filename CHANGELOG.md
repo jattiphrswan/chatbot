@@ -5,6 +5,17 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1-N17.2] - 2026-09-07
+### Added
+- WooCommerce Read-Only Business Integration (`includes/Integrations/WooCommerce/`):
+  - Integration adapter `WooCommerceIntegration` registering under slug `woocommerce` with dynamic availability detection via `class_exists('WooCommerce')` and `function_exists('wc_get_products')`.
+  - Normalization formatter `WooCommerceFormatter` safely extracting product attributes (`id`, `name`, `url`, `sku`, `price`, `sale_price`, `stock_status`, `category`, `short_description`, `categories`, `description`) without exposing raw models, database errors, or internal credentials.
+  - Keyword search action `SearchProductsAction` (`woocommerce.search_products`) querying published products via `wc_get_products()` with query length validation (1-200 chars) and limit clamping (max 10 products).
+  - Single product detail action `GetProductAction` (`woocommerce.get_product`) looking up published products by positive integer ID via `wc_get_product()`.
+  - Category search action `SearchByCategoryAction` (`woocommerce.search_by_category`) querying published products by category term slug via `wc_get_products()` (max 10 products).
+  - Admin integration status in `templates/admin/integrations.php`: displays live WooCommerce installation status and integration availability without clickable transaction/checkout controls.
+  - Comprehensive unit test suite in `tests/test-woocommerce-integration.php` covering availability detection, input schema validation, limit bounds, formatted output shapes, non-fatal absence handling, and strict exclusion of cart/checkout/payment operations.
+
 ## [1.3.0-N17.1] - 2026-09-07
 ### Added
 - WordPress-native Business Integration Framework Foundation:

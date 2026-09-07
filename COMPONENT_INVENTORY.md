@@ -22,6 +22,11 @@
 | `ActionValidator` | `SkyFish\GeminiChat\Integrations` | Deterministic parameter validation, type casting, and rogue argument rejection. | None |
 | `IntegrationRegistry` | `SkyFish\GeminiChat\Integrations` | Central registry for approved business integrations with duplicate protection. | `gca_register_integrations` hook |
 | `ActionExecutor` | `SkyFish\GeminiChat\Integrations` | Safe execution pipeline enforcing availability, enabled state, and exception safety. | `IntegrationRegistry`, `ActionValidator` |
+| `WooCommerceIntegration` | `SkyFish\GeminiChat\Integrations\WooCommerce` | Read-only business integration contract for WooCommerce catalog. | `SearchProductsAction`, `GetProductAction`, `SearchByCategoryAction` |
+| `WooCommerceFormatter` | `SkyFish\GeminiChat\Integrations\WooCommerce` | Normalizes WC_Product objects into sanitized product summary/detail arrays. | None |
+| `SearchProductsAction` | `SkyFish\GeminiChat\Integrations\WooCommerce` | Read-only action executing keyword product queries via `wc_get_products()`. | `wc_get_products()`, `WooCommerceFormatter` |
+| `GetProductAction` | `SkyFish\GeminiChat\Integrations\WooCommerce` | Read-only action retrieving single product details via `wc_get_product()`. | `wc_get_product()`, `WooCommerceFormatter` |
+| `SearchByCategoryAction` | `SkyFish\GeminiChat\Integrations\WooCommerce` | Read-only action querying products by category term slug via `wc_get_products()`. | `wc_get_products()`, `WooCommerceFormatter` |
 | `LogRepository` | `SkyFish\GeminiChat\Database` | Writes logs to `wp_gca_logs`. | `$wpdb` |
 | `GeminiClient` | `SkyFish\GeminiChat\Services` | Makes HTTP calls to Google Gemini API endpoints. | `wp_remote_post`, `Encryption` |
 | `ContextManager` | `SkyFish\GeminiChat\Services` | Compiles conversation history into Gemini format. | `MessageRepository`, `TokenCounter` |

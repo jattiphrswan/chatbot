@@ -28,7 +28,13 @@ SkyFish\GeminiChat
 │   ├── ActionResult: Normalized result object guaranteeing zero raw stack traces or leaks.
 │   ├── ActionValidator: Deterministic argument type and bounds validator.
 │   ├── IntegrationRegistry: Central registry with ID regex validation and extensibility hook.
-│   └── ActionExecutor: Controlled execution pipeline with availability and enabled checks.
+│   ├── ActionExecutor: Controlled execution pipeline with availability and enabled checks.
+│   └── WooCommerce/
+│       ├── WooCommerceIntegration: Read-only business integration for WooCommerce catalog.
+│       ├── WooCommerceFormatter: Normalizes WC_Product objects into sanitized arrays.
+│       ├── SearchProductsAction: Read action for searching products by keyword.
+│       ├── GetProductAction: Read action for single product detail lookup by ID.
+│       └── SearchByCategoryAction: Read action for querying products by category.
 ├── Services/
 │   ├── GeminiClient: HTTP transport wrapper for Google Gemini REST API.
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.

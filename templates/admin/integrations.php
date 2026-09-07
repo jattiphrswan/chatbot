@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Admin Integrations Page Template.
  *
@@ -110,20 +110,29 @@ $registered_count        = count( $registered_integrations );
 
 		<div class="gca-admin-grid gca-admin-grid--2">
 			<!-- WooCommerce -->
+			<?php
+			$wc_installed   = class_exists( 'WooCommerce' );
+			$wc_integration = $integration_registry->get( 'woocommerce' );
+			$wc_available   = $wc_integration ? $wc_integration->is_available() : false;
+			?>
 			<div class="gca-admin-card">
 				<div class="gca-admin-card__header">
 					<span class="dashicons dashicons-cart" style="color: #7f54b3;"></span>
-					<span class="gca-admin-pill gca-admin-pill--info">
-						<?php esc_html_e( 'Subnode N17.2 • Framework Ready', 'gemini-chat-assistant' ); ?>
+					<span class="gca-admin-pill <?php echo $wc_available ? 'gca-admin-pill--success' : 'gca-admin-pill--info'; ?>">
+						<?php echo $wc_available ? esc_html__( 'Active • Node N17.2', 'gemini-chat-assistant' ) : esc_html__( 'Subnode N17.2 • Ready', 'gemini-chat-assistant' ); ?>
 					</span>
 				</div>
 				<h3 class="gca-admin-card__title"><?php esc_html_e( 'WooCommerce Store & Catalog', 'gemini-chat-assistant' ); ?></h3>
 				<p class="gca-admin-card__desc">
-					<?php esc_html_e( 'Live product queries, real-time pricing lookups, stock availability checks, and direct add-to-cart handoffs.', 'gemini-chat-assistant' ); ?>
+					<?php esc_html_e( 'Read-only live product queries, real-time pricing lookups, stock availability checks, and category searches.', 'gemini-chat-assistant' ); ?>
 				</p>
 				<div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0f0f1; font-size: 12px; color: #646970;">
+					<div style="display: flex; gap: 16px; margin-bottom: 6px;">
+						<span><strong><?php esc_html_e( 'WooCommerce Installed:', 'gemini-chat-assistant' ); ?></strong> <?php echo $wc_installed ? esc_html__( 'Yes', 'gemini-chat-assistant' ) : esc_html__( 'No', 'gemini-chat-assistant' ); ?></span>
+						<span><strong><?php esc_html_e( 'Integration:', 'gemini-chat-assistant' ); ?></strong> <?php echo $wc_available ? esc_html__( 'Available', 'gemini-chat-assistant' ) : esc_html__( 'Unavailable', 'gemini-chat-assistant' ); ?></span>
+					</div>
 					<span class="dashicons dashicons-info" style="font-size: 16px; line-height: 1; vertical-align: text-top;"></span>
-					<?php esc_html_e( 'Status: Framework contracts defined. Implementation scheduled in Subnode N17.2.', 'gemini-chat-assistant' ); ?>
+					<?php esc_html_e( 'Scope: Read-only catalog queries. Cart, checkout, payment, and order actions are strictly excluded.', 'gemini-chat-assistant' ); ?>
 				</div>
 			</div>
 

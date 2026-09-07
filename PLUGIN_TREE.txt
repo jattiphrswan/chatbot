@@ -45,7 +45,13 @@ gemini-chat-assistant/
 │   │   ├── ActionResult.php
 │   │   ├── ActionValidator.php
 │   │   ├── IntegrationRegistry.php
-│   │   └── ActionExecutor.php
+│   │   ├── ActionExecutor.php
+│   │   └── WooCommerce/
+│   │       ├── WooCommerceIntegration.php
+│   │       ├── WooCommerceFormatter.php
+│   │       ├── SearchProductsAction.php
+│   │       ├── GetProductAction.php
+│   │       └── SearchByCategoryAction.php
 │   ├── REST/
 │   │   ├── RestServer.php
 │   │   ├── ChatController.php
@@ -97,6 +103,7 @@ gemini-chat-assistant/
 │   ├── test-knowledge-retriever.php
 │   ├── test-rag-context.php
 │   ├── test-integrations-framework.php
+│   ├── test-woocommerce-integration.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig
