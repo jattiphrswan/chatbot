@@ -407,6 +407,87 @@
 }
 
 /* -------------------------------------------------------------------------
+ * Direct Contact Channels (N17.5)
+ * ------------------------------------------------------------------------- */
+.gca-contact-channels {
+	margin-top: 24px;
+	padding-top: 16px;
+	border-top: 1px solid var(--gca-border);
+}
+
+.gca-contact-channels__title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--gca-text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	margin: 0 0 10px 0;
+}
+
+.gca-contact-channels__list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.gca-contact-btn {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	border-radius: var(--gca-radius-sm);
+	background-color: var(--gca-surface);
+	border: 1px solid var(--gca-border);
+	color: var(--gca-text-primary);
+	text-decoration: none;
+	font-size: 13px;
+	font-weight: 500;
+	transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+	box-sizing: border-box;
+}
+
+.gca-contact-btn:hover {
+	border-color: var(--gca-primary);
+	background-color: #f9fafb;
+	color: var(--gca-primary);
+	transform: translateY(-1px);
+}
+
+.gca-contact-btn:focus-visible {
+	outline: 2px solid var(--gca-primary);
+	outline-offset: 2px;
+}
+
+.gca-contact-btn__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--gca-radius-full);
+	flex-shrink: 0;
+}
+
+.gca-contact-btn--phone .gca-contact-btn__icon {
+	background-color: rgba(34, 113, 177, 0.1);
+	color: #2271b1;
+}
+
+.gca-contact-btn--email .gca-contact-btn__icon {
+	background-color: rgba(70, 180, 80, 0.1);
+	color: #46b450;
+}
+
+.gca-contact-btn--whatsapp .gca-contact-btn__icon {
+	background-color: rgba(37, 211, 102, 0.1);
+	color: #25d366;
+}
+
+.gca-contact-btn__label {
+	flex: 1;
+}
+
+/* -------------------------------------------------------------------------
  * Pre-Chat Lead Capture Screen (N14)
  * ------------------------------------------------------------------------- */
 .gca-prechat {

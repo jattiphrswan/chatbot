@@ -126,6 +126,30 @@ class Assets {
 				'collectRequirement' => (bool) ( $settings['collect_requirement'] ?? false ),
 				'requireRequirement' => (bool) ( $settings['require_requirement'] ?? false ),
 			],
+			'contactChannels'  => [
+				'enabled'  => (bool) ( $settings['contact_channels_enabled'] ?? false ),
+				'phone'    => [
+					'enabled' => (bool) ( $settings['contact_phone_enabled'] ?? false ) && ! empty( $settings['contact_phone_number'] ),
+					'number'  => esc_attr( (string) ( $settings['contact_phone_number'] ?? '' ) ),
+					'label'   => esc_html( (string) ( $settings['contact_phone_label'] ?? __( 'Call Us', 'gemini-chat-assistant' ) ) ),
+					'url'     => ! empty( $settings['contact_phone_number'] ) ? 'tel:' . preg_replace( '/[^0-9+]/', '', (string) $settings['contact_phone_number'] ) : '',
+				],
+				'email'    => [
+					'enabled' => (bool) ( $settings['contact_email_enabled'] ?? false ) && ! empty( $settings['contact_email_address'] ),
+					'address' => sanitize_email( (string) ( $settings['contact_email_address'] ?? '' ) ),
+					'label'   => esc_html( (string) ( $settings['contact_email_label'] ?? __( 'Email Us', 'gemini-chat-assistant' ) ) ),
+					'url'     => ! empty( $settings['contact_email_address'] ) ? 'mailto:' . rawurlencode( sanitize_email( (string) $settings['contact_email_address'] ) ) : '',
+				],
+				'whatsapp' => [
+					'enabled' => (bool) ( $settings['contact_whatsapp_enabled'] ?? false ) && ! empty( $settings['contact_whatsapp_number'] ),
+					'number'  => preg_replace( '/[^0-9]/', '', (string) ( $settings['contact_whatsapp_number'] ?? '' ) ),
+					'label'   => esc_html( (string) ( $settings['contact_whatsapp_label'] ?? __( 'WhatsApp', 'gemini-chat-assistant' ) ) ),
+					'message' => esc_attr( (string) ( $settings['contact_whatsapp_message'] ?? '' ) ),
+					'url'     => ! empty( $settings['contact_whatsapp_number'] )
+						? 'https://wa.me/' . preg_replace( '/[^0-9]/', '', (string) $settings['contact_whatsapp_number'] ) . ( ! empty( $settings['contact_whatsapp_message'] ) ? '?text=' . rawurlencode( (string) $settings['contact_whatsapp_message'] ) : '' )
+						: '',
+				],
+			],
 			'i18n'             => [
 				'startConversation' => esc_html__( 'Start a Conversation', 'gemini-chat-assistant' ),
 				'startDesc'         => esc_html__( 'Ask us about products, services or anything else you need help with.', 'gemini-chat-assistant' ),

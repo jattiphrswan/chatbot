@@ -246,3 +246,35 @@ NotificationService::send_handoff_notification()
 3. **Failure Isolation:** Any `wp_mail()` failure is caught and normalized internally. It never deletes the handoff, deletes the lead, breaks conversation flow, or leaks errors to the visitor.
 4. **Delivery Semantics:** wp_mail() returning true confirms WordPress accepted the message for delivery; it is documented accurately as "Sent / Accepted for sending" rather than guaranteed inbox receipt.
 5. **Idempotency Protection:** Uses a 7-day transient flag keyed by handoff public UUID (`gca_notif_sent_{md5}`) to prevent duplicate email alerts on retries.
+
+## 8. Direct Contact Channels Architecture (Node N17.5)
+
+```
+Admin Settings (Gemini Chat -> Settings -> Contact Channels)
+       │
+       ├─► contact_channels_enabled (bool)
+       ├─► contact_phone_enabled, contact_phone_number, contact_phone_label
+       ├─► contact_email_enabled, contact_email_address, contact_email_label
+       └─► contact_whatsapp_enabled, contact_whatsapp_number, contact_whatsapp_label, contact_whatsapp_message
+       │
+       ▼
+Public Assets Localization (Assets::get_localized_config) & Template Rendering (chat-widget.php)
+       │
+       ├─► Phone:    <a href="tel:{sanitized_phone}">
+       ├─► Email:    <a href="mailto:{sanitized_email}">
+       └─► WhatsApp: <a href="https://wa.me/{clean_digits}?text={urlencoded_message}" target="_blank" rel="noopener noreferrer">
+       │
+       ▼
+Visitor Client (Direct OS/Browser Deep Links)
+       ├─► No server-side HTTP calls
+       ├─► No Twilio / SMS APIs
+       ├─► No WhatsApp Business / Meta Graph APIs
+       ├─► No CRM webhooks
+       └─► Zero AI token consumption
+```
+
+### Core Tenets of N17.5:
+1. **Client-Side Deep Links:** Contact actions use standard URI schemes (`tel:`, `mailto:`, `https://wa.me/`). All connection handling occurs entirely on the user's client device via native dialers, email clients, or WhatsApp applications.
+2. **Zero Third-Party APIs:** No Meta Graph API, WhatsApp Cloud API, Twilio, SendGrid, or external CRM webhooks are used.
+3. **No Gemini Intermediation Required:** Visitors can access contact channels directly from the chat widget home screen without prompting or executing AI model calls.
+4. **Sanitization & Boundary Safety:** Phone numbers maintain valid dial characters, WhatsApp numbers are strictly stripped to digits and country code, emails are validated via `sanitize_email()`, and labels/messages have bounded length limits (50 chars for labels, 300 chars for WhatsApp prefilled messages).

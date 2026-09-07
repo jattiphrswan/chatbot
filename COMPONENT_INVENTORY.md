@@ -33,6 +33,7 @@
 | `CreateHandoffAction` | `SkyFish\GeminiChat\Integrations\Handoff` | Write action for recording handoff requests with conversation context. | `HandoffService` |
 | `SendHandoffNotificationAction` | `SkyFish\GeminiChat\Integrations\Handoff` | External action for dispatching handoff notification emails via `wp_mail()`. | `NotificationService`, `HandoffRepository` |
 | `NotificationService` | `SkyFish\GeminiChat\Notifications` | Internal team email notification dispatcher via WordPress native `wp_mail()`. | `wp_mail()`, `SettingsService`, `HandoffRepository`, Transients |
+| `Direct Contact Channels` | `Frontend / Templates / Assets` | Configurable direct contact options (Phone, Email, WhatsApp) with deep links. | `SettingsService`, `Assets`, `chat-widget.php`, `chat.css` |
 | `LogRepository` | `SkyFish\GeminiChat\Database` | Writes logs to `wp_gca_logs`. | `$wpdb` |
 | `GeminiClient` | `SkyFish\GeminiChat\Services` | Makes HTTP calls to Google Gemini API endpoints. | `wp_remote_post`, `Encryption` |
 | `ContextManager` | `SkyFish\GeminiChat\Services` | Compiles conversation history into Gemini format. | `MessageRepository`, `TokenCounter` |

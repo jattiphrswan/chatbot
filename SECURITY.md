@@ -77,3 +77,19 @@
 - **Idempotency Protection:** Prevents duplicate notification spam through 7-day transient markers keyed by handoff public UUID (`gca_notif_sent_{md5}`). Repeated requests for the same handoff return `ALREADY_NOTIFIED` without triggering redundant emails.
 - **Strict Error Isolation:** If `wp_mail()` returns false or fails, the failure is normalized internally (`EMAIL_SEND_FAILED`). The handoff remains valid, lead data remains intact, and no error message is exposed to the visitor.
 - **Zero Visitor Autoresponders:** Notifications are strictly sent to internal team members. Visitors are never emailed automatically in N17.4.
+
+## 11. Direct Contact Channels Security Policy (Node N17.5)
+- **Zero External API Storage or Transmission:** No third-party API credentials, webhook endpoints, or access tokens (Meta Graph API, WhatsApp Business API, Twilio, SendGrid) are accepted, stored, or transmitted by the server.
+- **Strict Input Sanitization & URL Scheme Control:**
+  - Phone numbers are sanitized to strip all characters except digits, spaces, hyphens, dots, parentheses, and leading plus (`/[^0-9+\-().\s]/`).
+  - WhatsApp numbers are sanitized to strict digits and leading plus (`/[^0-9+]/`).
+  - Contact email addresses are validated using `sanitize_email()` and `is_email()`.
+  - All output URLs are restricted to verified schemes (`tel:`, `mailto:`, and `https://wa.me/`). Rogue schemes (`javascript:`, `data:`, `file:`) are strictly forbidden.
+- **Boundary & Length Defense:**
+  - Channel labels are sanitized via `sanitize_text_field()` and clamped to 50 characters.
+  - WhatsApp prefilled message templates are sanitized and clamped to 300 characters.
+- **XSS Defense & Attribute Escaping:**
+  - All attributes rendered in widget HTML (`href`, `aria-label`, button text) are strictly escaped via `esc_url()`, `esc_attr()`, and `esc_html()`.
+  - External links (`https://wa.me/`) explicitly include `target="_blank"` with `rel="noopener noreferrer"` to prevent reverse tab-nabbing vulnerabilities.
+- **Zero Automated Outbound Calling or Messaging:** The server never makes calls, sends SMS, or sends WhatsApp messages on behalf of the visitor or administrator.
+- **Gemini Execution Independence:** Contact channel buttons are client-side navigation elements that execute without invoking Gemini API prompts, preventing unauthorized prompt injection or token depletion.

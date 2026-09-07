@@ -71,6 +71,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<button type="button" class="gca-tab-btn" data-tab="access"><?php esc_html_e( 'Access', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="limits"><?php esc_html_e( 'Limits', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="notifications"><?php esc_html_e( 'Notifications', 'gemini-chat-assistant' ); ?></button>
+			<button type="button" class="gca-tab-btn" data-tab="contact"><?php esc_html_e( 'Contact Channels', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="privacy"><?php esc_html_e( 'Privacy', 'gemini-chat-assistant' ); ?></button>
 		</div>
 
@@ -341,6 +342,81 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<?php esc_html_e( 'Send Test Email', 'gemini-chat-assistant' ); ?>
 				</button>
 				<?php wp_nonce_field( 'gca_send_test_email', '_wpnonce_test_email' ); ?>
+			</div>
+		</div>
+
+		<!-- Panel: Direct Contact Channels (N17.5) -->
+		<div class="gca-tab-panel" id="gca-panel-contact">
+			<div class="gca-section-card">
+				<h3><?php esc_html_e( 'Direct Contact Channels', 'gemini-chat-assistant' ); ?></h3>
+				<p class="description" style="margin-bottom: 16px;">
+					<?php esc_html_e( 'Configure direct contact links (Phone, Email, WhatsApp) displayed on the chatbot home screen so visitors can easily reach your team.', 'gemini-chat-assistant' ); ?>
+				</p>
+				<div class="gca-form-grid">
+					<div class="gca-field-row">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[contact_channels_enabled]" value="1" <?php checked( ! empty( $settings['contact_channels_enabled'] ) ); ?> />
+							<strong><?php esc_html_e( 'Enable Direct Contact Channels', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+						<span class="description"><?php esc_html_e( 'Show contact options (Need More Help?) on the chatbot home screen.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+
+					<!-- Phone / Call Channel -->
+					<div class="gca-field-row" style="border-top: 1px solid #f0f0f1; padding-top: 14px;">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[contact_phone_enabled]" value="1" <?php checked( ! empty( $settings['contact_phone_enabled'] ) ); ?> />
+							<strong><?php esc_html_e( 'Enable Phone / Call Channel', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_contact_phone_number"><?php esc_html_e( 'Phone Number', 'gemini-chat-assistant' ); ?></label>
+						<input type="tel" id="gca_contact_phone_number" name="gca_settings[contact_phone_number]" value="<?php echo esc_attr( $settings['contact_phone_number'] ?? '' ); ?>" class="regular-text" placeholder="+1 (555) 123-4567" />
+						<span class="description"><?php esc_html_e( 'Telephone number for tel: link.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_contact_phone_label"><?php esc_html_e( 'Phone Button Label', 'gemini-chat-assistant' ); ?></label>
+						<input type="text" id="gca_contact_phone_label" name="gca_settings[contact_phone_label]" value="<?php echo esc_attr( $settings['contact_phone_label'] ?? 'Call Us' ); ?>" class="regular-text" maxlength="50" />
+					</div>
+
+					<!-- Email Channel -->
+					<div class="gca-field-row" style="border-top: 1px solid #f0f0f1; padding-top: 14px;">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[contact_email_enabled]" value="1" <?php checked( ! empty( $settings['contact_email_enabled'] ) ); ?> />
+							<strong><?php esc_html_e( 'Enable Email Channel', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_contact_email_address"><?php esc_html_e( 'Contact Email Address', 'gemini-chat-assistant' ); ?></label>
+						<input type="email" id="gca_contact_email_address" name="gca_settings[contact_email_address]" value="<?php echo esc_attr( $settings['contact_email_address'] ?? '' ); ?>" class="regular-text" placeholder="contact@example.com" />
+						<span class="description"><?php esc_html_e( 'Target address for mailto: link.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_contact_email_label"><?php esc_html_e( 'Email Button Label', 'gemini-chat-assistant' ); ?></label>
+						<input type="text" id="gca_contact_email_label" name="gca_settings[contact_email_label]" value="<?php echo esc_attr( $settings['contact_email_label'] ?? 'Email Us' ); ?>" class="regular-text" maxlength="50" />
+					</div>
+
+					<!-- WhatsApp Channel -->
+					<div class="gca-field-row" style="border-top: 1px solid #f0f0f1; padding-top: 14px;">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[contact_whatsapp_enabled]" value="1" <?php checked( ! empty( $settings['contact_whatsapp_enabled'] ) ); ?> />
+							<strong><?php esc_html_e( 'Enable WhatsApp Channel', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_contact_whatsapp_number"><?php esc_html_e( 'WhatsApp Phone Number (with country code)', 'gemini-chat-assistant' ); ?></label>
+						<input type="tel" id="gca_contact_whatsapp_number" name="gca_settings[contact_whatsapp_number]" value="<?php echo esc_attr( $settings['contact_whatsapp_number'] ?? '' ); ?>" class="regular-text" placeholder="+15551234567" />
+						<span class="description"><?php esc_html_e( 'Include international country code without spaces or dashes (e.g. 15551234567 or 919876543210).', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_contact_whatsapp_label"><?php esc_html_e( 'WhatsApp Button Label', 'gemini-chat-assistant' ); ?></label>
+						<input type="text" id="gca_contact_whatsapp_label" name="gca_settings[contact_whatsapp_label]" value="<?php echo esc_attr( $settings['contact_whatsapp_label'] ?? 'WhatsApp' ); ?>" class="regular-text" maxlength="50" />
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_contact_whatsapp_message"><?php esc_html_e( 'WhatsApp Pre-filled Message (Optional)', 'gemini-chat-assistant' ); ?></label>
+						<textarea id="gca_contact_whatsapp_message" name="gca_settings[contact_whatsapp_message]" rows="2" class="large-text" maxlength="300"><?php echo esc_textarea( $settings['contact_whatsapp_message'] ?? '' ); ?></textarea>
+						<span class="description"><?php esc_html_e( 'Pre-filled text that appears in WhatsApp when the visitor clicks the link.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+				</div>
 			</div>
 		</div>
 

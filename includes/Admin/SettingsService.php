@@ -180,6 +180,34 @@ class SettingsService {
 		$subject = isset( $input['handoff_email_subject'] ) ? (string) $input['handoff_email_subject'] : ( $defaults['handoff_email_subject'] ?? 'New Chatbot Handoff Request' );
 		$sanitized['handoff_email_subject'] = \SkyFish\GeminiChat\Notifications\NotificationService::sanitize_subject( $subject );
 
+		// Direct Contact Channels (N17.5).
+		$sanitized['contact_channels_enabled'] = ! empty( $input['contact_channels_enabled'] );
+
+		// Phone / Call
+		$sanitized['contact_phone_enabled'] = ! empty( $input['contact_phone_enabled'] );
+		$raw_phone                          = isset( $input['contact_phone_number'] ) ? (string) $input['contact_phone_number'] : '';
+		$sanitized['contact_phone_number']  = preg_replace( '/[^0-9+\-().\s]/', '', trim( $raw_phone ) );
+		$phone_label                        = isset( $input['contact_phone_label'] ) ? sanitize_text_field( trim( (string) $input['contact_phone_label'] ) ) : '';
+		$sanitized['contact_phone_label']   = ! empty( $phone_label ) ? mb_substr( $phone_label, 0, 50 ) : 'Call Us';
+
+		// Email
+		$sanitized['contact_email_enabled'] = ! empty( $input['contact_email_enabled'] );
+		$raw_email                          = isset( $input['contact_email_address'] ) ? (string) $input['contact_email_address'] : '';
+		$clean_email                        = sanitize_email( trim( $raw_email ) );
+		$sanitized['contact_email_address'] = is_email( $clean_email ) ? $clean_email : '';
+		$email_label                        = isset( $input['contact_email_label'] ) ? sanitize_text_field( trim( (string) $input['contact_email_label'] ) ) : '';
+		$sanitized['contact_email_label']   = ! empty( $email_label ) ? mb_substr( $email_label, 0, 50 ) : 'Email Us';
+
+		// WhatsApp
+		$sanitized['contact_whatsapp_enabled'] = ! empty( $input['contact_whatsapp_enabled'] );
+		$raw_wa_num                            = isset( $input['contact_whatsapp_number'] ) ? (string) $input['contact_whatsapp_number'] : '';
+		// Strip all non-digit characters except leading plus
+		$sanitized['contact_whatsapp_number']  = preg_replace( '/[^0-9+]/', '', trim( $raw_wa_num ) );
+		$wa_label                              = isset( $input['contact_whatsapp_label'] ) ? sanitize_text_field( trim( (string) $input['contact_whatsapp_label'] ) ) : '';
+		$sanitized['contact_whatsapp_label']   = ! empty( $wa_label ) ? mb_substr( $wa_label, 0, 50 ) : 'WhatsApp';
+		$wa_msg                                = isset( $input['contact_whatsapp_message'] ) ? sanitize_text_field( trim( (string) $input['contact_whatsapp_message'] ) ) : '';
+		$sanitized['contact_whatsapp_message'] = mb_substr( $wa_msg, 0, 300 );
+
 		// Access.
 		$sanitized['guest_access'] = ! empty( $input['guest_access'] );
 

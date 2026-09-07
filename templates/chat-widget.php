@@ -46,6 +46,28 @@ if ( $faq_enabled ) {
 	$faq_repo  = new \SkyFish\GeminiChat\Database\FaqRepository();
 	$home_faqs = $faq_repo->get_home_faqs( $faq_home_limit );
 }
+
+// Direct Contact Channels (N17.5).
+$contact_channels_enabled = ! empty( $settings['contact_channels_enabled'] );
+$contact_phone_enabled    = ! empty( $settings['contact_phone_enabled'] ) && ! empty( $settings['contact_phone_number'] );
+$contact_phone_number     = (string) ( $settings['contact_phone_number'] ?? '' );
+$contact_phone_label      = (string) ( $settings['contact_phone_label'] ?? __( 'Call Us', 'gemini-chat-assistant' ) );
+$contact_phone_url        = ! empty( $contact_phone_number ) ? 'tel:' . preg_replace( '/[^0-9+]/', '', $contact_phone_number ) : '';
+
+$contact_email_enabled    = ! empty( $settings['contact_email_enabled'] ) && ! empty( $settings['contact_email_address'] );
+$contact_email_address    = sanitize_email( (string) ( $settings['contact_email_address'] ?? '' ) );
+$contact_email_label      = (string) ( $settings['contact_email_label'] ?? __( 'Email Us', 'gemini-chat-assistant' ) );
+$contact_email_url        = ! empty( $contact_email_address ) ? 'mailto:' . rawurlencode( $contact_email_address ) : '';
+
+$contact_wa_enabled       = ! empty( $settings['contact_whatsapp_enabled'] ) && ! empty( $settings['contact_whatsapp_number'] );
+$contact_wa_number        = preg_replace( '/[^0-9]/', '', (string) ( $settings['contact_whatsapp_number'] ?? '' ) );
+$contact_wa_label         = (string) ( $settings['contact_whatsapp_label'] ?? __( 'WhatsApp', 'gemini-chat-assistant' ) );
+$contact_wa_msg           = (string) ( $settings['contact_whatsapp_message'] ?? '' );
+$contact_wa_url           = ! empty( $contact_wa_number )
+	? 'https://wa.me/' . $contact_wa_number . ( ! empty( $contact_wa_msg ) ? '?text=' . rawurlencode( $contact_wa_msg ) : '' )
+	: '';
+
+$has_contact_channels = $contact_channels_enabled && ( $contact_phone_enabled || $contact_email_enabled || $contact_wa_enabled );
 ?>
 
 <?php if ( 'floating' === $mode ) : ?>
@@ -200,6 +222,62 @@ if ( $faq_enabled ) {
 									<template class="gca-faq-template-answer"><?php echo esc_html( (string) $faq['answer'] ); ?></template>
 								</div>
 							<?php endforeach; ?>
+						</div>
+					</div>
+				<?php endif; ?>
+
+				<!-- Direct Contact Channels (N17.5) -->
+				<?php if ( $has_contact_channels ) : ?>
+					<div class="gca-contact-channels" role="region" aria-label="<?php esc_attr_e( 'Direct Contact Options', 'gemini-chat-assistant' ); ?>">
+						<h3 class="gca-contact-channels__title"><?php esc_html_e( 'Need More Help?', 'gemini-chat-assistant' ); ?></h3>
+						<div class="gca-contact-channels__list">
+							<?php if ( $contact_phone_enabled ) : ?>
+								<a
+									href="<?php echo esc_url( $contact_phone_url ); ?>"
+									class="gca-contact-btn gca-contact-btn--phone"
+									aria-label="<?php echo esc_attr( sprintf( __( 'Call us at %s', 'gemini-chat-assistant' ), $contact_phone_number ) ); ?>"
+								>
+									<span class="gca-contact-btn__icon" aria-hidden="true">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+										</svg>
+									</span>
+									<span class="gca-contact-btn__label"><?php echo esc_html( $contact_phone_label ); ?></span>
+								</a>
+							<?php endif; ?>
+
+							<?php if ( $contact_email_enabled ) : ?>
+								<a
+									href="<?php echo esc_url( $contact_email_url ); ?>"
+									class="gca-contact-btn gca-contact-btn--email"
+									aria-label="<?php echo esc_attr( sprintf( __( 'Email us at %s', 'gemini-chat-assistant' ), $contact_email_address ) ); ?>"
+								>
+									<span class="gca-contact-btn__icon" aria-hidden="true">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+											<polyline points="22,6 12,13 2,6"></polyline>
+										</svg>
+									</span>
+									<span class="gca-contact-btn__label"><?php echo esc_html( $contact_email_label ); ?></span>
+								</a>
+							<?php endif; ?>
+
+							<?php if ( $contact_wa_enabled ) : ?>
+								<a
+									href="<?php echo esc_url( $contact_wa_url ); ?>"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="gca-contact-btn gca-contact-btn--whatsapp"
+									aria-label="<?php esc_attr_e( 'Message us on WhatsApp', 'gemini-chat-assistant' ); ?>"
+								>
+									<span class="gca-contact-btn__icon" aria-hidden="true">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+										</svg>
+									</span>
+									<span class="gca-contact-btn__label"><?php echo esc_html( $contact_wa_label ); ?></span>
+								</a>
+							<?php endif; ?>
 						</div>
 					</div>
 				<?php endif; ?>

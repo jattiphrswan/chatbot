@@ -70,7 +70,7 @@ SkyFish\GeminiChat
 - **ChatWidgetContainer (`chat.js` / `chat.css`):**
   - Floating trigger button & badge.
   - Chat window modal with header (bot name, status, reset button, close button).
-  - Home Screen: Greeting, Start a Conversation card, Quick Help FAQ list.
+  - Home Screen: Greeting, Start a Conversation card, Quick Help FAQ list, Direct Contact Channels (`tel:`, `mailto:`, `https://wa.me/`).
   - FAQ Detail Screen: Dedicated question view, multiline answer, and "Start a Conversation" CTA.
   - Pre-Chat Screen: Contact inquiry form with validation and honeypot protection.
   - Chat Screen: Message stream list, typing status indicator, composer input, autoscroll.

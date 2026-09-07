@@ -73,6 +73,19 @@ class Activator {
 			'handoff_email_recipients'   => '',
 			'handoff_email_subject'      => 'New Chatbot Handoff Request',
 
+			// Direct Contact Channels (N17.5).
+			'contact_channels_enabled'   => false,
+			'contact_phone_enabled'      => false,
+			'contact_phone_number'       => '',
+			'contact_phone_label'        => 'Call Us',
+			'contact_email_enabled'      => false,
+			'contact_email_address'      => '',
+			'contact_email_label'        => 'Email Us',
+			'contact_whatsapp_enabled'   => false,
+			'contact_whatsapp_number'    => '',
+			'contact_whatsapp_label'     => 'WhatsApp',
+			'contact_whatsapp_message'   => 'Hi! I would like to speak with someone regarding my inquiry.',
+
 			// Access.
 			'guest_access'          => true,
 

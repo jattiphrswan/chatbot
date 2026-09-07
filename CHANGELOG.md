@@ -5,6 +5,19 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4-N17.5] - 2026-09-07
+### Added
+- Direct Contact Channels Integration (`templates/chat-widget.php`, `public/css/chat.css`, `templates/admin/settings.php`, `includes/Admin/SettingsService.php`, `includes/class-assets.php`):
+  - Direct client-side contact channel options (Phone/Call via `tel:`, Email client drafting via `mailto:`, and WhatsApp chat via `https://wa.me/` deep links with optional pre-filled messages).
+  - Public Chatbot UI Home screen integration: renders accessible `.gca-contact-channels` container with contact action buttons and icons beneath quick help items.
+  - Responsive styling and high-contrast focus rings for contact channel buttons (`.gca-contact-btn--phone`, `.gca-contact-btn--email`, `.gca-contact-btn--whatsapp`).
+  - WordPress Admin Settings UI: added dedicated "Contact Channels" tab panel (`#gca-panel-contact`) in `Gemini Chat -> Settings` for configuring individual channel toggles, phone numbers, email addresses, labels, and WhatsApp prefilled messages.
+  - Strict input sanitization in `SettingsService`: filters phone numbers to permitted dial characters, WhatsApp numbers to digits and country codes, validates email addresses with `sanitize_email()`, and clamps labels (50 chars) and WhatsApp messages (300 chars).
+  - Secure asset localization in `Assets::get_localized_config()` providing client-side runtime access to sanitized contact link objects.
+  - Business Integrations screen update (`templates/admin/integrations.php`): displays live active/disabled status and transport specifications for Direct Contact Channels.
+  - Zero third-party API footprint: strictly no Meta Graph API, WhatsApp Cloud API, Twilio, SMS APIs, or external CRM webhooks.
+  - Comprehensive unit test suite in `tests/test-direct-contact-channels.php` covering defaults, sanitization, URL formation, XSS defense, localization, and negative assertions.
+
 ## [1.3.3-N17.4] - 2026-09-07
 ### Added
 - WordPress Native Human Handoff Email Notifications (`includes/notifications/class-notification-service.php`, `includes/Integrations/Handoff/SendHandoffNotificationAction.php`):

@@ -188,21 +188,33 @@ $registered_count        = count( $registered_integrations );
 				</div>
 			</div>
 
-			<!-- External Contact Actions -->
+			<!-- External Contact Actions (Node N17.5) -->
+			<?php
+			$contact_channels_enabled = (bool) \SkyFish\GeminiChat\Admin\SettingsService::get( 'contact_channels_enabled', false );
+			$phone_enabled            = (bool) \SkyFish\GeminiChat\Admin\SettingsService::get( 'contact_phone_enabled', false );
+			$email_enabled            = (bool) \SkyFish\GeminiChat\Admin\SettingsService::get( 'contact_email_enabled', false );
+			$whatsapp_enabled         = (bool) \SkyFish\GeminiChat\Admin\SettingsService::get( 'contact_whatsapp_enabled', false );
+			$active_channels_count    = ( $phone_enabled ? 1 : 0 ) + ( $email_enabled ? 1 : 0 ) + ( $whatsapp_enabled ? 1 : 0 );
+			?>
 			<div class="gca-admin-card">
 				<div class="gca-admin-card__header">
 					<span class="dashicons dashicons-phone" style="color: #25d366;"></span>
-					<span class="gca-admin-pill gca-admin-pill--info">
-						<?php esc_html_e( 'Subnode N17.5 • Framework Ready', 'gemini-chat-assistant' ); ?>
+					<span class="gca-admin-pill <?php echo $contact_channels_enabled ? 'gca-admin-pill--success' : 'gca-admin-pill--muted'; ?>">
+						<?php echo $contact_channels_enabled ? esc_html__( 'Active • Node N17.5', 'gemini-chat-assistant' ) : esc_html__( 'Disabled • Node N17.5', 'gemini-chat-assistant' ); ?>
 					</span>
 				</div>
-				<h3 class="gca-admin-card__title"><?php esc_html_e( 'Direct Contact Channels (WhatsApp & Calls)', 'gemini-chat-assistant' ); ?></h3>
+				<h3 class="gca-admin-card__title"><?php esc_html_e( 'Direct Contact Channels (Phone, Email, WhatsApp)', 'gemini-chat-assistant' ); ?></h3>
 				<p class="gca-admin-card__desc">
-					<?php esc_html_e( 'Deep-linked direct contact actions allowing visitors to initiate pre-populated WhatsApp chats or direct phone calls.', 'gemini-chat-assistant' ); ?>
+					<?php esc_html_e( 'Direct client-side contact links allowing visitors to initiate direct phone calls, email client drafting, or pre-filled WhatsApp conversations without server-side third-party APIs.', 'gemini-chat-assistant' ); ?>
 				</p>
 				<div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0f0f1; font-size: 12px; color: #646970;">
+					<div style="display: flex; gap: 16px; margin-bottom: 6px;">
+						<span><strong><?php esc_html_e( 'Available:', 'gemini-chat-assistant' ); ?></strong> <?php esc_html_e( 'Yes', 'gemini-chat-assistant' ); ?></span>
+						<span><strong><?php esc_html_e( 'Transport:', 'gemini-chat-assistant' ); ?></strong> <code>tel:</code>, <code>mailto:</code>, <code>wa.me</code></span>
+						<span><strong><?php esc_html_e( 'Active Channels:', 'gemini-chat-assistant' ); ?></strong> <?php echo $contact_channels_enabled ? esc_html( (string) $active_channels_count ) : '0'; ?></span>
+					</div>
 					<span class="dashicons dashicons-info" style="font-size: 16px; line-height: 1; vertical-align: text-top;"></span>
-					<?php esc_html_e( 'Status: Framework contracts defined. Implementation scheduled in Subnode N17.5.', 'gemini-chat-assistant' ); ?>
+					<?php esc_html_e( 'Configuration: Manage channel numbers, addresses, and messages in Gemini Chat -> Settings -> Contact Channels.', 'gemini-chat-assistant' ); ?>
 				</div>
 			</div>
 		</div>

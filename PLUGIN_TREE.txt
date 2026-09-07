@@ -117,6 +117,7 @@ gemini-chat-assistant/
 │   ├── test-woocommerce-integration.php
 │   ├── test-handoff-service.php
 │   ├── test-email-notifications.php
+│   ├── test-direct-contact-channels.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig
