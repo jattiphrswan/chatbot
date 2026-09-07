@@ -5,6 +5,16 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N11] - 2026-09-07
+### Added
+- WordPress Admin Conversations Management module (`templates/admin/conversations.php`, `templates/admin/conversation-detail.php`) accessible via submenu `Gemini Chat -> Conversations` (`gca-conversations`).
+- Server-side paginated conversation list supporting safe status filtering (`all`, `active`, `closed`), search by public UUID or title, and whitelisted column sorting (`created_at`, `updated_at`, `last_message_at`).
+- Full conversation transcript view with chronological thread rendering, speaker role distinctions (Visitor, AI Assistant, System), AI model badge indicators, and strict XSS output escaping (`esc_html`, `esc_attr`).
+- Admin POST actions with `manage_options` capability check and per-resource nonce verification: Close conversation (`gca_close_conversation`), Reopen conversation (`gca_reopen_conversation`), and Delete conversation (`gca_delete_conversation`).
+- Cascading deletion in `ConversationRepository::delete_by_public_id()` cleaning up child messages via `MessageRepository::delete_by_conversation_id()` prior to parent row removal.
+- Quick Actions integration on the Admin Dashboard shell linking directly to Conversations management.
+- Unit and mock test suite in `tests/test-conversations-page.php`.
+
 ## [1.0.0-N10] - 2026-09-07
 ### Added
 - Native WordPress Admin Dashboard Shell (`templates/admin/dashboard.php`) under top-level `Gemini Chat` menu with submenus for `Dashboard` and `Settings`.

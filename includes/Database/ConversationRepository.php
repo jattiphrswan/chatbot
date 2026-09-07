@@ -272,6 +272,168 @@ class ConversationRepository {
 	}
 
 	/**
+	 * Whitelisted orderby columns for admin queries.
+	 */
+	public const ALLOWED_ORDERBY = [ 'updated_at', 'created_at', 'message_count', 'title', 'status' ];
+
+	/**
+	 * Retrieves paginated, filtered conversations for admin view.
+	 *
+	 * @param array<string, mixed> $args Filter and pagination arguments.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_admin_list( array $args = [] ): array {
+		global $wpdb;
+
+		$table    = self::get_table_name();
+		$page     = max( 1, absint( $args['page'] ?? 1 ) );
+		$per_page = max( 1, min( 100, absint( $args['per_page'] ?? 20 ) ) );
+		$offset   = ( $page - 1 ) * $per_page;
+
+		$status   = ! empty( $args['status'] ) && in_array( strtolower( (string) $args['status'] ), [ 'active', 'closed' ], true ) ? strtolower( (string) $args['status'] ) : null;
+		$search   = ! empty( $args['search'] ) ? trim( (string) $args['search'] ) : null;
+		$orderby  = ! empty( $args['orderby'] ) && in_array( strtolower( (string) $args['orderby'] ), self::ALLOWED_ORDERBY, true ) ? strtolower( (string) $args['orderby'] ) : 'updated_at';
+		$order    = ! empty( $args['order'] ) && 'ASC' === strtoupper( (string) $args['order'] ) ? 'ASC' : 'DESC';
+
+		$where_clauses = [];
+		$params        = [];
+
+		if ( $status ) {
+			$where_clauses[] = 'status = %s';
+			$params[]        = $status;
+		}
+
+		if ( $search ) {
+			$search_like     = '%' . $wpdb->esc_like( $search ) . '%';
+			$where_clauses[] = '(public_id LIKE %s OR title LIKE %s)';
+			$params[]        = $search_like;
+			$params[]        = $search_like;
+		}
+
+		$where_sql = '';
+		if ( ! empty( $where_clauses ) ) {
+			$where_sql = 'WHERE ' . implode( ' AND ', $where_clauses );
+		}
+
+		$sql = "SELECT id, public_id, user_id, title, status, message_count, created_at, updated_at, last_message_at FROM {$table} {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d";
+		$params[] = $per_page;
+		$params[] = $offset;
+
+		$query = $wpdb->prepare( $sql, ...$params );
+		$rows  = $wpdb->get_results( $query, ARRAY_A );
+
+		return is_array( $rows ) ? $rows : [];
+	}
+
+	/**
+	 * Counts matching conversations for admin pagination.
+	 *
+	 * @param array<string, mixed> $args Filter arguments.
+	 * @return int
+	 */
+	public function count_admin_list( array $args = [] ): int {
+		global $wpdb;
+
+		$table  = self::get_table_name();
+		$status = ! empty( $args['status'] ) && in_array( strtolower( (string) $args['status'] ), [ 'active', 'closed' ], true ) ? strtolower( (string) $args['status'] ) : null;
+		$search = ! empty( $args['search'] ) ? trim( (string) $args['search'] ) : null;
+
+		$where_clauses = [];
+		$params        = [];
+
+		if ( $status ) {
+			$where_clauses[] = 'status = %s';
+			$params[]        = $status;
+		}
+
+		if ( $search ) {
+			$search_like     = '%' . $wpdb->esc_like( $search ) . '%';
+			$where_clauses[] = '(public_id LIKE %s OR title LIKE %s)';
+			$params[]        = $search_like;
+			$params[]        = $search_like;
+		}
+
+		$where_sql = '';
+		if ( ! empty( $where_clauses ) ) {
+			$where_sql = 'WHERE ' . implode( ' AND ', $where_clauses );
+		}
+
+		$sql = "SELECT COUNT(*) FROM {$table} {$where_sql}";
+
+		if ( ! empty( $params ) ) {
+			$query = $wpdb->prepare( $sql, ...$params );
+			$count = $wpdb->get_var( $query );
+		} else {
+			$count = $wpdb->get_var( $sql );
+		}
+
+		return absint( $count );
+	}
+
+	/**
+	 * Returns total count of all conversations in the database.
+	 *
+	 * @return int
+	 */
+	public function count_all(): int {
+		global $wpdb;
+		$table = self::get_table_name();
+		return absint( $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+	}
+
+	/**
+	 * Updates status by public UUID.
+	 *
+	 * @param string $public_id Public UUID.
+	 * @param string $status    New status.
+	 * @return bool
+	 */
+	public function update_status_by_public_id( string $public_id, string $status ): bool {
+		global $wpdb;
+
+		$table  = self::get_table_name();
+		$result = $wpdb->update(
+			$table,
+			[
+				'status'     => sanitize_text_field( $status ),
+				'updated_at' => gmdate( 'Y-m-d H:i:s' ),
+			],
+			[ 'public_id' => sanitize_text_field( $public_id ) ],
+			[ '%s', '%s' ],
+			[ '%s' ]
+		);
+
+		return false !== $result;
+	}
+
+	/**
+	 * Deletes a conversation and all its associated messages by public UUID.
+	 *
+	 * @param string $public_id Public UUID.
+	 * @return bool
+	 */
+	public function delete_by_public_id( string $public_id ): bool {
+		global $wpdb;
+
+		$conv = $this->get_by_public_id( $public_id );
+		if ( ! $conv ) {
+			return false;
+		}
+
+		$conv_id = (int) $conv['id'];
+
+		// Delete child messages first (Application cascade).
+		$msg_repo = new MessageRepository();
+		$msg_repo->delete_by_conversation_id( $conv_id );
+
+		// Delete parent conversation.
+		$table  = self::get_table_name();
+		$result = $wpdb->delete( $table, [ 'id' => $conv_id ], [ '%d' ] );
+
+		return false !== $result && $result > 0;
+	}
+
+	/**
 	 * Prunes conversations older than a specified number of days.
 	 *
 	 * @param int $days Retention threshold in days.

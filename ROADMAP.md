@@ -20,6 +20,8 @@ flowchart TD
     N2 --> N10[N10: Admin Dashboard Shell]
     N8 --> N10
     N9 --> N10
+    N3 --> N11[N11: Conversation Management]
+    N10 --> N11
 ```
 
 ## 2. Approved Node Breakdown
@@ -37,3 +39,4 @@ flowchart TD
 | **N8** | **Security & Rate Limiting** | Dual-tier transient rate limiter (5m/1h session & IP ceiling), HTTP 429 & Retry-After handling, secret leakage audits. | **COMPLETED** |
 | **N9** | **Full Chat UX** | Production-quality frontend client (`chat.js`, `chat.css`), UX state model, unread badge, retry flow, autoscroll, rate limit countdown. | **COMPLETED** |
 | **N10** | **Admin Dashboard Shell** | Top-level Gemini Chat menu, Dashboard overview, system status cards, setup checklist, quick actions, scoped admin styles. | **COMPLETED** |
+| **N11** | **Conversation Management** | Secure WordPress Admin conversation module (Conversations submenu `gca-conversations`, server-side pagination, search/filtering, transcript thread view, close/reopen/delete actions with cascading message cleanup). | **COMPLETED** |

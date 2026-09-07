@@ -626,3 +626,223 @@
 	border: 1px solid #d0d7de;
 	font-weight: 600;
 }
+
+/* -------------------------------------------------------------------------
+ * Conversation Management (N11)
+ * ------------------------------------------------------------------------- */
+.gca-admin-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.gca-admin-subsub {
+	margin: 0;
+	padding: 0;
+}
+
+.gca-admin-search-form {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.gca-admin-search-input {
+	padding: 5px 10px;
+	border-radius: 4px;
+	border: 1px solid #8c8f94;
+	min-width: 240px;
+	font-size: 13px;
+}
+
+.gca-admin-table-card {
+	padding: 0;
+	overflow: hidden;
+}
+
+.gca-admin-table {
+	border: none;
+	box-shadow: none;
+	margin: 0;
+}
+
+.gca-admin-table th {
+	background: #f6f7f7;
+	font-weight: 600;
+	color: #1d2327;
+	padding: 10px 14px;
+}
+
+.gca-admin-table td {
+	padding: 12px 14px;
+	vertical-align: middle;
+}
+
+.gca-admin-col-id {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.gca-admin-link-bold {
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.gca-admin-link-bold:hover {
+	text-decoration: underline;
+}
+
+.gca-admin-title-hint {
+	font-size: 11px;
+	color: #646970;
+}
+
+.gca-admin-user-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	color: #2c3338;
+}
+
+.gca-admin-user-tag .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+	color: #646970;
+}
+
+.gca-admin-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	background: #f6f7f7;
+	border-top: 1px solid #c3c4c7;
+}
+
+.gca-admin-pagination__info {
+	font-size: 13px;
+	color: #50575e;
+}
+
+.gca-admin-pagination__links {
+	display: flex;
+	gap: 6px;
+}
+
+.gca-admin-empty-state {
+	text-align: center;
+	padding: 48px 24px;
+	color: #50575e;
+}
+
+.gca-admin-empty-state .dashicons {
+	font-size: 48px;
+	width: 48px;
+	height: 48px;
+	color: #c3c4c7;
+	margin-bottom: 12px;
+}
+
+.gca-admin-empty-state h3 {
+	font-size: 16px;
+	font-weight: 600;
+	color: #1d2327;
+	margin: 0 0 6px 0;
+}
+
+.gca-admin-empty-state p {
+	font-size: 13px;
+	max-width: 460px;
+	margin: 0 auto 16px auto;
+	line-height: 1.5;
+}
+
+.gca-admin-breadcrumb {
+	margin-bottom: 16px;
+}
+
+.gca-admin-detail-header {
+	margin-bottom: 20px;
+}
+
+.gca-admin-detail-meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	font-size: 13px;
+	color: #50575e;
+	margin-top: 6px;
+}
+
+.gca-admin-thread-card {
+	padding: 24px;
+}
+
+.gca-admin-thread {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-top: 8px;
+}
+
+.gca-admin-msg {
+	border-radius: 8px;
+	padding: 14px 16px;
+	border: 1px solid #e0e0e0;
+}
+
+.gca-admin-msg--user {
+	background: #f0f6fc;
+	border-color: #d0d7de;
+}
+
+.gca-admin-msg--assistant {
+	background: #ffffff;
+	border-color: #c3c4c7;
+	border-left: 4px solid #2271b1;
+}
+
+.gca-admin-msg--system {
+	background: #fcf0db;
+	border-color: #f0c36d;
+}
+
+.gca-admin-msg__header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.gca-admin-msg__author {
+	font-size: 13px;
+	color: #1d2327;
+}
+
+.gca-admin-msg__time {
+	font-size: 11px;
+	color: #646970;
+}
+
+.gca-admin-msg__body {
+	font-size: 13px;
+	line-height: 1.55;
+	color: #1d2327;
+}
+
+.gca-admin-msg__body p {
+	margin: 0 0 8px 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.gca-admin-msg__body p:last-child {
+	margin-bottom: 0;
+}

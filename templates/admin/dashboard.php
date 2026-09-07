@@ -237,6 +237,16 @@ $site_url       = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
 				<?php esc_html_e( 'Quick Actions', 'gemini-chat-assistant' ); ?>
 			</h2>
 			<div class="gca-admin-action-list">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-conversations' ) ); ?>" class="gca-admin-action-item">
+					<div class="gca-admin-action-item__icon" aria-hidden="true">
+						<span class="dashicons dashicons-format-chat"></span>
+					</div>
+					<div class="gca-admin-action-item__text">
+						<strong><?php esc_html_e( 'Manage Conversations', 'gemini-chat-assistant' ); ?></strong>
+						<span><?php esc_html_e( 'Search, inspect transcripts, and manage visitor sessions.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
+				</a>
 				<a href="<?php echo esc_url( $settings_url ); ?>" class="gca-admin-action-item">
 					<div class="gca-admin-action-item__icon" aria-hidden="true">
 						<span class="dashicons dashicons-admin-generic"></span>
@@ -272,13 +282,17 @@ $site_url       = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
 		</p>
 
 		<div class="gca-admin-grid gca-admin-grid--3">
-			<div class="gca-admin-card gca-admin-card--future">
+			<div class="gca-admin-card">
 				<div class="gca-admin-card__header">
-					<span class="dashicons dashicons-format-chat"></span>
-					<span class="gca-admin-pill gca-admin-pill--planned"><?php esc_html_e( 'Node N11', 'gemini-chat-assistant' ); ?></span>
+					<span class="dashicons dashicons-format-chat" style="color: #2271b1;"></span>
+					<span class="gca-admin-pill gca-admin-pill--success"><?php esc_html_e( 'Node N11 • Active', 'gemini-chat-assistant' ); ?></span>
 				</div>
-				<h4><?php esc_html_e( 'Conversations Management', 'gemini-chat-assistant' ); ?></h4>
-				<p><?php esc_html_e( 'Search, browse, view, and export multi-turn visitor chat transcripts.', 'gemini-chat-assistant' ); ?></p>
+				<h4>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-conversations' ) ); ?>" style="text-decoration: none; color: inherit;">
+						<?php esc_html_e( 'Conversations Management', 'gemini-chat-assistant' ); ?> &rarr;
+					</a>
+				</h4>
+				<p class="gca-admin-card__desc"><?php esc_html_e( 'Search, browse, view, and manage multi-turn visitor chat transcripts.', 'gemini-chat-assistant' ); ?></p>
 			</div>
 
 			<div class="gca-admin-card gca-admin-card--future">
