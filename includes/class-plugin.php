@@ -113,6 +113,10 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/class-chat-service.php';
 		require_once GCA_PLUGIN_DIR . 'includes/class-rest-controller.php';
 
+		// Public Frontend UI & Shortcode.
+		require_once GCA_PLUGIN_DIR . 'includes/class-assets.php';
+		require_once GCA_PLUGIN_DIR . 'includes/class-shortcode.php';
+
 		// Load Provider Abstraction.
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderInterface.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderResponse.php';
@@ -143,6 +147,44 @@ class Plugin {
 	 * @var RestController|null
 	 */
 	private ?RestController $rest_controller = null;
+
+	/**
+	 * Frontend assets loader instance.
+	 *
+	 * @var Assets|null
+	 */
+	private ?Assets $assets = null;
+
+	/**
+	 * Public shortcode handler instance.
+	 *
+	 * @var Shortcode|null
+	 */
+	private ?Shortcode $shortcode = null;
+
+	/**
+	 * Accessor to Assets loader.
+	 *
+	 * @return Assets
+	 */
+	public function get_assets(): Assets {
+		if ( null === $this->assets ) {
+			$this->assets = new Assets();
+		}
+		return $this->assets;
+	}
+
+	/**
+	 * Accessor to Shortcode handler.
+	 *
+	 * @return Shortcode
+	 */
+	public function get_shortcode(): Shortcode {
+		if ( null === $this->shortcode ) {
+			$this->shortcode = new Shortcode();
+		}
+		return $this->shortcode;
+	}
 
 	/**
 	 * Accessor to GeminiClient.
@@ -283,5 +325,33 @@ class Plugin {
 		}
 
 		$this->get_rest_controller()->init();
+		$this->get_assets()->init();
+		$this->get_shortcode()->init();
+
+		add_action( 'wp_footer', [ $this, 'render_floating_widget' ] );
+	}
+
+	/**
+	 * Renders the floating chat widget in the footer of public pages.
+	 */
+	public function render_floating_widget(): void {
+		if ( is_admin() ) {
+			return;
+		}
+
+		$enabled        = (bool) SettingsService::get( 'enabled', true );
+		$widget_enabled = (bool) SettingsService::get( 'widget_enabled', true );
+
+		if ( ! $enabled || ! $widget_enabled ) {
+			return;
+		}
+
+		$mode        = 'floating';
+		$instance_id = 'gca-floating-widget';
+
+		$template_path = GCA_PLUGIN_DIR . 'templates/chat-widget.php';
+		if ( file_exists( $template_path ) ) {
+			include $template_path;
+		}
 	}
 }

@@ -5,6 +5,15 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N6] - 2026-09-07
+### Added
+- Frontend shortcode handler `[gemini_chat]` in `includes/class-shortcode.php`.
+- Asset management & script localization service in `includes/class-assets.php`.
+- Clean, accessible multi-mode template in `templates/chat-widget.php` supporting both floating and embedded modes.
+- Public scoped stylesheet in `public/css/chat.css` with CSS custom properties and mobile-responsive viewport rules down to 320px.
+- Vanilla JavaScript client in `public/js/chat.js` with cryptographically secure session generation, navigation between Home and Chat tabs, safe DOM message rendering, and integration with `gca/v1/chat` and `gca/v1/reset`.
+- Standalone test suites: `tests/test-shortcode.php`, `tests/test-assets.php`, `tests/test-public-ui.php`.
+
 ## [1.0.0-N5] - 2026-09-07
 ### Added
 - WordPress REST API Controller (`includes/class-rest-controller.php`) registering routes `POST /gca/v1/chat`, `POST /gca/v1/reset`, and `GET /gca/v1/health`.
