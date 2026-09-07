@@ -16,6 +16,7 @@ gemini-chat-assistant/
 ├── includes/
 │   ├── Admin/
 │   │   ├── AdminMenu.php
+│   │   ├── ProfileService.php
 │   │   ├── SettingsPage.php
 │   │   ├── LogsPage.php
 │   │   └── HealthPage.php
@@ -48,6 +49,8 @@ gemini-chat-assistant/
 │       └── ChatShortcode.php
 ├── templates/
 │   ├── admin/
+│   │   ├── ai-assistant.php
+│   │   ├── ai-profile-edit.php
 │   │   ├── dashboard.php
 │   │   ├── settings.php
 │   │   ├── logs.php

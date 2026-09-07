@@ -21,6 +21,7 @@
 | `ChatController` | `SkyFish\GeminiChat\REST` | Handles `POST /wp-json/gca/v1/chat` and `POST /reset`. | `GeminiClient`, `ContextManager`, `RateLimiter` |
 | `HealthController` | `SkyFish\GeminiChat\REST` | Handles `GET /wp-json/gca/v1/health`. | `Migrator`, `GeminiClient` |
 | `AdminMenu` | `SkyFish\GeminiChat\Admin` | Adds admin pages under WordPress dashboard. | `add_menu_page`, `add_submenu_page` |
+| `ProfileService` | `SkyFish\GeminiChat\Admin` | Manages AI profiles, active selection, and prompt construction. | `SettingsService`, `wp_options` |
 | `SettingsPage` | `SkyFish\GeminiChat\Admin` | Renders settings screen. | `Encryption` |
 | `LogsPage` | `SkyFish\GeminiChat\Admin` | Renders audit logs screen. | `LogRepository`, `ConversationRepository` |
 | `HealthPage` | `SkyFish\GeminiChat\Admin` | Renders diagnostics & self-test screen. | `HealthController` |

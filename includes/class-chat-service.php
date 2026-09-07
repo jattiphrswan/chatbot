@@ -7,6 +7,7 @@
 
 namespace SkyFish\GeminiChat;
 
+use SkyFish\GeminiChat\Admin\ProfileService;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\Database\ConversationRepository;
 use SkyFish\GeminiChat\Database\MessageRepository;
@@ -30,6 +31,7 @@ class ChatService {
 	private ConversationRepository $conversation_repo;
 	private MessageRepository $message_repo;
 	private GeminiClient $gemini_client;
+	private ProfileService $profile_service;
 
 	/**
 	 * ChatService constructor.
@@ -39,19 +41,22 @@ class ChatService {
 	 * @param ConversationRepository|null $conversation_repo Optional conversation repository.
 	 * @param MessageRepository|null      $message_repo      Optional message repository.
 	 * @param GeminiClient|null           $gemini_client     Optional Gemini client.
+	 * @param ProfileService|null         $profile_service   Optional profile service.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
 		?SessionService $session_service = null,
 		?ConversationRepository $conversation_repo = null,
 		?MessageRepository $message_repo = null,
-		?GeminiClient $gemini_client = null
+		?GeminiClient $gemini_client = null,
+		?ProfileService $profile_service = null
 	) {
 		$this->settings_service  = $settings_service ?? SettingsService::get_instance();
 		$this->conversation_repo = $conversation_repo ?? new ConversationRepository();
 		$this->message_repo      = $message_repo ?? new MessageRepository();
 		$this->session_service   = $session_service ?? new SessionService( $this->conversation_repo, $this->message_repo );
 		$this->gemini_client     = $gemini_client ?? new GeminiClient( $this->settings_service );
+		$this->profile_service   = $profile_service ?? new ProfileService( $this->settings_service );
 	}
 
 	/**
@@ -103,7 +108,7 @@ class ChatService {
 
 		// 6. Prepare Gemini client request.
 		$model              = SettingsService::get_model();
-		$system_instruction = SettingsService::get_system_instruction();
+		$system_instruction = $this->profile_service->get_effective_system_instruction();
 
 		$start_time  = microtime( true );
 		$ai_response = $this->gemini_client->create_interaction(

@@ -5,6 +5,19 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N15] - 2026-09-07
+### Added
+- WordPress-native AI Profiles & Custom Prompts module (`includes/Admin/ProfileService.php`, `templates/admin/ai-assistant.php`, `templates/admin/ai-profile-edit.php`) accessible via submenu `Gemini Chat -> AI Assistant` (`gca-ai-assistant`).
+- Configuration storage via WordPress Options API (`gca_ai_profiles`, `autoload = 'no'`) supporting up to 25 configurable AI profiles.
+- Seamless, non-destructive migration from legacy `gca_settings['system_instruction']` into a default "General Assistant" profile on first access.
+- Centralized deterministic prompt builder in `ProfileService::get_effective_system_instruction()` assembling Persona Role, System Instructions, Tone, Response Style, Behavioral Rules, and Fallback Message guidance.
+- Centralized active profile ID management in `gca_settings['active_profile_id']` with safe fallback hierarchy (active profile -> first enabled -> legacy setting fallback -> hardcoded safe default).
+- Profile lifecycle operations: Create, Edit, Duplicate (clones with new UUID and inactive status), Delete (with last-profile and active-profile safeguards), and Activate.
+- Architectural integration with `ChatService`: `ChatService` queries `ProfileService::get_effective_system_instruction()` while keeping `GeminiClient` as a strictly separated transport layer.
+- Enhanced Admin Settings page: "AI & Model" tab replaced editable textarea with an active AI profile reference card and deep-link to AI Assistant, preserving legacy prompt through hidden input during general settings save.
+- Dashboard integration: Added "Active AI Profile" status card, "Manage AI Assistant Profiles" Quick Action, and activated Node N15 Roadmap card.
+- Comprehensive unit test suite in `tests/test-ai-profiles.php` covering CRUD, sanitization, XSS, whitelist enforcement, deterministic prompt assembly, secret isolation, and ChatService integration.
+
 ## [1.0.0-N14] - 2026-09-07
 ### Added
 - Configurable Pre-Chat lead capture form (`templates/chat-widget.php`, `public/js/chat.js`, `public/css/chat.css`) supporting name, email, phone, and inquiry requirement fields with individual collect and require controls.

@@ -8,6 +8,7 @@
 namespace SkyFish\GeminiChat;
 
 use SkyFish\GeminiChat\Admin\AdminMenu;
+use SkyFish\GeminiChat\Admin\ProfileService;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\Database\ConversationRepository;
 use SkyFish\GeminiChat\Database\MessageRepository;
@@ -85,6 +86,13 @@ class Plugin {
 	private ?LeadService $lead_service = null;
 
 	/**
+	 * AI profile service instance.
+	 *
+	 * @var ProfileService|null
+	 */
+	private ?ProfileService $profile_service = null;
+
+	/**
 	 * Gets the singleton instance.
 	 *
 	 * @return Plugin
@@ -119,6 +127,7 @@ class Plugin {
 
 		// Admin & Settings Services.
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/SettingsService.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Admin/ProfileService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/AnalyticsService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/AppearanceService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/AdminMenu.php';
@@ -238,6 +247,18 @@ class Plugin {
 	}
 
 	/**
+	 * Accessor to ProfileService.
+	 *
+	 * @return ProfileService
+	 */
+	public function get_profile_service(): ProfileService {
+		if ( null === $this->profile_service ) {
+			$this->profile_service = new ProfileService( SettingsService::get_instance() );
+		}
+		return $this->profile_service;
+	}
+
+	/**
 	 * Accessor to ChatService.
 	 *
 	 * @return ChatService
@@ -249,7 +270,8 @@ class Plugin {
 				$this->get_session_service(),
 				$this->get_conversation_repository(),
 				$this->get_message_repository(),
-				$this->get_gemini_client()
+				$this->get_gemini_client(),
+				$this->get_profile_service()
 			);
 		}
 		return $this->chat_service;

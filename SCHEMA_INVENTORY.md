@@ -141,7 +141,37 @@
     "rate_limit_1h": { "type": "integer", "default": 100, "minimum": 5, "maximum": 5000 },
     "store_messages": { "type": "boolean", "default": true },
     "store_leads": { "type": "boolean", "default": true },
-    "retention_days": { "type": "integer", "default": 30, "minimum": 1, "maximum": 365 }
+    "retention_days": { "type": "integer", "default": 30, "minimum": 1, "maximum": 365 },
+    "active_profile_id": { "type": "string", "default": "" }
+  }
+}
+```
+
+### 2.2 `gca_ai_profiles` Options Schema
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AIProfilesOption",
+  "type": "object",
+  "maxProperties": 25,
+  "additionalProperties": {
+    "type": "object",
+    "required": ["id", "name", "tone", "system_prompt", "response_style", "enabled", "created_at", "updated_at"],
+    "properties": {
+      "id": { "type": "string" },
+      "name": { "type": "string", "maxLength": 100 },
+      "description": { "type": "string", "maxLength": 1000 },
+      "role": { "type": "string", "maxLength": 2000 },
+      "tone": { "type": "string", "enum": ["professional", "friendly", "concise", "helpful", "conversational", "formal"] },
+      "system_prompt": { "type": "string", "maxLength": 15000 },
+      "rules": { "type": "string", "maxLength": 10000 },
+      "response_style": { "type": "string", "enum": ["concise", "balanced", "detailed"] },
+      "fallback_message": { "type": "string", "maxLength": 2000 },
+      "enabled": { "type": "boolean" },
+      "created_at": { "type": "string", "format": "date-time" },
+      "updated_at": { "type": "string", "format": "date-time" }
+    }
   }
 }
 ```

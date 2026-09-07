@@ -25,6 +25,10 @@ $widget_enabled = ! empty( $settings['widget_enabled'] );
 $store_messages = ! empty( $settings['store_messages'] );
 $guest_access   = ! empty( $settings['guest_access'] );
 $site_url       = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
+
+$profile_service     = new \SkyFish\GeminiChat\Admin\ProfileService();
+$active_profile      = $profile_service->get_active_profile();
+$active_profile_name = $active_profile['name'] ?? __( 'General Assistant', 'gemini-chat-assistant' );
 ?>
 <div class="wrap gca-admin-wrap">
 	<!-- Admin Header -->
@@ -133,6 +137,22 @@ $site_url       = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
 				</p>
 			</div>
 
+			<!-- Card: AI Profile -->
+			<div class="gca-admin-card gca-admin-card--status">
+				<div class="gca-admin-card__header">
+					<span class="gca-admin-card__icon" aria-hidden="true">
+						<span class="dashicons dashicons-admin-users"></span>
+					</span>
+					<span class="gca-admin-pill gca-admin-pill--success">
+						<?php echo esc_html( $active_profile_name ); ?>
+					</span>
+				</div>
+				<h3 class="gca-admin-card__title"><?php esc_html_e( 'Active AI Profile', 'gemini-chat-assistant' ); ?></h3>
+				<p class="gca-admin-card__desc">
+					<?php esc_html_e( 'Persona, instructions, and tone powering assistant interactions.', 'gemini-chat-assistant' ); ?>
+				</p>
+			</div>
+
 			<!-- Card 4: Database Schema -->
 			<div class="gca-admin-card gca-admin-card--status">
 				<div class="gca-admin-card__header">
@@ -237,6 +257,16 @@ $site_url       = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
 				<?php esc_html_e( 'Quick Actions', 'gemini-chat-assistant' ); ?>
 			</h2>
 			<div class="gca-admin-action-list">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-ai-assistant' ) ); ?>" class="gca-admin-action-item">
+					<div class="gca-admin-action-item__icon" aria-hidden="true">
+						<span class="dashicons dashicons-superhero"></span>
+					</div>
+					<div class="gca-admin-action-item__text">
+						<strong><?php esc_html_e( 'Manage AI Assistant Profiles', 'gemini-chat-assistant' ); ?></strong>
+						<span><?php esc_html_e( 'Configure personas, instructions, tone, and behavioral boundaries.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
+				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-conversations' ) ); ?>" class="gca-admin-action-item">
 					<div class="gca-admin-action-item__icon" aria-hidden="true">
 						<span class="dashicons dashicons-format-chat"></span>
@@ -362,6 +392,19 @@ $site_url       = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
 					</a>
 				</h4>
 				<p class="gca-admin-card__desc"><?php esc_html_e( 'Configurable pre-chat lead capture form, lead repository, and admin inquiries management.', 'gemini-chat-assistant' ); ?></p>
+			</div>
+
+			<div class="gca-admin-card">
+				<div class="gca-admin-card__header">
+					<span class="dashicons dashicons-superhero" style="color: #2271b1;"></span>
+					<span class="gca-admin-pill gca-admin-pill--success"><?php esc_html_e( 'Node N15 • Active', 'gemini-chat-assistant' ); ?></span>
+				</div>
+				<h4>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-ai-assistant' ) ); ?>" style="text-decoration: none; color: inherit;">
+						<?php esc_html_e( 'AI Profiles & Custom Prompts', 'gemini-chat-assistant' ); ?> &rarr;
+					</a>
+				</h4>
+				<p class="gca-admin-card__desc"><?php esc_html_e( 'Persona management, active profile selection, role guidance, tone, rules, and prompt builder.', 'gemini-chat-assistant' ); ?></p>
 			</div>
 
 			<div class="gca-admin-card gca-admin-card--future">

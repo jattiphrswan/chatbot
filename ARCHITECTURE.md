@@ -66,6 +66,8 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 ### 2.3 PHP Application & Service Tier
 - **Core Orchestration (`SkyFish\GeminiChat\Core\Plugin`):** Bootstraps services, hooks into WordPress lifecycle, registers autoloader, and manages singleton container.
 - **Gemini Client (`SkyFish\GeminiChat\GeminiClient`):** Communicates with Google Gemini Interactions API (`/v1/interactions`) via WordPress `wp_remote_post()`. Handles server-side API keys (`x-goog-api-key` header), payload assembly (`model`, `input`, `system_instruction`, `previous_interaction_id`), `steps[]` response parsing, usage metrics, and error normalization.
+- **AI Profiles & Prompt Service (`SkyFish\GeminiChat\Admin\ProfileService`):** Manages AI personas, instructions, tone, response style, behavioral rules, fallback message guidance, and deterministic effective system instruction construction.
+  - *Prompt Precedence Hierarchy:* Active Profile prompt &rarr; legacy `system_instruction` fallback &rarr; hardcoded safe default (`You are a helpful customer support assistant for this website.`).
 - **Context Manager (`SkyFish\GeminiChat\Services\ContextManager`):** Retrieves previous message history for a session, formats conversation history according to Gemini multi-turn format, and applies token/message window constraints.
 - **Security & Rate Limiting (`SkyFish\GeminiChat\Security\*`):** Enforces transient-based rate limits per IP/session, validates nonces, and manages server-side credential isolation.
 
@@ -73,9 +75,11 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 - Custom database tables prefixed with `{$wpdb->prefix}gca_`:
   1. `gca_conversations`: Stores conversation session metadata.
   2. `gca_messages`: Stores individual user and assistant messages.
-  3. `gca_logs`: Stores system events, API latency, token metrics, and errors.
+  3. `gca_leads`: Stores pre-chat lead inquiries and contact information.
+  4. `gca_logs`: Stores system events, API latency, token metrics, and errors.
 - WordPress Options (`wp_options`):
-  - `gca_settings`: Serialized array of configuration settings (model, system instructions, rate limits, widget toggles).
+  - `gca_settings`: Serialized array of configuration settings (model, active_profile_id, rate limits, widget toggles).
+  - `gca_ai_profiles`: Serialized array of up to 25 configured AI profiles (`autoload = 'no'`).
   - `gca_db_version`: Current schema migration version.
 
 > **CRITICAL CREDENTIAL ARCHITECTURE:**
@@ -125,3 +129,5 @@ ProviderInterface
 
 The system employs a provider abstraction layer decoupling conversational controllers from concrete AI vendor SDKs. The `ProviderRegistry` resolves implementations of `ProviderInterface` (`GeminiProvider`, `OpenAIProvider`, `ClaudeProvider`) dynamically based on administrator configuration, ensuring normalized input formatting and response structures via `ProviderResponse`.
 
+> **V1 IMPLEMENTATION STATUS:**
+> In production v1 (N0 through N15), `ChatService` operates strictly and exclusively with Google Gemini through `GeminiClient`. Multi-provider routing, external OpenAI/Claude keys, and non-Gemini SDKs are not active in runtime.

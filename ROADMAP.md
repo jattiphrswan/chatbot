@@ -32,6 +32,9 @@ flowchart TD
     N5 --> N14
     N9 --> N14
     N10 --> N14
+    N2 --> N15[N15: AI Profiles & Custom Prompts]
+    N4 --> N15
+    N10 --> N15
 ```
 
 ## 2. Approved Node Breakdown
@@ -53,3 +56,4 @@ flowchart TD
 | **N12** | **Analytics & Insights** | Native WordPress Analytics module (Analytics submenu `gca-analytics`, date range filtering, real KPI aggregates, daily activity charts, status & audience & model breakdowns). | **COMPLETED** |
 | **N13** | **Appearance Builder** | WordPress-native visual customizer (`gca-appearance`), live mock preview, avatar upload via Media Library, color palette, dimensions/radius clamping, launcher icons, device visibility, safe CSS variable injection, reset to defaults. | **COMPLETED** |
 | **N14** | **Leads & Pre-Chat Capture** | Configurable pre-chat lead capture form (name, email, phone, requirement), server/client validation, Leads database table (`gca_leads`), LeadRepository, LeadService, REST `/prechat` endpoint, conversation association, Admin Leads management (`gca-leads`). | **COMPLETED** |
+| **N15** | **AI Profiles & Custom Prompts** | WordPress-native AI Profile and Prompt Management system (AI Assistant submenu `gca-ai-assistant`, Options API storage `gca_ai_profiles`, active profile selection, role, instructions, tone, response style, rules, fallback message, duplicate, safe delete, migration from legacy system_instruction, centralized prompt builder in `ProfileService`, ChatService integration). | **COMPLETED** |

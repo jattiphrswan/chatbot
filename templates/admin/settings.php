@@ -108,10 +108,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<input type="text" id="gca_model" name="gca_settings[model]" value="<?php echo esc_attr( $settings['model'] ); ?>" />
 						<span class="description"><?php esc_html_e( 'Configured Gemini model (default: gemini-3.8-flash).', 'gemini-chat-assistant' ); ?></span>
 					</div>
-					<div class="gca-field-row">
-						<label for="gca_system_instruction"><?php esc_html_e( 'System Instruction / Prompt', 'gemini-chat-assistant' ); ?></label>
-						<textarea id="gca_system_instruction" name="gca_settings[system_instruction]" rows="6"><?php echo esc_textarea( $settings['system_instruction'] ); ?></textarea>
-						<span class="description"><?php esc_html_e( 'Directive guiding persona, tone, business guidelines, and boundaries.', 'gemini-chat-assistant' ); ?></span>
+
+					<?php
+					$profile_service = new \SkyFish\GeminiChat\Admin\ProfileService();
+					$active_profile  = $profile_service->get_active_profile();
+					$active_name     = $active_profile['name'] ?? __( 'General Assistant', 'gemini-chat-assistant' );
+					$ai_url          = admin_url( 'admin.php?page=gca-ai-assistant' );
+					?>
+					<div class="gca-field-row" style="background: #f6f7f7; padding: 16px; border-radius: 6px; border: 1px solid #dcdcde;">
+						<label style="font-weight: 600;"><?php esc_html_e( 'Active AI Persona & Instructions', 'gemini-chat-assistant' ); ?></label>
+						<p style="margin: 4px 0 10px;">
+							<strong><?php esc_html_e( 'Active Profile:', 'gemini-chat-assistant' ); ?></strong>
+							<span class="gca-admin-pill gca-admin-pill--success" style="font-size: 13px; margin-left: 6px;">
+								<?php echo esc_html( $active_name ); ?>
+							</span>
+						</p>
+						<p class="description" style="margin-bottom: 12px;">
+							<?php esc_html_e( 'AI personas, instructions, tone, and behavioral rules are now centrally managed under AI Assistant.', 'gemini-chat-assistant' ); ?>
+						</p>
+						<a href="<?php echo esc_url( $ai_url ); ?>" class="button button-secondary">
+							<span class="dashicons dashicons-superhero" style="vertical-align: middle; margin-right: 4px;"></span>
+							<?php esc_html_e( 'Manage AI Profiles & Prompts &rarr;', 'gemini-chat-assistant' ); ?>
+						</a>
+						<!-- Hidden passthrough fields to protect existing configuration during general settings save -->
+						<input type="hidden" name="gca_settings[system_instruction]" value="<?php echo esc_attr( $settings['system_instruction'] ); ?>" />
+						<?php if ( ! empty( $settings['active_profile_id'] ) ) : ?>
+							<input type="hidden" name="gca_settings[active_profile_id]" value="<?php echo esc_attr( $settings['active_profile_id'] ); ?>" />
+						<?php endif; ?>
 					</div>
 				</div>
 			</div>

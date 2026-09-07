@@ -30,3 +30,10 @@
 ## 4. Input & Output Discipline
 - All inputs are unwrapped from slashes via `wp_unslash()` and sanitized.
 - Responses use strict JSON encodings and explicit HTTP status codes.
+
+## 5. AI Profile & Prompt Security
+- **No Public Prompt Exposure:** The effective system prompt, profile instructions, and behavioral rules are strictly server-side data sent to GeminiClient. They are never sent to frontend JavaScript, REST responses, page HTML, or browser local storage.
+- **Plain Text Storage:** System instructions and rules are treated as plain text strings (`sanitize_textarea_field`). They are never executed, `eval()`'d, or rendered as unescaped HTML.
+- **Admin Capability:** Profile creation, editing, activation, duplication, and deletion strictly require `current_user_can('manage_options')` and unique action nonces.
+- **Zero Credential Contamination:** Stored profiles and constructed prompts are audited to ensure they never include API keys, database credentials, or visitor PII.
+- **Safe Options Quota:** Total profiles are capped at 25 and saved with `autoload = 'no'` to prevent database and cache bloat.

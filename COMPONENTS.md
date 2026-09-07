@@ -28,6 +28,7 @@ SkyFish\GeminiChat
 │   └── HealthController: Handles `/health` diagnostic endpoint.
 ├── Admin/
 │   ├── AdminMenu: Registers WP admin menu entries under `Gemini Chat`.
+│   ├── ProfileService: Manages AI profiles, active profile selection, and prompt building.
 │   ├── SettingsPage: Admin settings screen for model config, toggles, limits, privacy.
 │   ├── LogsPage: Audit trail viewer, conversation inspector, latency metrics.
 │   └── HealthPage: Real-time connectivity and status diagnostics page.

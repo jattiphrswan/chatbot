@@ -32,10 +32,12 @@
     "tables": [
       "wp_gca_conversations",
       "wp_gca_messages",
+      "wp_gca_leads",
       "wp_gca_logs"
     ],
     "options": [
       "gca_settings",
+      "gca_ai_profiles",
       "gca_db_version"
     ]
   },

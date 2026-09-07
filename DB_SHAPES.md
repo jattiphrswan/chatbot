@@ -84,8 +84,33 @@ CREATE TABLE `{$wpdb->prefix}gca_logs` (
 
 | Option Name | Type | Description |
 | :--- | :--- | :--- |
-| `gca_settings` | `array` | Stores plugin configuration (model, general toggles, limits, privacy, widget settings). |
-| `gca_db_version` | `string` | Semantic database migration version (e.g. `1.0.0`). |
+| `gca_settings` | `array` | Stores plugin configuration (model, active_profile_id, limits, privacy, widget settings). |
+| `gca_ai_profiles` | `array` | Stores up to 25 AI profiles keyed by UUID (`autoload = 'no'`). |
+| `gca_db_version` | `string` | Semantic database migration version (e.g. `1.1.0`). |
+
+### 3.1 AI Profile Data Shape (`gca_ai_profiles`)
+Stored as an associative array keyed by Profile UUID:
+
+```php
+[
+    'profile-uuid' => [
+        'id'               => 'string (UUID v4)',
+        'name'             => 'string (max 100)',
+        'description'      => 'string (max 1000, admin metadata)',
+        'role'             => 'string (max 2000, assistant role/persona)',
+        'tone'             => 'string (professional|friendly|concise|helpful|conversational|formal)',
+        'system_prompt'    => 'string (max 15000, instructions)',
+        'rules'            => 'string (max 10000, behavioral rules)',
+        'response_style'   => 'string (concise|balanced|detailed)',
+        'fallback_message' => 'string (max 2000, fallback instruction)',
+        'enabled'          => 'bool',
+        'created_at'       => 'datetime (Y-m-d H:i:s)',
+        'updated_at'       => 'datetime (Y-m-d H:i:s)',
+    ],
+]
+```
 
 > **NOTE ON API CREDENTIALS:**
+> The Google Gemini API key is **NEVER** stored in any database table or option. It is resolved strictly from the environment variable (`GEMINI_API_KEY`) or the `GCA_GEMINI_API_KEY` constant in `wp-config.php`.
+
 > The Gemini API key is **NOT** stored in `wp_options`. Credentials reside purely in server-side environment variables (`GEMINI_API_KEY`) or `wp-config.php` (`GCA_GEMINI_API_KEY`).

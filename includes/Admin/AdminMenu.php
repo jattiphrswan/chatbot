@@ -23,6 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class AdminMenu {
 
 	public const MAIN_MENU_SLUG          = 'gemini-chat-assistant';
+	public const AI_ASSISTANT_MENU_SLUG  = 'gca-ai-assistant';
 	public const CONVERSATIONS_MENU_SLUG = 'gca-conversations';
 	public const LEADS_MENU_SLUG         = 'gca-leads';
 	public const ANALYTICS_MENU_SLUG     = 'gca-analytics';
@@ -33,6 +34,7 @@ class AdminMenu {
 	private MessageRepository $message_repo;
 	private AnalyticsService $analytics_service;
 	private LeadRepository $lead_repo;
+	private ProfileService $profile_service;
 
 	/**
 	 * AdminMenu constructor.
@@ -41,17 +43,20 @@ class AdminMenu {
 	 * @param MessageRepository|null      $message_repo      Optional message repository.
 	 * @param AnalyticsService|null       $analytics_service Optional analytics service.
 	 * @param LeadRepository|null         $lead_repo         Optional lead repository.
+	 * @param ProfileService|null         $profile_service   Optional profile service.
 	 */
 	public function __construct(
 		?ConversationRepository $conversation_repo = null,
 		?MessageRepository $message_repo = null,
 		?AnalyticsService $analytics_service = null,
-		?LeadRepository $lead_repo = null
+		?LeadRepository $lead_repo = null,
+		?ProfileService $profile_service = null
 	) {
 		$this->conversation_repo = $conversation_repo ?? new ConversationRepository();
 		$this->message_repo      = $message_repo ?? new MessageRepository();
 		$this->analytics_service = $analytics_service ?? new AnalyticsService();
 		$this->lead_repo         = $lead_repo ?? new LeadRepository();
+		$this->profile_service   = $profile_service ?? new ProfileService();
 	}
 
 	/**
@@ -73,6 +78,13 @@ class AdminMenu {
 
 		// Admin post action hooks for appearance
 		add_action( 'admin_post_gca_reset_appearance', [ $this, 'handle_reset_appearance' ] );
+
+		// Admin post action hooks for AI profiles
+		add_action( 'admin_post_gca_create_profile', [ $this, 'handle_create_profile' ] );
+		add_action( 'admin_post_gca_update_profile', [ $this, 'handle_update_profile' ] );
+		add_action( 'admin_post_gca_duplicate_profile', [ $this, 'handle_duplicate_profile' ] );
+		add_action( 'admin_post_gca_delete_profile', [ $this, 'handle_delete_profile' ] );
+		add_action( 'admin_post_gca_activate_profile', [ $this, 'handle_activate_profile' ] );
 	}
 
 	/**
@@ -96,6 +108,15 @@ class AdminMenu {
 			'manage_options',
 			self::MAIN_MENU_SLUG,
 			[ $this, 'render_dashboard_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
+			__( 'AI Assistant', 'gemini-chat-assistant' ),
+			__( 'AI Assistant', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::AI_ASSISTANT_MENU_SLUG,
+			[ $this, 'render_ai_assistant_page' ]
 		);
 
 		add_submenu_page(
@@ -167,6 +188,8 @@ class AdminMenu {
 	public function enqueue_assets( string $hook_suffix ): void {
 		$allowed_hooks = [
 			'toplevel_page_' . self::MAIN_MENU_SLUG,
+			'gemini-chat_page_' . self::AI_ASSISTANT_MENU_SLUG,
+			'gemini-chat-assistant_page_' . self::AI_ASSISTANT_MENU_SLUG,
 			'gemini-chat_page_' . self::CONVERSATIONS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::CONVERSATIONS_MENU_SLUG,
 			'gemini-chat_page_' . self::LEADS_MENU_SLUG,
@@ -488,5 +511,169 @@ class AdminMenu {
 		$is_configured = SettingsService::is_api_key_configured();
 
 		include GCA_PLUGIN_DIR . 'templates/admin/settings.php';
+	}
+
+	/**
+	 * Renders the AI Assistant management page (list or edit view).
+	 */
+	public function render_ai_assistant_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$this->profile_service->migrate_legacy_prompt();
+
+		$action     = ! empty( $_GET['action'] ) ? sanitize_key( (string) $_GET['action'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$profile_id = ! empty( $_GET['profile_id'] ) ? sanitize_text_field( (string) $_GET['profile_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		if ( 'add' === $action || ( 'edit' === $action && ! empty( $profile_id ) ) ) {
+			$profile = null;
+			$is_new  = ( 'add' === $action );
+
+			if ( ! $is_new ) {
+				$profile = $this->profile_service->get_profile( $profile_id );
+				if ( ! $profile ) {
+					wp_safe_redirect( admin_url( 'admin.php?page=' . self::AI_ASSISTANT_MENU_SLUG ) );
+					exit;
+				}
+			} else {
+				$profile = [
+					'id'               => '',
+					'name'             => '',
+					'description'      => '',
+					'role'             => '',
+					'tone'             => 'professional',
+					'system_prompt'    => '',
+					'rules'            => '',
+					'response_style'   => 'balanced',
+					'fallback_message' => '',
+					'enabled'          => true,
+				];
+			}
+
+			$active_id    = $this->profile_service->get_active_profile_id();
+			$is_active    = ( $profile['id'] === $active_id );
+			$preview_text = $this->profile_service->get_effective_system_instruction( $profile );
+			$back_url     = admin_url( 'admin.php?page=' . self::AI_ASSISTANT_MENU_SLUG );
+
+			include GCA_PLUGIN_DIR . 'templates/admin/ai-profile-edit.php';
+			return;
+		}
+
+		$profiles       = $this->profile_service->get_all_profiles();
+		$active_id      = $this->profile_service->get_active_profile_id();
+		$active_profile = $this->profile_service->get_active_profile();
+		$preview_text   = $this->profile_service->get_effective_system_instruction( $active_profile );
+		$add_url        = admin_url( 'admin.php?page=' . self::AI_ASSISTANT_MENU_SLUG . '&action=add' );
+		$max_profiles   = ProfileService::MAX_PROFILES;
+		$at_limit       = ( count( $profiles ) >= $max_profiles );
+
+		include GCA_PLUGIN_DIR . 'templates/admin/ai-assistant.php';
+	}
+
+	/**
+	 * Handles POST action to create an AI profile.
+	 */
+	public function handle_create_profile(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		check_admin_referer( 'gca_create_profile' );
+
+		$profile_data = isset( $_POST['profile'] ) && is_array( $_POST['profile'] ) ? $_POST['profile'] : [];
+		$result       = $this->profile_service->create_profile( $profile_data );
+
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'created' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to update an AI profile.
+	 */
+	public function handle_update_profile(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$profile_id = ! empty( $_POST['profile_id'] ) ? sanitize_text_field( (string) $_POST['profile_id'] ) : '';
+		check_admin_referer( 'gca_update_profile_' . $profile_id );
+
+		$profile_data = isset( $_POST['profile'] ) && is_array( $_POST['profile'] ) ? $_POST['profile'] : [];
+		$result       = $this->profile_service->update_profile( $profile_id, $profile_data );
+
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'profile_id' => $profile_id, 'action' => 'edit', 'updated' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to duplicate an AI profile.
+	 */
+	public function handle_duplicate_profile(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$profile_id = ! empty( $_POST['profile_id'] ) ? sanitize_text_field( (string) $_POST['profile_id'] ) : '';
+		check_admin_referer( 'gca_duplicate_profile_' . $profile_id );
+
+		$result = $this->profile_service->duplicate_profile( $profile_id );
+
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'duplicated' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to delete an AI profile.
+	 */
+	public function handle_delete_profile(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$profile_id = ! empty( $_POST['profile_id'] ) ? sanitize_text_field( (string) $_POST['profile_id'] ) : '';
+		check_admin_referer( 'gca_delete_profile_' . $profile_id );
+
+		$result = $this->profile_service->delete_profile( $profile_id );
+
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'deleted' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to activate an AI profile.
+	 */
+	public function handle_activate_profile(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$profile_id = ! empty( $_POST['profile_id'] ) ? sanitize_text_field( (string) $_POST['profile_id'] ) : '';
+		check_admin_referer( 'gca_activate_profile_' . $profile_id );
+
+		$result = $this->profile_service->activate_profile( $profile_id );
+
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'activated' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
 	}
 }
