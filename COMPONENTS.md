@@ -20,7 +20,6 @@ SkyFish\GeminiChat
 │   ├── TokenCounter: Estimates token count and warns on budget limits.
 │   └── PromptBuilder: Injects system instructions, context metadata, and history.
 ├── Security/
-│   ├── Encryption: AES-256-GCM symmetric encryption for API keys in wp_options.
 │   ├── RateLimiter: IP and session throttling via WordPress transients.
 │   └── NonceValidator: Verifies WP REST nonces and capabilities.
 ├── REST/
@@ -29,7 +28,7 @@ SkyFish\GeminiChat
 │   └── HealthController: Handles `/health` diagnostic endpoint.
 ├── Admin/
 │   ├── AdminMenu: Registers WP admin menu entries under `Gemini Chat`.
-│   ├── SettingsPage: Admin settings screen for model config, API key, styling.
+│   ├── SettingsPage: Admin settings screen for model config, toggles, limits, privacy.
 │   ├── LogsPage: Audit trail viewer, conversation inspector, latency metrics.
 │   └── HealthPage: Real-time connectivity and status diagnostics page.
 └── Shortcode/

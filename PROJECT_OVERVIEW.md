@@ -49,7 +49,7 @@
 ```
 
 > **CRITICAL SECURITY GUARANTEE:**
-> The Google Gemini API key is stored server-side with AES-256-GCM encryption in WordPress options and is **NEVER** exposed to the client browser or outputted in frontend markup.
+> The Google Gemini API key is loaded server-side exclusively via environment variables (`GEMINI_API_KEY`) or `wp-config.php` (`GCA_GEMINI_API_KEY`). It is **NEVER** stored in `gca_settings`, database options, or exposed to the client browser.
 
 ## 4. Key Capabilities & Features
 1. **Interactive Frontend Chat Widget:**
@@ -62,7 +62,7 @@
    - `POST /wp-json/gca/v1/reset`: Clears user session history and starts a fresh conversation.
    - `GET /wp-json/gca/v1/health`: Verifies database health, API key validity, and external Gemini API connectivity.
 3. **Comprehensive Admin Dashboard:**
-   - **Settings Module:** Model selection (`gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash`), API key configuration, system prompt customization, temperature, top_p, and token constraints.
+   - **Settings Module:** Model configuration (`gemini-3.7-flash`), server-side credential status indicator, system prompt customization, temperature, top_p, and token constraints.
    - **Logs & Analytics Module:** Real-time logging of chat traffic, error rates, token consumption, and active user sessions.
    - **Health & Diagnostics Module:** Self-test tool for API connectivity, database status, and REST route verification.
 4. **Resilient Data Architecture:**

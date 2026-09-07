@@ -7,13 +7,13 @@
 
 ## Key Features
 - **Unidirectional Secure Architecture:** Browser -> WordPress REST API (`gca/v1`) -> PHP Application Layer -> Google Gemini API.
-- **Zero Client-Side Secret Exposure:** The Gemini API key is encrypted with AES-256-GCM in the WordPress database and is never exposed to the frontend.
+- **Zero Client-Side Secret Exposure:** The Gemini API key is loaded server-side exclusively via environment variables (`GEMINI_API_KEY`) or `wp-config.php` (`GCA_GEMINI_API_KEY`) and is never stored in DB options or exposed to the frontend.
 - **REST Endpoints:**
   - `POST /wp-json/gca/v1/chat`
   - `POST /wp-json/gca/v1/reset`
   - `GET /wp-json/gca/v1/health`
 - **Shortcode:** `[gemini_chat]` (supports floating widget and inline embed modes).
-- **Admin Dashboard:** Includes Settings (Model Selection, System Prompt, Temperature), Logs & Analytics, and Health Diagnostics.
+- **Admin Dashboard:** Includes Settings (Model: `gemini-3.7-flash`, System Prompt, Rate Limits, Widget Toggles), Logs & Analytics, and Health Diagnostics.
 - **Database Architecture:** Optimized custom tables `wp_gca_conversations`, `wp_gca_messages`, and `wp_gca_logs`.
 
 ## System Requirements

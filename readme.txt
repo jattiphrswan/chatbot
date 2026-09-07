@@ -24,17 +24,18 @@ Key features:
 == Installation ==
 
 1. Upload the plugin files to the `/wp-content/plugins/gemini-chat-assistant` directory, or install the plugin through the WordPress plugins screen directly.
-2. Activate the plugin through the 'Plugins' screen in WordPress.
-3. Navigate to **Gemini Chat > Settings** to configure your Google Gemini API Key and preferences.
-4. Place the `[gemini_chat]` shortcode on any post, page, or widget area.
+2. Define your `GEMINI_API_KEY` environment variable or add `define('GCA_GEMINI_API_KEY', 'your_key_here');` in your `wp-config.php`.
+3. Activate the plugin through the 'Plugins' screen in WordPress.
+4. Navigate to **Gemini Chat > Settings** to configure model (`gemini-3.7-flash`), system prompts, and behavior.
+5. Place the `[gemini_chat]` shortcode on any post, page, or widget area.
 
 == Frequently Asked Questions ==
 
 = Is the Gemini API Key exposed to site visitors? =
-No. The API key is stored encrypted on your server and used solely in server-to-server requests.
+No. The API key is loaded server-side only from environment variables or `wp-config.php` and is never exposed to the client or saved in the database.
 
-= Which Gemini models are supported? =
-Supported models include `gemini-1.5-flash`, `gemini-1.5-pro`, and `gemini-2.0-flash`.
+= Which Gemini model is configured by default? =
+The default model is `gemini-3.7-flash` (configurable in settings).
 
 == Changelog ==
 

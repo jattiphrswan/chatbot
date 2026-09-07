@@ -115,52 +115,37 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "PluginSettings",
   "type": "object",
-  "required": ["model", "temperature", "max_tokens", "rate_limit"],
+  "required": ["model", "assistant_name", "max_message_length", "rate_limit_5m", "rate_limit_1h"],
   "properties": {
-    "model": {
-      "type": "string",
-      "enum": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"],
-      "default": "gemini-1.5-flash"
-    },
-    "system_instruction": {
-      "type": "string",
-      "maxLength": 10000,
-      "default": "You are a helpful customer support assistant for this website."
-    },
-    "temperature": {
-      "type": "number",
-      "minimum": 0.0,
-      "maximum": 2.0,
-      "default": 0.7
-    },
-    "top_p": {
-      "type": "number",
-      "minimum": 0.0,
-      "maximum": 1.0,
-      "default": 0.95
-    },
-    "max_tokens": {
-      "type": "integer",
-      "minimum": 64,
-      "maximum": 8192,
-      "default": 1024
-    },
-    "rate_limit": {
-      "type": "object",
-      "properties": {
-        "requests_per_minute": { "type": "integer", "default": 10 },
-        "daily_ip_cap": { "type": "integer", "default": 100 }
-      }
-    },
-    "ui_theme": {
-      "type": "object",
-      "properties": {
-        "primary_color": { "type": "string", "default": "#1a73e8" },
-        "position": { "type": "string", "enum": ["bottom-right", "bottom-left", "inline"], "default": "bottom-right" },
-        "bot_title": { "type": "string", "default": "AI Assistant" },
-        "welcome_message": { "type": "string", "default": "Hi! How can I help you today?" }
-      }
-    }
+    "enabled": { "type": "boolean", "default": true },
+    "assistant_name": { "type": "string", "default": "AI Assistant" },
+    "greeting": { "type": "string", "default": "Welcome!" },
+    "welcome_message": { "type": "string", "default": "Hi! How can I help you today?" },
+    "placeholder": { "type": "string", "default": "Type your message..." },
+    "model": { "type": "string", "default": "gemini-3.7-flash" },
+    "system_instruction": { "type": "string", "default": "You are a helpful customer support assistant for this website." },
+    "widget_enabled": { "type": "boolean", "default": true },
+    "embedded_chat_enabled": { "type": "boolean", "default": true },
+    "desktop_enabled": { "type": "boolean", "default": true },
+    "mobile_enabled": { "type": "boolean", "default": true },
+    "prechat_enabled": { "type": "boolean", "default": false },
+    "collect_name": { "type": "boolean", "default": false },
+    "require_name": { "type": "boolean", "default": false },
+    "collect_email": { "type": "boolean", "default": false },
+    "require_email": { "type": "boolean", "default": false },
+    "collect_phone": { "type": "boolean", "default": false },
+    "require_phone": { "type": "boolean", "default": false },
+    "collect_requirement": { "type": "boolean", "default": false },
+    "require_requirement": { "type": "boolean", "default": false },
+    "faq_enabled": { "type": "boolean", "default": false },
+    "faq_show_home": { "type": "boolean", "default": false },
+    "guest_access": { "type": "boolean", "default": true },
+    "max_message_length": { "type": "integer", "default": 2000, "minimum": 100, "maximum": 10000 },
+    "rate_limit_5m": { "type": "integer", "default": 15, "minimum": 1, "maximum": 500 },
+    "rate_limit_1h": { "type": "integer", "default": 100, "minimum": 5, "maximum": 5000 },
+    "store_messages": { "type": "boolean", "default": true },
+    "store_leads": { "type": "boolean", "default": true },
+    "retention_days": { "type": "integer", "default": 30, "minimum": 1, "maximum": 365 }
   }
 }
 ```

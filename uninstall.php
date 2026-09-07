@@ -24,7 +24,5 @@ if ( ! empty( $options['wipe_data_on_uninstall'] ) ) {
 	$wpdb->query( "DROP TABLE IF EXISTS `{$table_logs}`" );
 
 	delete_option( 'gca_settings' );
-	delete_option( 'gca_api_key_encrypted' );
 	delete_option( 'gca_db_version' );
-	delete_option( 'gca_encryption_salt' );
 }

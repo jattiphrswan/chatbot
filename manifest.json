@@ -9,6 +9,7 @@
   "shortcode": "[gemini_chat]",
   "requires_php": "8.0",
   "requires_wp": "6.2",
+  "default_model": "gemini-3.7-flash",
   "routes": {
     "chat": {
       "method": "POST",
@@ -34,13 +35,14 @@
     ],
     "options": [
       "gca_settings",
-      "gca_api_key_encrypted",
       "gca_db_version"
     ]
   },
   "architecture": "Browser -> WordPress REST API -> PHP Service Layer -> Gemini API",
   "security": {
+    "api_key_storage": "Server-side only (GEMINI_API_KEY env var or GCA_GEMINI_API_KEY wp-config constant). Never stored in DB or exposed to client.",
     "api_key_exposed_to_client": false,
+    "api_key_stored_in_db": false,
     "nonce_verification": true,
     "capability_checks": true,
     "rate_limiting": true

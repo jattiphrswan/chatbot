@@ -67,7 +67,7 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 - **Core Orchestration (`SkyFish\GeminiChat\Core\Plugin`):** Bootstraps services, hooks into WordPress lifecycle, registers autoloader, and manages singleton container.
 - **Gemini Client (`SkyFish\GeminiChat\Services\GeminiClient`):** Communicates with Google Gemini API endpoint via `wp_remote_post`. Manages payload assembly, timeout handling, error mapping, and response parsing.
 - **Context Manager (`SkyFish\GeminiChat\Services\ContextManager`):** Retrieves previous message history for a session, formats conversation history according to Gemini multi-turn format, and applies token/message window constraints.
-- **Security & Rate Limiting (`SkyFish\GeminiChat\Security\*`):** Enforces transient-based rate limits per IP/session, validates nonces, and manages two-way encryption (AES-256-GCM) for sensitive configuration items like API keys.
+- **Security & Rate Limiting (`SkyFish\GeminiChat\Security\*`):** Enforces transient-based rate limits per IP/session, validates nonces, and manages server-side credential isolation.
 
 ### 2.4 Data Tier
 - Custom database tables prefixed with `{$wpdb->prefix}gca_`:
@@ -75,16 +75,18 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
   2. `gca_messages`: Stores individual user and assistant messages.
   3. `gca_logs`: Stores system events, API latency, token metrics, and errors.
 - WordPress Options (`wp_options`):
-  - `gca_settings`: Serialized JSON array of configuration settings.
-  - `gca_api_key_encrypted`: Encrypted string of Google Gemini API key.
+  - `gca_settings`: Serialized array of configuration settings (model, system instructions, rate limits, widget toggles).
   - `gca_db_version`: Current schema migration version.
+
+> **CRITICAL CREDENTIAL ARCHITECTURE:**
+> The Gemini API Key is **NEVER** stored in `gca_settings` or `wp_options`. It is loaded strictly from the server environment (`GEMINI_API_KEY`) with fallback to the `GCA_GEMINI_API_KEY` constant in `wp-config.php`.
 
 ## 3. Security Boundary & Data Flow
 
 ```
 +-------------------------------------------------------------+
 | Browser Context (Untrusted)                                 |
-| - Cannot access Gemini API Key                              |
+| - Zero knowledge of Gemini API Key                          |
 | - Supplies: Session ID, User Message, WP REST Nonce         |
 +------------------------------+------------------------------+
                                |
@@ -93,7 +95,7 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 +-------------------------------------------------------------+
 | Server Context (Trusted WordPress Environment)              |
 | - Validates Nonce & Rate Limits                             |
-| - Decrypts Gemini API Key (stored in wp_options)            |
+| - Retrieves Gemini API Key (GEMINI_API_KEY / wp-config)     |
 | - Builds Context & Calls Gemini API                         |
 | - Logs Metrics & Saves Message History                      |
 +------------------------------+------------------------------+

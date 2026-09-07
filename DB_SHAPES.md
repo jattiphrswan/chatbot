@@ -79,7 +79,8 @@ CREATE TABLE `{$wpdb->prefix}gca_logs` (
 
 | Option Name | Type | Description |
 | :--- | :--- | :--- |
-| `gca_settings` | `array` / `JSON` | Stores plugin configuration (model, max_tokens, temperature, system prompt, rate limits, UI themes). |
-| `gca_api_key_encrypted` | `string` | AES-256-GCM encrypted Google Gemini API Key. |
+| `gca_settings` | `array` | Stores plugin configuration (model, general toggles, limits, privacy, widget settings). |
 | `gca_db_version` | `string` | Semantic database migration version (e.g. `1.0.0`). |
-| `gca_encryption_salt` | `string` | Site-specific encryption salt derived from `wp-config.php` `AUTH_KEY` + `LOGGED_IN_KEY`. |
+
+> **NOTE ON API CREDENTIALS:**
+> The Gemini API key is **NOT** stored in `wp_options`. Credentials reside purely in server-side environment variables (`GEMINI_API_KEY`) or `wp-config.php` (`GCA_GEMINI_API_KEY`).

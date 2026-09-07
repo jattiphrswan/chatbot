@@ -43,25 +43,11 @@ class GeminiProvider implements ProviderInterface {
 	public function get_models(): array {
 		return [
 			[
-				'id'                => 'gemini-1.5-flash',
-				'name'              => 'Gemini 1.5 Flash',
+				'id'                => 'gemini-3.7-flash',
+				'name'              => 'Gemini 3.7 Flash',
 				'context_window'    => 1048576,
 				'max_output_tokens' => 8192,
-				'description'       => 'Fast and versatile multimodal model for general conversational tasks.',
-			],
-			[
-				'id'                => 'gemini-1.5-pro',
-				'name'              => 'Gemini 1.5 Pro',
-				'context_window'    => 2097152,
-				'max_output_tokens' => 8192,
-				'description'       => 'Highly capable model for complex reasoning, analysis, and large context.',
-			],
-			[
-				'id'                => 'gemini-2.0-flash',
-				'name'              => 'Gemini 2.0 Flash',
-				'context_window'    => 1048576,
-				'max_output_tokens' => 8192,
-				'description'       => 'Next-generation low-latency model optimized for speed and multimodal tasks.',
+				'description'       => 'High-speed, cost-effective multimodal model with strong reasoning and low latency.',
 			],
 		];
 	}

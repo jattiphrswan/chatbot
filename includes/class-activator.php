@@ -18,32 +18,67 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Activator {
 
 	/**
-	 * Short description of what the activate method does.
+	 * Returns default settings array for gca_settings.
 	 *
+	 * @return array<string, mixed>
+	 */
+	public static function get_default_settings(): array {
+		return [
+			// General.
+			'enabled'               => true,
+			'assistant_name'        => 'AI Assistant',
+			'greeting'              => 'Welcome!',
+			'welcome_message'       => 'Hi! How can I help you today?',
+			'placeholder'           => 'Type your message...',
+
+			// AI.
+			'model'                 => 'gemini-3.7-flash',
+			'system_instruction'    => 'You are a helpful customer support assistant for this website.',
+
+			// Widget.
+			'widget_enabled'        => true,
+			'embedded_chat_enabled' => true,
+			'desktop_enabled'       => true,
+			'mobile_enabled'        => true,
+
+			// Pre-chat.
+			'prechat_enabled'       => false,
+			'collect_name'          => false,
+			'require_name'          => false,
+			'collect_email'         => false,
+			'require_email'         => false,
+			'collect_phone'         => false,
+			'require_phone'         => false,
+			'collect_requirement'   => false,
+			'require_requirement'   => false,
+
+			// FAQ.
+			'faq_enabled'           => false,
+			'faq_show_home'         => false,
+
+			// Access.
+			'guest_access'          => true,
+
+			// Limits.
+			'max_message_length'    => 2000,
+			'rate_limit_5m'         => 15,
+			'rate_limit_1h'         => 100,
+
+			// Privacy.
+			'store_messages'        => true,
+			'store_leads'           => true,
+			'retention_days'        => 30,
+		];
+	}
+
+	/**
 	 * Performs database table creation, default settings initialization,
 	 * and version tracking.
 	 */
 	public static function activate(): void {
 		// Set default settings if not already present.
 		if ( ! get_option( 'gca_settings' ) ) {
-			$default_settings = [
-				'model'              => 'gemini-1.5-flash',
-				'system_instruction' => 'You are a helpful customer support assistant for this website.',
-				'temperature'        => 0.7,
-				'top_p'              => 0.95,
-				'max_tokens'         => 1024,
-				'rate_limit'         => [
-					'requests_per_minute' => 10,
-					'daily_ip_cap'        => 100,
-				],
-				'ui_theme'           => [
-					'primary_color'   => '#1a73e8',
-					'position'        => 'bottom-right',
-					'bot_title'       => 'AI Assistant',
-					'welcome_message' => 'Hi! How can I help you today?',
-				],
-			];
-			add_option( 'gca_settings', $default_settings );
+			add_option( 'gca_settings', self::get_default_settings() );
 		}
 
 		if ( ! get_option( 'gca_db_version' ) ) {
