@@ -170,6 +170,71 @@ class ConversationRepository {
 	}
 
 	/**
+	 * Updates the Gemini interaction identifier for conversation memory.
+	 *
+	 * @param int    $id             Conversation ID.
+	 * @param string $interaction_id Gemini interaction ID.
+	 * @return bool
+	 */
+	public function update_interaction_id( int $id, string $interaction_id ): bool {
+		global $wpdb;
+
+		$table  = self::get_table_name();
+		$result = $wpdb->update(
+			$table,
+			[
+				'interaction_id' => sanitize_text_field( $interaction_id ),
+				'updated_at'     => gmdate( 'Y-m-d H:i:s' ),
+			],
+			[ 'id' => absint( $id ) ],
+			[ '%s', '%s' ],
+			[ '%d' ]
+		);
+
+		return false !== $result;
+	}
+
+	/**
+	 * Retrieves the stored Gemini interaction identifier for a conversation.
+	 *
+	 * @param int $id Conversation ID.
+	 * @return string|null
+	 */
+	public function get_interaction_id( int $id ): ?string {
+		global $wpdb;
+
+		$table = self::get_table_name();
+		$query = $wpdb->prepare( "SELECT interaction_id FROM {$table} WHERE id = %d LIMIT 1", absint( $id ) );
+		$val   = $wpdb->get_var( $query );
+
+		return ! empty( $val ) ? (string) $val : null;
+	}
+
+	/**
+	 * Clears the Gemini interaction identifier for a conversation.
+	 *
+	 * @param int $id Conversation ID.
+	 * @return bool
+	 */
+	public function clear_interaction_id( int $id ): bool {
+		global $wpdb;
+
+		$table  = self::get_table_name();
+		$result = $wpdb->update(
+			$table,
+			[
+				'interaction_id' => null,
+				'updated_at'     => gmdate( 'Y-m-d H:i:s' ),
+			],
+			[ 'id' => absint( $id ) ],
+			[ null, '%s' ],
+			[ '%d' ]
+		);
+
+		return false !== $result;
+	}
+
+	/**
 	 * Increments message count and updates last_message_at timestamp.
 	 *
 	 * @param int $id Conversation ID.

@@ -33,7 +33,7 @@ flowchart TD
 | **N4** | **Gemini Client** | Gemini API client service (`GeminiClient`), Interactions API (v1), payload construction, steps parser, and error normalizers. | **COMPLETED** |
 | **N5** | **WordPress REST API** | REST route registration (`gca/v1`), `/chat`, `/reset`, `/health` controllers, and schema validators. | **COMPLETED** |
 | **N6** | **Public Chat UI** | `[gemini_chat]` shortcode, frontend HTML/CSS chat widget, responsive styling. | **COMPLETED** |
-| **N7** | **Conversation Memory** | Session management, multi-turn history formatting, rolling context window. | Planned |
+| **N7** | **Conversation Memory** | Session management, multi-turn history formatting, rolling context window. | **COMPLETED** |
 | **N8** | **Security & Rate Limiting** | AES-256-GCM API key encryption, transient-based IP/session rate limiter, nonce validation. | Planned |
 | **N9** | **Full Chat UX** | Frontend JavaScript client, streaming/typing indicator, markdown rendering, error handling, reset flows. | Planned |
 | **N10** | **Admin Dashboard Shell** | Complete admin dashboard tabs (Settings, Logs/Analytics, Health & Diagnostics self-test). | Planned |

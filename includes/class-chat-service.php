@@ -98,14 +98,17 @@ class ChatService {
 			$this->message_repo->create( $conv_db_id, 'user', $message );
 		}
 
-		// 5. Prepare Gemini client request.
+		// 5. Retrieve active conversation memory (previous_interaction_id).
+		$previous_interaction_id = $this->session_service->get_interaction_id( $session_id, $conv_db_id );
+
+		// 6. Prepare Gemini client request.
 		$model              = SettingsService::get_model();
 		$system_instruction = SettingsService::get_system_instruction();
 
 		$start_time  = microtime( true );
 		$ai_response = $this->gemini_client->create_interaction(
 			$message,
-			null,
+			$previous_interaction_id,
 			[
 				'model'              => $model,
 				'system_instruction' => $system_instruction,
@@ -113,9 +116,30 @@ class ChatService {
 		);
 		$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
 
-		// 6. Handle AI transport or API error.
+		// 7. Handle AI transport or API error with stale interaction recovery.
 		if ( is_wp_error( $ai_response ) ) {
-			return $this->map_gemini_error( $ai_response, $req_id );
+			// Check if error is due to an invalid/stale previous interaction ID.
+			if ( ! empty( $previous_interaction_id ) && $this->is_stale_interaction_error( $ai_response ) ) {
+				// Clear stale interaction context.
+				$this->session_service->clear_interaction_id( $session_id, $conv_db_id );
+
+				// Retry message ONCE as a fresh interaction without previous_interaction_id.
+				$start_time  = microtime( true );
+				$ai_response = $this->gemini_client->create_interaction(
+					$message,
+					null,
+					[
+						'model'              => $model,
+						'system_instruction' => $system_instruction,
+					]
+				);
+				$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
+			}
+
+			// If still failing after recovery attempt or for ordinary network/auth/quota errors.
+			if ( is_wp_error( $ai_response ) ) {
+				return $this->map_gemini_error( $ai_response, $req_id );
+			}
 		}
 
 		$assistant_text = $ai_response['text'] ?? '';
@@ -123,7 +147,13 @@ class ChatService {
 		$input_tokens   = absint( $usage['input_tokens'] ?? 0 );
 		$output_tokens  = absint( $usage['output_tokens'] ?? 0 );
 
-		// 7. Persist assistant message if enabled.
+		// 8. Synchronize new interaction ID into session transient and database.
+		$new_interaction_id = $ai_response['interaction_id'] ?? '';
+		if ( ! empty( $new_interaction_id ) ) {
+			$this->session_service->set_interaction_id( $session_id, $conv_db_id, (string) $new_interaction_id );
+		}
+
+		// 9. Persist assistant message if enabled.
 		if ( $store_messages && $conv_db_id > 0 ) {
 			$this->message_repo->create(
 				$conv_db_id,
@@ -139,7 +169,7 @@ class ChatService {
 			$this->conversation_repo->increment_message_count( $conv_db_id, 2 );
 		}
 
-		// 8. Return normalized public response shape (zero database IDs or secrets).
+		// 10. Return normalized public response shape (zero database IDs, hashes, or interaction IDs).
 		return [
 			'message'         => $assistant_text,
 			'conversation_id' => $public_id,
@@ -148,6 +178,20 @@ class ChatService {
 				'model' => $model,
 			],
 		];
+	}
+
+	/**
+	 * Detects whether an API error indicates a stale, expired, or invalid interaction ID.
+	 *
+	 * @param WP_Error $error API Error.
+	 * @return bool
+	 */
+	private function is_stale_interaction_error( WP_Error $error ): bool {
+		$msg = strtolower( $error->get_error_message() );
+		return false !== strpos( $msg, 'previous_interaction_id' )
+			|| false !== strpos( $msg, 'interaction not found' )
+			|| false !== strpos( $msg, 'invalid interaction' )
+			|| false !== strpos( $msg, 'interaction expired' );
 	}
 
 	/**

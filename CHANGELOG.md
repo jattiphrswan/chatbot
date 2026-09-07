@@ -5,6 +5,14 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N7] - 2026-09-07
+### Added
+- Multi-turn conversation memory continuation using Gemini Interactions API `previous_interaction_id`.
+- Transient and database interaction ID synchronization (`SessionService::get_interaction_id`, `SessionService::set_interaction_id`, `ConversationRepository::update_interaction_id`).
+- Automated stale/expired interaction detection and one-time safe retry recovery.
+- Session-isolated reset semantics detaching interaction state.
+- Comprehensive conversation memory test suite in `tests/test-conversation-memory.php`.
+
 ## [1.0.0-N6] - 2026-09-07
 ### Added
 - Frontend shortcode handler `[gemini_chat]` in `includes/class-shortcode.php`.

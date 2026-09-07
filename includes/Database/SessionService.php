@@ -161,6 +161,94 @@ class SessionService {
 	}
 
 	/**
+	 * Retrieves the active Gemini interaction identifier for a session.
+	 *
+	 * Checks transient cache first, falling back to database conversation.
+	 *
+	 * @param string $session_token  Client session token.
+	 * @param int    $conversation_id Associated conversation ID.
+	 * @return string|null
+	 */
+	public function get_interaction_id( string $session_token, int $conversation_id = 0 ): ?string {
+		if ( ! self::is_valid_session_token( $session_token ) ) {
+			return null;
+		}
+
+		// 1. Check transient cache.
+		$cache = $this->get_session_cache( $session_token );
+		if ( is_array( $cache ) && ! empty( $cache['interaction_id'] ) ) {
+			return (string) $cache['interaction_id'];
+		}
+
+		// 2. Fall back to conversation repository.
+		if ( $conversation_id > 0 ) {
+			return $this->conversation_repo->get_interaction_id( $conversation_id );
+		}
+
+		$session_hash = self::hash_session_token( $session_token );
+		$conv         = $this->conversation_repo->get_by_session_hash( $session_hash );
+		if ( $conv && ! empty( $conv['interaction_id'] ) ) {
+			return (string) $conv['interaction_id'];
+		}
+
+		return null;
+	}
+
+	/**
+	 * Stores and synchronizes the active Gemini interaction identifier across transient and database.
+	 *
+	 * @param string $session_token  Client session token.
+	 * @param int    $conversation_id Associated conversation ID.
+	 * @param string $interaction_id Gemini interaction ID.
+	 * @return bool
+	 */
+	public function set_interaction_id( string $session_token, int $conversation_id, string $interaction_id ): bool {
+		if ( ! self::is_valid_session_token( $session_token ) || empty( $interaction_id ) ) {
+			return false;
+		}
+
+		// 1. Update transient cache.
+		$cache                   = $this->get_session_cache( $session_token ) ?? [];
+		$cache['interaction_id'] = $interaction_id;
+		$cache['updated_at']     = time();
+		$this->set_session_cache( $session_token, $cache );
+
+		// 2. Update database conversation row.
+		if ( $conversation_id > 0 ) {
+			$this->conversation_repo->update_interaction_id( $conversation_id, $interaction_id );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Clears the stored Gemini interaction identifier across transient and database.
+	 *
+	 * @param string $session_token  Client session token.
+	 * @param int    $conversation_id Associated conversation ID.
+	 * @return bool
+	 */
+	public function clear_interaction_id( string $session_token, int $conversation_id = 0 ): bool {
+		if ( ! self::is_valid_session_token( $session_token ) ) {
+			return false;
+		}
+
+		// 1. Clear in transient.
+		$cache = $this->get_session_cache( $session_token );
+		if ( is_array( $cache ) ) {
+			unset( $cache['interaction_id'] );
+			$this->set_session_cache( $session_token, $cache );
+		}
+
+		// 2. Clear in database.
+		if ( $conversation_id > 0 ) {
+			$this->conversation_repo->clear_interaction_id( $conversation_id );
+		}
+
+		return true;
+	}
+
+	/**
 	 * Clears / resets a session.
 	 *
 	 * Deletes transient cache and marks conversation as closed.
@@ -177,10 +265,11 @@ class SessionService {
 		$transient_key = self::TRANSIENT_PREFIX . md5( $session_token );
 		delete_transient( $transient_key );
 
-		// 2. Mark conversation as closed in database.
+		// 2. Mark conversation as closed in database and clear interaction.
 		$session_hash = self::hash_session_token( $session_token );
 		$conv         = $this->conversation_repo->get_by_session_hash( $session_hash );
 		if ( $conv ) {
+			$this->conversation_repo->clear_interaction_id( (int) $conv['id'] );
 			$this->conversation_repo->update_status( (int) $conv['id'], 'closed' );
 		}
 
