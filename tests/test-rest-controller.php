@@ -190,11 +190,62 @@ if ( ! function_exists( 'update_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_salt' ) ) {
+	function wp_salt( $scheme = 'auth' ) {
+		return 'test_salt_secret_key_12345';
+	}
+}
+
+if ( ! function_exists( 'apply_filters' ) ) {
+	function apply_filters( $tag, $value ) {
+		return $value;
+	}
+}
+
+// Mock WordPress Transient cache.
+global $mock_transients;
+$mock_transients = [];
+
+if ( ! function_exists( 'get_transient' ) ) {
+	function get_transient( $transient ) {
+		global $mock_transients;
+		if ( isset( $mock_transients[ $transient ] ) ) {
+			$item = $mock_transients[ $transient ];
+			if ( isset( $item['ttl_expire'] ) && time() > $item['ttl_expire'] ) {
+				unset( $mock_transients[ $transient ] );
+				return false;
+			}
+			return $item['data'];
+		}
+		return false;
+	}
+}
+
+if ( ! function_exists( 'set_transient' ) ) {
+	function set_transient( $transient, $value, $expiration = 0 ) {
+		global $mock_transients;
+		$mock_transients[ $transient ] = [
+			'data'       => $value,
+			'ttl_expire' => $expiration > 0 ? time() + $expiration : 0,
+		];
+		return true;
+	}
+}
+
+if ( ! function_exists( 'delete_transient' ) ) {
+	function delete_transient( $transient ) {
+		global $mock_transients;
+		unset( $mock_transients[ $transient ] );
+		return true;
+	}
+}
+
 require_once __DIR__ . '/../includes/Admin/SettingsService.php';
 require_once __DIR__ . '/../includes/Database/ConversationRepository.php';
 require_once __DIR__ . '/../includes/Database/MessageRepository.php';
 require_once __DIR__ . '/../includes/Database/SessionService.php';
 require_once __DIR__ . '/../includes/class-gemini-client.php';
+require_once __DIR__ . '/../includes/class-rate-limiter.php';
 require_once __DIR__ . '/../includes/class-validator.php';
 require_once __DIR__ . '/../includes/class-chat-service.php';
 require_once __DIR__ . '/../includes/class-rest-controller.php';
@@ -233,6 +284,7 @@ class RestControllerTest {
 		$this->test_handle_chat_valid();
 		$this->test_handle_chat_invalid_message();
 		$this->test_handle_chat_invalid_session();
+		$this->test_handle_chat_rate_limited();
 		$this->test_handle_reset();
 		$this->test_handle_health();
 
@@ -354,6 +406,32 @@ class RestControllerTest {
 		$this->assert( 400 === $res->get_status(), 'Invalid session returns 400 Bad Request' );
 		$data = $res->get_data();
 		$this->assert( 'SESSION_INVALID' === $data['error']['code'], 'Error code is SESSION_INVALID' );
+	}
+
+	private function test_handle_chat_rate_limited(): void {
+		global $mock_options, $mock_transients;
+		$mock_options['gca_settings'] = [
+			'rate_limit_enabled' => true,
+			'rate_limit_5m'      => 1,
+			'rate_limit_1h'      => 10,
+		];
+		$mock_transients = [];
+
+		$controller = new RestController();
+		$request    = new WP_REST_Request( 'POST', '/gca/v1/chat' );
+		$request->set_param( 'message', 'First query' );
+		$request->set_param( 'session_id', 'gca_sess_rate_limit_test_123456789' );
+
+		// 1st request passes
+		$controller->handle_chat( $request );
+
+		// 2nd request gets 429'd
+		$res = $controller->handle_chat( $request );
+		$this->assert( 429 === $res->get_status(), 'Rate limited request returns 429' );
+		$data = $res->get_data();
+		$this->assert( false === $data['success'], 'Rate limit response success is false' );
+		$this->assert( 'RATE_LIMITED' === $data['error']['code'], 'Rate limit error code is RATE_LIMITED' );
+		$this->assert( isset( $data['error']['retry_after'] ) && $data['error']['retry_after'] > 0, 'retry_after is present in error payload' );
 	}
 
 	private function test_handle_reset(): void {

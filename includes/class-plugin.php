@@ -109,6 +109,7 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/class-gemini-client.php';
 
 		// REST API & Application Services.
+		require_once GCA_PLUGIN_DIR . 'includes/class-rate-limiter.php';
 		require_once GCA_PLUGIN_DIR . 'includes/class-validator.php';
 		require_once GCA_PLUGIN_DIR . 'includes/class-chat-service.php';
 		require_once GCA_PLUGIN_DIR . 'includes/class-rest-controller.php';
@@ -149,6 +150,13 @@ class Plugin {
 	private ?RestController $rest_controller = null;
 
 	/**
+	 * Rate limiter instance.
+	 *
+	 * @var RateLimiter|null
+	 */
+	private ?RateLimiter $rate_limiter = null;
+
+	/**
 	 * Frontend assets loader instance.
 	 *
 	 * @var Assets|null
@@ -184,6 +192,18 @@ class Plugin {
 			$this->shortcode = new Shortcode();
 		}
 		return $this->shortcode;
+	}
+
+	/**
+	 * Accessor to RateLimiter.
+	 *
+	 * @return RateLimiter
+	 */
+	public function get_rate_limiter(): RateLimiter {
+		if ( null === $this->rate_limiter ) {
+			$this->rate_limiter = new RateLimiter( SettingsService::get_instance() );
+		}
+		return $this->rate_limiter;
 	}
 
 	/**
@@ -226,7 +246,8 @@ class Plugin {
 			$this->rest_controller = new RestController(
 				SettingsService::get_instance(),
 				$this->get_chat_service(),
-				$this->get_gemini_client()
+				$this->get_gemini_client(),
+				$this->get_rate_limiter()
 			);
 		}
 		return $this->rest_controller;

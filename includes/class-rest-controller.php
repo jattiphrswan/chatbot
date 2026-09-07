@@ -34,6 +34,7 @@ class RestController extends WP_REST_Controller {
 	private SettingsService $settings_service;
 	private ChatService $chat_service;
 	private GeminiClient $gemini_client;
+	private RateLimiter $rate_limiter;
 
 	/**
 	 * RestController constructor.
@@ -41,16 +42,19 @@ class RestController extends WP_REST_Controller {
 	 * @param SettingsService|null $settings_service Optional settings service.
 	 * @param ChatService|null     $chat_service     Optional chat service.
 	 * @param GeminiClient|null    $gemini_client    Optional Gemini client.
+	 * @param RateLimiter|null     $rate_limiter     Optional rate limiter service.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
 		?ChatService $chat_service = null,
-		?GeminiClient $gemini_client = null
+		?GeminiClient $gemini_client = null,
+		?RateLimiter $rate_limiter = null
 	) {
 		$this->namespace        = self::REST_NAMESPACE;
 		$this->settings_service = $settings_service ?? SettingsService::get_instance();
 		$this->gemini_client    = $gemini_client ?? new GeminiClient( $this->settings_service );
 		$this->chat_service     = $chat_service ?? new ChatService( $this->settings_service, null, null, null, $this->gemini_client );
+		$this->rate_limiter     = $rate_limiter ?? new RateLimiter( $this->settings_service );
 	}
 
 	/**
@@ -200,7 +204,13 @@ class RestController extends WP_REST_Controller {
 		$raw_context = $request->get_param( 'context' );
 		$context     = Validator::validate_context( $raw_context );
 
-		// 4. Orchestrate chat interaction through ChatService.
+		// 4. Rate limiting check & consume before executing expensive LLM transport.
+		$rate_check = $this->rate_limiter->check_and_consume( $session_id );
+		if ( is_wp_error( $rate_check ) ) {
+			return $this->format_error_response( $rate_check, $request_id );
+		}
+
+		// 5. Orchestrate chat interaction through ChatService.
 		$result = $this->chat_service->handle_chat( $message, $session_id, $context, $request_id );
 
 		if ( is_wp_error( $result ) ) {
@@ -283,16 +293,28 @@ class RestController extends WP_REST_Controller {
 		$err_data = $error->get_error_data();
 		$status   = is_array( $err_data ) && isset( $err_data['status'] ) ? absint( $err_data['status'] ) : 400;
 
-		return new WP_REST_Response(
+		$error_payload = [
+			'code'       => $code,
+			'message'    => $message,
+			'request_id' => $request_id,
+		];
+
+		if ( is_array( $err_data ) && isset( $err_data['retry_after'] ) ) {
+			$error_payload['retry_after'] = absint( $err_data['retry_after'] );
+		}
+
+		$response = new WP_REST_Response(
 			[
 				'success' => false,
-				'error'   => [
-					'code'       => $code,
-					'message'    => $message,
-					'request_id' => $request_id,
-				],
+				'error'   => $error_payload,
 			],
 			$status
 		);
+
+		if ( isset( $error_payload['retry_after'] ) ) {
+			$response->header( 'Retry-After', (string) $error_payload['retry_after'] );
+		}
+
+		return $response;
 	}
 }

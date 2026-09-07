@@ -5,6 +5,13 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N8] - 2026-09-07
+### Added
+- Dual-tier transient rate limiter (`includes/class-rate-limiter.php`) enforcing 5-minute and 1-hour session limits with secondary privacy-safe hashed-IP abuse ceiling.
+- HTTP 429 response formatting with `Retry-After` header and payload metadata in `includes/class-rest-controller.php`.
+- Client IP resolution filter `gca_client_ip` supporting reverse proxies/CDNs with HMAC-SHA256 privacy hashing.
+- Complete test suite `tests/test-rate-limiter.php` validating multi-tier limits, session rotation protection, and IP hashing safety.
+
 ## [1.0.0-N7] - 2026-09-07
 ### Added
 - Multi-turn conversation memory continuation using Gemini Interactions API `previous_interaction_id`.
