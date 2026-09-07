@@ -5,6 +5,14 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N10] - 2026-09-07
+### Added
+- Native WordPress Admin Dashboard Shell (`templates/admin/dashboard.php`) under top-level `Gemini Chat` menu with submenus for `Dashboard` and `Settings`.
+- Real-time system and configuration overview cards (Chatbot status, API key status, model slug, database version, message storage, guest access).
+- Setup & Verification checklist and Quick Actions navigation panel.
+- Scoped admin stylesheet (`admin/css/admin-settings.css`) with responsive 3-column grid, Dashicon integration, and RTL-safe styles.
+- Unit and static test suite in `tests/test-dashboard.php`.
+
 ## [1.0.0-N9] - 2026-09-07
 ### Added
 - Production-grade frontend client (`public/js/chat.js`) with explicit UX State Model (`isOpen`, `activeScreen`, `isSending`, `unreadCount`, `lastFailedMessage`, `rateLimitRemaining`, `userScrolledUp`).

@@ -1,15 +1,431 @@
 /**
- * Gemini Chat Assistant - Admin Settings Styles
+ * Gemini Chat Assistant - Admin Stylesheet
+ *
+ * Scoped under .gca-admin- to prevent collisions with WordPress core or other plugins.
  *
  * @package SkyFish\GeminiChat
  */
 
 .gca-admin-wrap {
-	max-width: 1080px;
+	max-width: 1140px;
 	margin: 20px 20px 40px 0;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	box-sizing: border-box;
 }
 
+.gca-admin-wrap *,
+.gca-admin-wrap *::before,
+.gca-admin-wrap *::after {
+	box-sizing: inherit;
+}
+
+/* -------------------------------------------------------------------------
+ * Header
+ * ------------------------------------------------------------------------- */
+.gca-admin-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 24px;
+	padding: 20px 24px;
+	background: #ffffff;
+	border: 1px solid #c3c4c7;
+	border-radius: 8px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.gca-admin-header__info {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.gca-admin-header__icon {
+	width: 48px;
+	height: 48px;
+	border-radius: 8px;
+	background: #e7f3ff;
+	color: #2271b1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.gca-admin-header__icon .dashicons {
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+}
+
+.gca-admin-header__title {
+	font-size: 22px;
+	font-weight: 700;
+	color: #1d2327;
+	margin: 0 0 4px 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.gca-admin-header__subtitle {
+	font-size: 13px;
+	color: #646970;
+	margin: 0;
+	line-height: 1.4;
+}
+
+.gca-admin-badge {
+	font-size: 11px;
+	background: #2271b1;
+	color: #ffffff;
+	padding: 2px 8px;
+	border-radius: 12px;
+	font-weight: 600;
+	vertical-align: middle;
+}
+
+/* -------------------------------------------------------------------------
+ * Notice & Alerts
+ * ------------------------------------------------------------------------- */
+.gca-admin-notice {
+	margin: 0 0 20px 0 !important;
+	padding: 12px 16px !important;
+	border-radius: 6px;
+}
+
+.gca-admin-notice code {
+	background: #ffffff;
+	padding: 2px 6px;
+	border-radius: 4px;
+	border: 1px solid #d0d7de;
+	font-weight: 600;
+	color: #0969da;
+}
+
+/* -------------------------------------------------------------------------
+ * Section
+ * ------------------------------------------------------------------------- */
+.gca-admin-section {
+	margin-bottom: 28px;
+}
+
+.gca-admin-section__title {
+	font-size: 16px;
+	font-weight: 600;
+	color: #1d2327;
+	margin: 0 0 4px 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.gca-admin-section__title .dashicons {
+	color: #2271b1;
+}
+
+.gca-admin-section__desc {
+	font-size: 13px;
+	color: #646970;
+	margin: 0 0 16px 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Grids
+ * ------------------------------------------------------------------------- */
+.gca-admin-grid {
+	display: grid;
+	gap: 16px;
+}
+
+.gca-admin-grid--3 {
+	grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 960px) {
+	.gca-admin-grid--3 {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 600px) {
+	.gca-admin-grid--3 {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Cards
+ * ------------------------------------------------------------------------- */
+.gca-admin-card {
+	background: #ffffff;
+	border: 1px solid #c3c4c7;
+	border-radius: 8px;
+	padding: 18px 20px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	display: flex;
+	flex-direction: column;
+}
+
+.gca-admin-card__section-title {
+	font-size: 15px;
+	font-weight: 600;
+	color: #1d2327;
+	margin: 0 0 16px 0;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #f0f0f1;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.gca-admin-card__section-title .dashicons {
+	color: #2271b1;
+}
+
+.gca-admin-card--status {
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gca-admin-card--status:hover {
+	box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+	transform: translateY(-1px);
+}
+
+.gca-admin-card__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 12px;
+}
+
+.gca-admin-card__icon {
+	width: 32px;
+	height: 32px;
+	border-radius: 6px;
+	background: #f0f6fc;
+	color: #2271b1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.gca-admin-card__icon .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+.gca-admin-card__title {
+	font-size: 15px;
+	font-weight: 600;
+	color: #1d2327;
+	margin: 0 0 6px 0;
+}
+
+.gca-admin-card__desc {
+	font-size: 12px;
+	color: #646970;
+	margin: 0;
+	line-height: 1.45;
+}
+
+/* Future / Roadmap Cards */
+.gca-admin-card--future {
+	border: 1px dashed #dcdcde;
+	background: #fcfcfc;
+}
+
+.gca-admin-card--future h4 {
+	font-size: 14px;
+	font-weight: 600;
+	color: #2c3338;
+	margin: 0 0 6px 0;
+}
+
+.gca-admin-card--future p {
+	font-size: 12px;
+	color: #646970;
+	margin: 0;
+	line-height: 1.4;
+}
+
+/* -------------------------------------------------------------------------
+ * Status Pills
+ * ------------------------------------------------------------------------- */
+.gca-admin-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 10px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.gca-admin-pill--success {
+	background: #e7f5ea;
+	color: #006618;
+}
+
+.gca-admin-pill--warning {
+	background: #fcf0db;
+	color: #8c5b00;
+}
+
+.gca-admin-pill--info {
+	background: #e7f3ff;
+	color: #005a9c;
+}
+
+.gca-admin-pill--muted {
+	background: #f0f0f1;
+	color: #646970;
+}
+
+.gca-admin-pill--planned {
+	background: #f0f0f1;
+	color: #50575e;
+	border: 1px solid #dcdcde;
+}
+
+/* -------------------------------------------------------------------------
+ * 2-Column Layout
+ * ------------------------------------------------------------------------- */
+.gca-admin-layout-2col {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+	margin-bottom: 28px;
+}
+
+@media (max-width: 840px) {
+	.gca-admin-layout-2col {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Checklist
+ * ------------------------------------------------------------------------- */
+.gca-admin-checklist__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.gca-admin-checklist__item {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	font-size: 13px;
+	line-height: 1.4;
+}
+
+.gca-admin-checklist__item .dashicons {
+	margin-top: 2px;
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+}
+
+.gca-admin-checklist__item.is-done .dashicons {
+	color: #008a20;
+}
+
+.gca-admin-checklist__item.is-pending .dashicons {
+	color: #dba617;
+}
+
+.gca-admin-checklist__text {
+	display: flex;
+	flex-direction: column;
+}
+
+.gca-admin-checklist__text strong {
+	color: #1d2327;
+}
+
+.gca-admin-checklist__text span {
+	color: #646970;
+	font-size: 12px;
+}
+
+/* -------------------------------------------------------------------------
+ * Quick Action List
+ * ------------------------------------------------------------------------- */
+.gca-admin-action-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.gca-admin-action-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 14px;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	text-decoration: none;
+	background: #fafafa;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+	color: inherit;
+}
+
+.gca-admin-action-item:hover {
+	background: #ffffff;
+	border-color: #2271b1;
+	color: inherit;
+}
+
+.gca-admin-action-item:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 1px;
+}
+
+.gca-admin-action-item__icon {
+	width: 34px;
+	height: 34px;
+	border-radius: 6px;
+	background: #e7f3ff;
+	color: #2271b1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.gca-admin-action-item__text {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.gca-admin-action-item__text strong {
+	font-size: 13px;
+	color: #1d2327;
+}
+
+.gca-admin-action-item__text span {
+	font-size: 12px;
+	color: #646970;
+}
+
+.gca-admin-action-item .dashicons-arrow-right-alt2,
+.gca-admin-action-item .dashicons-external {
+	color: #8c8f94;
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+/* -------------------------------------------------------------------------
+ * Existing Settings Form Styles
+ * ------------------------------------------------------------------------- */
 .gca-header {
 	display: flex;
 	align-items: center;
@@ -36,14 +452,13 @@
 	margin-left: 8px;
 }
 
-/* Status Card */
 .gca-card {
 	background: #fff;
 	border: 1px solid #c3c4c7;
 	border-radius: 8px;
 	padding: 20px;
 	margin-bottom: 24px;
-	box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .gca-status-card {
@@ -92,7 +507,6 @@
 	height: 18px;
 }
 
-/* Tabs */
 .gca-nav-tab-wrapper {
 	margin-bottom: 20px;
 	border-bottom: 1px solid #c3c4c7;
@@ -127,7 +541,6 @@
 	font-weight: 600;
 }
 
-/* Tab Panels */
 .gca-tab-panel {
 	display: none;
 }

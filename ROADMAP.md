@@ -36,4 +36,4 @@ flowchart TD
 | **N7** | **Conversation Memory** | Session management, multi-turn history formatting, rolling context window. | **COMPLETED** |
 | **N8** | **Security & Rate Limiting** | Dual-tier transient rate limiter (5m/1h session & IP ceiling), HTTP 429 & Retry-After handling, secret leakage audits. | **COMPLETED** |
 | **N9** | **Full Chat UX** | Production-quality frontend client (`chat.js`, `chat.css`), UX state model, unread badge, retry flow, autoscroll, rate limit countdown. | **COMPLETED** |
-| **N10** | **Admin Dashboard Shell** | Complete admin dashboard tabs (Settings, Logs/Analytics, Health & Diagnostics self-test). | Planned |
+| **N10** | **Admin Dashboard Shell** | Top-level Gemini Chat menu, Dashboard overview, system status cards, setup checklist, quick actions, scoped admin styles. | **COMPLETED** |

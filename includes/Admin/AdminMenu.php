@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class AdminMenu {
 
+	public const MAIN_MENU_SLUG     = 'gemini-chat-assistant';
+	public const SETTINGS_MENU_SLUG = 'gca-settings';
+
 	/**
 	 * Hook registrations.
 	 */
@@ -33,21 +36,30 @@ class AdminMenu {
 	 */
 	public function register_menu(): void {
 		add_menu_page(
-			__( 'Gemini Chat Settings', 'gemini-chat-assistant' ),
+			__( 'Gemini Chat Assistant', 'gemini-chat-assistant' ),
 			__( 'Gemini Chat', 'gemini-chat-assistant' ),
 			'manage_options',
-			'gemini-chat-assistant',
-			[ $this, 'render_settings_page' ],
+			self::MAIN_MENU_SLUG,
+			[ $this, 'render_dashboard_page' ],
 			'dashicons-format-chat',
 			30
 		);
 
 		add_submenu_page(
-			'gemini-chat-assistant',
+			self::MAIN_MENU_SLUG,
+			__( 'Dashboard', 'gemini-chat-assistant' ),
+			__( 'Dashboard', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::MAIN_MENU_SLUG,
+			[ $this, 'render_dashboard_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
 			__( 'Settings', 'gemini-chat-assistant' ),
 			__( 'Settings', 'gemini-chat-assistant' ),
 			'manage_options',
-			'gemini-chat-assistant',
+			self::SETTINGS_MENU_SLUG,
 			[ $this, 'render_settings_page' ]
 		);
 	}
@@ -68,29 +80,54 @@ class AdminMenu {
 	}
 
 	/**
-	 * Enqueues admin stylesheet and JavaScript only on the plugin's settings screen.
+	 * Enqueues admin stylesheet and JavaScript only on the plugin's admin screens.
 	 *
 	 * @param string $hook_suffix Current admin page hook.
 	 */
 	public function enqueue_assets( string $hook_suffix ): void {
-		if ( 'toplevel_page_gemini-chat-assistant' !== $hook_suffix ) {
+		$allowed_hooks = [
+			'toplevel_page_' . self::MAIN_MENU_SLUG,
+			'gemini-chat_page_' . self::SETTINGS_MENU_SLUG,
+			'gemini-chat-assistant_page_' . self::SETTINGS_MENU_SLUG,
+		];
+
+		if ( ! in_array( $hook_suffix, $allowed_hooks, true ) && false === strpos( $hook_suffix, 'gemini-chat' ) ) {
 			return;
 		}
 
 		wp_enqueue_style(
-			'gca-admin-settings',
+			'gca-admin-styles',
 			GCA_PLUGIN_URL . 'admin/css/admin-settings.css',
 			[],
 			GCA_VERSION
 		);
 
-		wp_enqueue_script(
-			'gca-admin-settings',
-			GCA_PLUGIN_URL . 'admin/js/admin-settings.js',
-			[],
-			GCA_VERSION,
-			true
-		);
+		if ( false !== strpos( $hook_suffix, self::SETTINGS_MENU_SLUG ) || 'toplevel_page_gemini-chat-assistant' === $hook_suffix ) {
+			wp_enqueue_script(
+				'gca-admin-settings',
+				GCA_PLUGIN_URL . 'admin/js/admin-settings.js',
+				[],
+				GCA_VERSION,
+				true
+			);
+		}
+	}
+
+	/**
+	 * Renders the admin dashboard page view.
+	 */
+	public function render_dashboard_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$settings      = SettingsService::get_all();
+		$is_configured = SettingsService::is_api_key_configured();
+		$model         = SettingsService::get_model();
+		$db_version    = defined( 'GCA_DB_VERSION' ) ? GCA_DB_VERSION : '1.0.0';
+		$settings_url  = admin_url( 'admin.php?page=' . self::SETTINGS_MENU_SLUG );
+
+		include GCA_PLUGIN_DIR . 'templates/admin/dashboard.php';
 	}
 
 	/**
@@ -101,8 +138,8 @@ class AdminMenu {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
 		}
 
-		$settings         = SettingsService::get_all();
-		$is_configured    = SettingsService::is_api_key_configured();
+		$settings      = SettingsService::get_all();
+		$is_configured = SettingsService::is_api_key_configured();
 
 		include GCA_PLUGIN_DIR . 'templates/admin/settings.php';
 	}
