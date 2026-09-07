@@ -178,3 +178,36 @@ External Business Event or Intent
 4. **No Auto-Execution in N17.1/N17.2:** The framework establishes contracts and safe pipelines. Autonomous tool-calling loops by Gemini are not active.
 5. **Read-Only Scope (N17.2):** Strictly read-only product and catalog queries. Cart, checkout, payment, and order modifications are strictly prohibited.
 6. **Zero External APIs:** WooCommerce queries use native PHP functions (`wc_get_products()`, `wc_get_product()`) without outbound REST HTTP requests.
+
+## 6. Human Handoff Framework (Node N17.3)
+
+```
+Visitor Message
+       │
+       ▼
+Chat UI (POST /chat)
+       │
+       ▼
+  ChatService
+       │
+       ├─► 1. Handoff Detection (detect_handoff_intent: explicit keywords & regex)
+       │         │ (If handoff detected)
+       │         ▼
+       ├─► 2. HandoffService::create_handoff()
+       │         │
+       │         ├─► Lookup active conversation & lead (from N11 & N14)
+       │         ├─► Validate reason (customer_request, unknown_answer, complex_question, sales_request, technical_issue)
+       │         └─► Persist to wp_gca_handoffs table (default status: 'pending')
+       │
+       ▼
+Admin Dashboard (Gemini Chat -> Handoffs)
+       │
+       └─► Inspect, update status (pending -> assigned -> resolved / cancelled), review transcript & contact details
+```
+
+### Core Tenets of N17.3:
+1. **Safe Intent Detection:** ChatService checks inbound messages for explicit human assistance intent without autonomous AI execution loops.
+2. **Controlled Statuses & Reasons:** Status transitions (`pending`, `assigned`, `resolved`, `cancelled`) and reason types (`customer_request`, `unknown_answer`, `complex_question`, `sales_request`, `technical_issue`) are strictly constrained.
+3. **Lead Association:** Integrates directly with N14 leads; if the visitor has submitted contact details, the existing lead is linked rather than creating duplicates.
+4. **Integration Framework Connection:** Provides `HandoffIntegration` (`handoff`) and `CreateHandoffAction` (`handoff.create`, `RISK_WRITE`) registered in `IntegrationRegistry`.
+5. **No Outbound Notifications in N17.3:** Email, SMS, WhatsApp, and CRM dispatches are excluded and reserved for N17.4+.

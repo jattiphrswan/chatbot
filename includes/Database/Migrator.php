@@ -22,7 +22,7 @@ class Migrator {
 	/**
 	 * Target database schema version.
 	 */
-	public const SCHEMA_VERSION = '1.2.0';
+	public const SCHEMA_VERSION = '1.3.0';
 
 	/**
 	 * Option key storing installed schema version.
@@ -51,6 +51,7 @@ class Migrator {
 		$faqs              = $wpdb->prefix . 'gca_faqs';
 		$knowledge_sources = $wpdb->prefix . 'gca_knowledge_sources';
 		$knowledge_chunks  = $wpdb->prefix . 'gca_knowledge_chunks';
+		$handoffs          = $wpdb->prefix . 'gca_handoffs';
 
 		// Schema definitions formatted strictly according to dbDelta specifications.
 		$sql = "CREATE TABLE {$conversations} (
@@ -154,6 +155,23 @@ created_at datetime default current_timestamp not null,
 PRIMARY KEY  (id),
 KEY idx_source_id (source_id),
 KEY idx_chunk_index (chunk_index)
+) {$charset_collate};
+CREATE TABLE {$handoffs} (
+id bigint(20) unsigned not null auto_increment,
+public_id varchar(64) not null,
+conversation_id bigint(20) unsigned not null,
+lead_id bigint(20) unsigned default null,
+reason varchar(50) not null,
+status varchar(20) default 'pending' not null,
+created_at datetime default current_timestamp not null,
+updated_at datetime default current_timestamp not null,
+PRIMARY KEY  (id),
+UNIQUE KEY uk_public_id (public_id),
+KEY idx_conversation_id (conversation_id),
+KEY idx_lead_id (lead_id),
+KEY idx_reason (reason),
+KEY idx_status (status),
+KEY idx_created_at (created_at)
 ) {$charset_collate};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';

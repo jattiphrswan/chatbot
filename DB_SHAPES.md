@@ -151,13 +151,38 @@ CREATE TABLE `{$wpdb->prefix}gca_knowledge_chunks` (
 
 ---
 
+### 2.7 Human Handoffs Table: `{$wpdb->prefix}gca_handoffs` (Node N17.3)
+Stores visitor human handoff and escalation requests linked to conversations and optional leads.
+
+```sql
+CREATE TABLE `{$wpdb->prefix}gca_handoffs` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(64) NOT NULL,
+  `conversation_id` bigint(20) unsigned NOT NULL,
+  `lead_id` bigint(20) unsigned DEFAULT NULL,
+  `reason` varchar(50) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'pending',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_public_id` (`public_id`),
+  KEY `idx_conversation_id` (`conversation_id`),
+  KEY `idx_lead_id` (`lead_id`),
+  KEY `idx_reason` (`reason`),
+  KEY `idx_status` (`status`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
+```
+
+---
+
 ## 3. WordPress Options Table Entries (`wp_options`)
 
 | Option Name | Type | Description |
 | :--- | :--- | :--- |
 | `gca_settings` | `array` | Stores plugin configuration (model, active_profile_id, limits, privacy, widget settings, FAQ & RAG settings). |
 | `gca_ai_profiles` | `array` | Stores up to 25 AI profiles keyed by UUID (`autoload = 'no'`). |
-| `gca_db_version` | `string` | Semantic database migration version (e.g. `1.2.0`). |
+| `gca_db_version` | `string` | Semantic database migration version (e.g. `1.3.0`). |
 
 ### 3.1 AI Profile Data Shape (`gca_ai_profiles`)
 Stored as an associative array keyed by Profile UUID:

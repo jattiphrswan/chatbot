@@ -137,11 +137,15 @@ $registered_count        = count( $registered_integrations );
 			</div>
 
 			<!-- Human Agent Handoff -->
+			<?php
+			$handoff_integration = $integration_registry ? $integration_registry->get( 'handoff' ) : null;
+			$handoff_available   = $handoff_integration ? $handoff_integration->is_available() : false;
+			?>
 			<div class="gca-admin-card">
 				<div class="gca-admin-card__header">
 					<span class="dashicons dashicons-businesswoman" style="color: #0073aa;"></span>
-					<span class="gca-admin-pill gca-admin-pill--info">
-						<?php esc_html_e( 'Subnode N17.3 • Framework Ready', 'gemini-chat-assistant' ); ?>
+					<span class="gca-admin-pill <?php echo $handoff_available ? 'gca-admin-pill--success' : 'gca-admin-pill--info'; ?>">
+						<?php echo $handoff_available ? esc_html__( 'Active • Node N17.3', 'gemini-chat-assistant' ) : esc_html__( 'Subnode N17.3 • Ready', 'gemini-chat-assistant' ); ?>
 					</span>
 				</div>
 				<h3 class="gca-admin-card__title"><?php esc_html_e( 'Live Agent & Human Handoff', 'gemini-chat-assistant' ); ?></h3>
@@ -149,8 +153,12 @@ $registered_count        = count( $registered_integrations );
 					<?php esc_html_e( 'Transfer complex visitor queries to human support personnel, ticket desks, or live operator queues with session transcripts.', 'gemini-chat-assistant' ); ?>
 				</p>
 				<div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0f0f1; font-size: 12px; color: #646970;">
+					<div style="display: flex; gap: 16px; margin-bottom: 6px;">
+						<span><strong><?php esc_html_e( 'Framework Action:', 'gemini-chat-assistant' ); ?></strong> <code>handoff.create</code></span>
+						<span><strong><?php esc_html_e( 'Status:', 'gemini-chat-assistant' ); ?></strong> <?php echo $handoff_available ? esc_html__( 'Active', 'gemini-chat-assistant' ) : esc_html__( 'Ready', 'gemini-chat-assistant' ); ?></span>
+					</div>
 					<span class="dashicons dashicons-info" style="font-size: 16px; line-height: 1; vertical-align: text-top;"></span>
-					<?php esc_html_e( 'Status: Framework contracts defined. Implementation scheduled in Subnode N17.3.', 'gemini-chat-assistant' ); ?>
+					<?php esc_html_e( 'Scope: Controlled escalation requests and admin management. External email/SMS dispatches belong to N17.4+.', 'gemini-chat-assistant' ); ?>
 				</div>
 			</div>
 

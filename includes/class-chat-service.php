@@ -34,6 +34,7 @@ class ChatService {
 	private ProfileService $profile_service;
 	private ?Knowledge\KnowledgeRetriever $knowledge_retriever;
 	private ?Knowledge\KnowledgeContextBuilder $context_builder;
+	private ?Handoff\HandoffService $handoff_service;
 
 	/**
 	 * ChatService constructor.
@@ -46,6 +47,7 @@ class ChatService {
 	 * @param ProfileService|null                     $profile_service     Optional profile service.
 	 * @param Knowledge\KnowledgeRetriever|null       $knowledge_retriever Optional knowledge retriever.
 	 * @param Knowledge\KnowledgeContextBuilder|null  $context_builder     Optional knowledge context builder.
+	 * @param Handoff\HandoffService|null             $handoff_service     Optional handoff service.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
@@ -55,7 +57,8 @@ class ChatService {
 		?GeminiClient $gemini_client = null,
 		?ProfileService $profile_service = null,
 		?Knowledge\KnowledgeRetriever $knowledge_retriever = null,
-		?Knowledge\KnowledgeContextBuilder $context_builder = null
+		?Knowledge\KnowledgeContextBuilder $context_builder = null,
+		?Handoff\HandoffService $handoff_service = null
 	) {
 		$this->settings_service    = $settings_service ?? SettingsService::get_instance();
 		$this->conversation_repo   = $conversation_repo ?? new ConversationRepository();
@@ -65,6 +68,7 @@ class ChatService {
 		$this->profile_service     = $profile_service ?? new ProfileService( $this->settings_service );
 		$this->knowledge_retriever = $knowledge_retriever ?? new Knowledge\KnowledgeRetriever();
 		$this->context_builder     = $context_builder ?? new Knowledge\KnowledgeContextBuilder();
+		$this->handoff_service     = $handoff_service ?? new Handoff\HandoffService( null, $this->conversation_repo );
 	}
 
 	/**
@@ -114,7 +118,22 @@ class ChatService {
 		// 5. Retrieve active conversation memory (previous_interaction_id).
 		$previous_interaction_id = $this->session_service->get_interaction_id( $session_id, $conv_db_id );
 
-		// 6. Prepare Gemini client request.
+		// 6. Check human handoff intent (Node N17.3).
+		$handoff_meta = null;
+		if ( null !== $this->handoff_service && $conv_db_id > 0 ) {
+			$detected_reason = $this->handoff_service->detect_handoff_intent( $message );
+			if ( null !== $detected_reason ) {
+				$handoff_result = $this->handoff_service->create_handoff( $conv_db_id, $detected_reason );
+				if ( is_array( $handoff_result ) && ! empty( $handoff_result['public_id'] ) ) {
+					$handoff_meta = [
+						'status'    => 'requested',
+						'public_id' => (string) $handoff_result['public_id'],
+					];
+				}
+			}
+		}
+
+		// 7. Prepare Gemini client request.
 		$model              = SettingsService::get_model();
 		$system_instruction = $this->profile_service->get_effective_system_instruction();
 
@@ -194,7 +213,7 @@ class ChatService {
 		}
 
 		// 10. Return normalized public response shape (zero database IDs, hashes, or interaction IDs).
-		return [
+		$response_payload = [
 			'message'         => $assistant_text,
 			'conversation_id' => $public_id,
 			'request_id'      => $req_id,
@@ -202,6 +221,12 @@ class ChatService {
 				'model' => $model,
 			],
 		];
+
+		if ( ! empty( $handoff_meta ) ) {
+			$response_payload['meta']['handoff'] = $handoff_meta;
+		}
+
+		return $response_payload;
 	}
 
 	/**

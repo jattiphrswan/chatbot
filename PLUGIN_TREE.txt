@@ -34,7 +34,8 @@ gemini-chat-assistant/
 │   │   ├── LeadRepository.php
 │   │   ├── AnalyticsRepository.php
 │   │   ├── FaqRepository.php
-│   │   └── KnowledgeRepository.php
+│   │   ├── KnowledgeRepository.php
+│   │   └── HandoffRepository.php
 │   ├── Knowledge/
 │   │   ├── KnowledgeIndexer.php
 │   │   ├── KnowledgeRetriever.php
@@ -46,12 +47,17 @@ gemini-chat-assistant/
 │   │   ├── ActionValidator.php
 │   │   ├── IntegrationRegistry.php
 │   │   ├── ActionExecutor.php
-│   │   └── WooCommerce/
-│   │       ├── WooCommerceIntegration.php
-│   │       ├── WooCommerceFormatter.php
-│   │       ├── SearchProductsAction.php
-│   │       ├── GetProductAction.php
-│   │       └── SearchByCategoryAction.php
+│   │   ├── WooCommerce/
+│   │   │   ├── WooCommerceIntegration.php
+│   │   │   ├── WooCommerceFormatter.php
+│   │   │   ├── SearchProductsAction.php
+│   │   │   ├── GetProductAction.php
+│   │   │   └── SearchByCategoryAction.php
+│   │   └── Handoff/
+│   │       ├── HandoffIntegration.php
+│   │       └── CreateHandoffAction.php
+│   ├── handoff/
+│   │   └── class-handoff-service.php
 │   ├── REST/
 │   │   ├── RestServer.php
 │   │   ├── ChatController.php
@@ -81,6 +87,8 @@ gemini-chat-assistant/
 │   │   ├── faqs.php
 │   │   ├── knowledge.php
 │   │   ├── integrations.php
+│   │   ├── handoffs.php
+│   │   ├── handoff-detail.php
 │   │   ├── dashboard.php
 │   │   ├── settings.php
 │   │   ├── logs.php
@@ -104,6 +112,7 @@ gemini-chat-assistant/
 │   ├── test-rag-context.php
 │   ├── test-integrations-framework.php
 │   ├── test-woocommerce-integration.php
+│   ├── test-handoff-service.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig

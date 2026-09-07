@@ -35,6 +35,7 @@
 - **`test-rag-context.php`:** Verifies untrusted context framing delimiters, prompt-injection defense containment, source attribution formatting, HTML exclusion in context output, and seamless N15 AI Profile persona/rules preservation.
 - **`test-integrations-framework.php`:** Verifies Business Integration Framework contracts, ActionInterface schemas, ActionResult value objects, ActionValidator type checking & rogue argument stripping, ActionExecutor exception handling, duplicate registration protection, and risk classification metadata.
 - **`test-woocommerce-integration.php`:** Verifies WooCommerceIntegration availability detection, SearchProductsAction query validation & limits, GetProductAction ID casting & publish check, SearchByCategoryAction, WooCommerceFormatter attribute sanitization, and strict exclusion of cart/checkout functions.
+- **`test-handoff-service.php`:** Verifies Human Handoff schema v1.3.0, HandoffRepository CRUD operations & active request duplicate prevention, HandoffService intent detection & automatic N14 Lead association, controlled status transitions, integration registry adapter registration, and strict exclusion of external transport/mail/multi-provider APIs.
 
 ### 2.4 Static Analysis & Linting
 - **PHP_CodeSniffer (PHPCS):** WordPress-Core, WordPress-Extra, and WordPress-Docs standards.

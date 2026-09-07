@@ -155,6 +155,12 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Integrations/WooCommerce/GetProductAction.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Integrations/WooCommerce/SearchByCategoryAction.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Integrations/WooCommerce/WooCommerceIntegration.php';
+
+		// Human Handoff (N17.3).
+		require_once GCA_PLUGIN_DIR . 'includes/Database/HandoffRepository.php';
+		require_once GCA_PLUGIN_DIR . 'includes/handoff/class-handoff-service.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/Handoff/CreateHandoffAction.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/Handoff/HandoffIntegration.php';
 	}
 
 	/**
@@ -274,7 +280,8 @@ class Plugin {
 				$this->get_gemini_client(),
 				$this->get_profile_service(),
 				$this->get_knowledge_retriever(),
-				$this->get_knowledge_context_builder()
+				$this->get_knowledge_context_builder(),
+				$this->get_handoff_service()
 			);
 		}
 		return $this->chat_service;
@@ -437,6 +444,36 @@ class Plugin {
 	}
 
 	/**
+	 * Accessor to HandoffRepository.
+	 *
+	 * @return \SkyFish\GeminiChat\Database\HandoffRepository
+	 */
+	public function get_handoff_repository(): \SkyFish\GeminiChat\Database\HandoffRepository {
+		static $handoff_repo = null;
+		if ( null === $handoff_repo ) {
+			$handoff_repo = new \SkyFish\GeminiChat\Database\HandoffRepository();
+		}
+		return $handoff_repo;
+	}
+
+	/**
+	 * Accessor to HandoffService.
+	 *
+	 * @return \SkyFish\GeminiChat\Handoff\HandoffService
+	 */
+	public function get_handoff_service(): \SkyFish\GeminiChat\Handoff\HandoffService {
+		static $handoff_service = null;
+		if ( null === $handoff_service ) {
+			$handoff_service = new \SkyFish\GeminiChat\Handoff\HandoffService(
+				$this->get_handoff_repository(),
+				$this->get_conversation_repository(),
+				$this->get_lead_repository()
+			);
+		}
+		return $handoff_service;
+	}
+
+	/**
 	 * Accessor to IntegrationRegistry.
 	 *
 	 * @return \SkyFish\GeminiChat\Integrations\IntegrationRegistry
@@ -447,6 +484,8 @@ class Plugin {
 			$registry = new \SkyFish\GeminiChat\Integrations\IntegrationRegistry();
 			// Register WooCommerce business integration (N17.2).
 			$registry->register( new \SkyFish\GeminiChat\Integrations\WooCommerce\WooCommerceIntegration() );
+			// Register Human Handoff business integration (N17.3).
+			$registry->register( new \SkyFish\GeminiChat\Integrations\Handoff\HandoffIntegration( $this->get_handoff_service() ) );
 		}
 		return $registry;
 	}

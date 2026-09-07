@@ -5,6 +5,17 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2-N17.3] - 2026-09-07
+### Added
+- Native WordPress Human Handoff System (`includes/handoff/`, `includes/Database/HandoffRepository.php`, `includes/Integrations/Handoff/`):
+  - Database table `{$wpdb->prefix}gca_handoffs` managed via `Migrator` (schema v1.3.0) with foreign key indices for conversation, lead, status, reason, and unique `public_id`.
+  - Data access layer `HandoffRepository` providing CRUD operations, joined queries with conversations and leads, pagination, search, status filtering, and active duplicate detection (`get_active_by_conversation_id`).
+  - Core service `HandoffService` managing controlled statuses (`pending`, `assigned`, `resolved`, `cancelled`), controlled reasons (`customer_request`, `unknown_answer`, `complex_question`, `sales_request`, `technical_issue`), regex and keyword intent detection (`detect_handoff_intent`), conversation existence verification, and automatic N14 Lead association without duplicating contact records.
+  - Business Integration Framework Action `CreateHandoffAction` (`handoff.create`) registering under `HandoffIntegration` (`handoff`) with risk classification `write` and declarative argument validation.
+  - Chat orchestration integration in `ChatService`: evaluates user turns for escalation intents, persists handoff requests atomically, and returns structured `meta.handoff` payload to client.
+  - WordPress Admin Handoff Management UI (`templates/admin/handoffs.php` and `templates/admin/handoff-detail.php`) accessible via submenu `Gemini Chat -> Handoffs` (`gca-handoffs`) protected by `manage_options` capability, featuring status filtering, inline badge styling, transcript modal links, and customer contact cards.
+  - Comprehensive unit test suite in `tests/test-handoff-service.php` verifying schema constraints, status transitions, intent detection, lead linkage, duplicate prevention, and zero unauthorized external transport/mail calls.
+
 ## [1.3.1-N17.2] - 2026-09-07
 ### Added
 - WooCommerce Read-Only Business Integration (`includes/Integrations/WooCommerce/`):

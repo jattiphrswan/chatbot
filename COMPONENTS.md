@@ -17,7 +17,10 @@ SkyFish\GeminiChat
 │   ├── AnalyticsRepository: Metrics aggregator across messages and conversations.
 │   ├── FaqRepository: CRUD operations, sorting, and Home visibility for `wp_gca_faqs`.
 │   ├── KnowledgeRepository: Sources, chunks, and candidate queries for `wp_gca_knowledge_*`.
+│   ├── HandoffRepository: CRUD operations, associations, and admin pagination for `wp_gca_handoffs`.
 │   └── LogRepository: Append-only logger for `wp_gca_logs`.
+├── Handoff/
+│   └── HandoffService: Escalation orchestration, intent detection, status transitions, and lead linkage.
 ├── Knowledge/
 │   ├── KnowledgeIndexer: Content extraction, normalization, hashing, multibyte chunking, and sync hooks.
 │   ├── KnowledgeRetriever: Lexical tokenization, candidate scoring, top-K clamping, and budget limits.
@@ -29,12 +32,15 @@ SkyFish\GeminiChat
 │   ├── ActionValidator: Deterministic argument type and bounds validator.
 │   ├── IntegrationRegistry: Central registry with ID regex validation and extensibility hook.
 │   ├── ActionExecutor: Controlled execution pipeline with availability and enabled checks.
-│   └── WooCommerce/
-│       ├── WooCommerceIntegration: Read-only business integration for WooCommerce catalog.
-│       ├── WooCommerceFormatter: Normalizes WC_Product objects into sanitized arrays.
-│       ├── SearchProductsAction: Read action for searching products by keyword.
-│       ├── GetProductAction: Read action for single product detail lookup by ID.
-│       └── SearchByCategoryAction: Read action for querying products by category.
+│   ├── WooCommerce/
+│   │   ├── WooCommerceIntegration: Read-only business integration for WooCommerce catalog.
+│   │   ├── WooCommerceFormatter: Normalizes WC_Product objects into sanitized arrays.
+│   │   ├── SearchProductsAction: Read action for searching products by keyword.
+│   │   ├── GetProductAction: Read action for single product detail lookup by ID.
+│   │   └── SearchByCategoryAction: Read action for querying products by category.
+│   └── Handoff/
+│       ├── HandoffIntegration: Business integration for human assistance and escalation.
+│       └── CreateHandoffAction: Write action for recording handoff requests with conversation context.
 ├── Services/
 │   ├── GeminiClient: HTTP transport wrapper for Google Gemini REST API.
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.

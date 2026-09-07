@@ -35,6 +35,7 @@ class AdminMenu {
 	public const FAQS_MENU_SLUG          = 'gca-faqs';
 	public const KNOWLEDGE_MENU_SLUG     = 'gca-knowledge';
 	public const INTEGRATIONS_MENU_SLUG  = 'gca-integrations';
+	public const HANDOFFS_MENU_SLUG     = 'gca-handoffs';
 	public const SETTINGS_MENU_SLUG      = 'gca-settings';
 
 	private ConversationRepository $conversation_repo;
@@ -47,6 +48,8 @@ class AdminMenu {
 	private ?KnowledgeIndexer $knowledge_indexer;
 	private ?KnowledgeRetriever $knowledge_retriever;
 	private ?\SkyFish\GeminiChat\Integrations\IntegrationRegistry $integration_registry;
+	private ?\SkyFish\GeminiChat\Database\HandoffRepository $handoff_repo;
+	private ?\SkyFish\GeminiChat\Handoff\HandoffService $handoff_service;
 
 	/**
 	 * AdminMenu constructor.
@@ -61,6 +64,8 @@ class AdminMenu {
 	 * @param KnowledgeIndexer|null       $knowledge_indexer  Optional knowledge indexer.
 	 * @param KnowledgeRetriever|null     $knowledge_retriever Optional knowledge retriever.
 	 * @param \SkyFish\GeminiChat\Integrations\IntegrationRegistry|null $integration_registry Optional integration registry.
+	 * @param \SkyFish\GeminiChat\Database\HandoffRepository|null $handoff_repo Optional handoff repository.
+	 * @param \SkyFish\GeminiChat\Handoff\HandoffService|null $handoff_service Optional handoff service.
 	 */
 	public function __construct(
 		?ConversationRepository $conversation_repo = null,
@@ -72,7 +77,9 @@ class AdminMenu {
 		?KnowledgeRepository $knowledge_repo = null,
 		?KnowledgeIndexer $knowledge_indexer = null,
 		?KnowledgeRetriever $knowledge_retriever = null,
-		?\SkyFish\GeminiChat\Integrations\IntegrationRegistry $integration_registry = null
+		?\SkyFish\GeminiChat\Integrations\IntegrationRegistry $integration_registry = null,
+		?\SkyFish\GeminiChat\Database\HandoffRepository $handoff_repo = null,
+		?\SkyFish\GeminiChat\Handoff\HandoffService $handoff_service = null
 	) {
 		$this->conversation_repo   = $conversation_repo ?? new ConversationRepository();
 		$this->message_repo        = $message_repo ?? new MessageRepository();
@@ -84,6 +91,8 @@ class AdminMenu {
 		$this->knowledge_indexer   = $knowledge_indexer ?? new KnowledgeIndexer( $this->knowledge_repo, $this->faq_repo );
 		$this->knowledge_retriever = $knowledge_retriever ?? new KnowledgeRetriever( $this->knowledge_repo );
 		$this->integration_registry = $integration_registry;
+		$this->handoff_repo        = $handoff_repo ?? new \SkyFish\GeminiChat\Database\HandoffRepository();
+		$this->handoff_service     = $handoff_service ?? new \SkyFish\GeminiChat\Handoff\HandoffService( $this->handoff_repo, $this->conversation_repo, $this->lead_repo );
 	}
 
 	/**
@@ -123,6 +132,10 @@ class AdminMenu {
 		add_action( 'admin_post_gca_sync_knowledge', [ $this, 'handle_sync_knowledge' ] );
 		add_action( 'admin_post_gca_clear_knowledge', [ $this, 'handle_clear_knowledge' ] );
 		add_action( 'admin_post_gca_save_knowledge_settings', [ $this, 'handle_save_knowledge_settings' ] );
+
+		// Admin post action hooks for Human Handoff (N17.3)
+		add_action( 'admin_post_gca_update_handoff_status', [ $this, 'handle_update_handoff_status' ] );
+		add_action( 'admin_post_gca_delete_handoff', [ $this, 'handle_delete_handoff' ] );
 	}
 
 	/**
@@ -218,6 +231,15 @@ class AdminMenu {
 			'manage_options',
 			self::INTEGRATIONS_MENU_SLUG,
 			[ $this, 'render_integrations_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
+			__( 'Handoffs', 'gemini-chat-assistant' ),
+			__( 'Handoffs', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::HANDOFFS_MENU_SLUG,
+			[ $this, 'render_handoffs_page' ]
 		);
 
 		add_submenu_page(
@@ -1011,5 +1033,111 @@ class AdminMenu {
 		$integration_registry = $this->integration_registry;
 
 		include GCA_PLUGIN_DIR . 'templates/admin/integrations.php';
+	}
+
+	/**
+	 * Renders the Human Handoffs management list or detail view.
+	 */
+	public function render_handoffs_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$handoff_id = ! empty( $_GET['handoff_id'] ) ? sanitize_text_field( (string) $_GET['handoff_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		if ( ! empty( $handoff_id ) ) {
+			// Detail view
+			$handoff = $this->handoff_service ? $this->handoff_service->get_handoff( $handoff_id ) : null;
+			if ( ! $handoff ) {
+				wp_safe_redirect( admin_url( 'admin.php?page=' . self::HANDOFFS_MENU_SLUG ) );
+				exit;
+			}
+
+			$conversation = null;
+			if ( ! empty( $handoff['conversation_id'] ) ) {
+				$conversation = $this->conversation_repo->get_by_id( (int) $handoff['conversation_id'] );
+			}
+
+			$lead = null;
+			if ( ! empty( $handoff['lead_id'] ) ) {
+				$lead = $this->lead_repo->get_by_id( (int) $handoff['lead_id'] );
+			}
+
+			$back_url = admin_url( 'admin.php?page=' . self::HANDOFFS_MENU_SLUG );
+
+			include GCA_PLUGIN_DIR . 'templates/admin/handoff-detail.php';
+			return;
+		}
+
+		// List view
+		$current_page   = max( 1, absint( $_GET['paged'] ?? 1 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$per_page       = 20;
+		$current_status = ! empty( $_GET['status'] ) ? sanitize_text_field( (string) $_GET['status'] ) : 'all'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$current_reason = ! empty( $_GET['reason'] ) ? sanitize_text_field( (string) $_GET['reason'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$search_term    = ! empty( $_GET['s'] ) ? sanitize_text_field( (string) $_GET['s'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		$filter_args = [
+			'page'     => $current_page,
+			'per_page' => $per_page,
+			'status'   => 'all' !== $current_status ? $current_status : null,
+			'reason'   => ! empty( $current_reason ) ? $current_reason : null,
+			'search'   => $search_term,
+			'orderby'  => 'created_at',
+			'order'    => 'DESC',
+		];
+
+		$handoffs    = $this->handoff_service ? $this->handoff_service->get_admin_list( $filter_args ) : [];
+		$total_items = $this->handoff_service ? $this->handoff_service->count_admin_list( $filter_args ) : 0;
+		$total_pages = (int) ceil( $total_items / $per_page );
+		$base_url    = admin_url( 'admin.php?page=' . self::HANDOFFS_MENU_SLUG );
+
+		include GCA_PLUGIN_DIR . 'templates/admin/handoffs.php';
+	}
+
+	/**
+	 * Handles POST action to update handoff status.
+	 */
+	public function handle_update_handoff_status(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$handoff_id = ! empty( $_POST['handoff_id'] ) ? sanitize_text_field( (string) $_POST['handoff_id'] ) : '';
+		check_admin_referer( 'gca_update_handoff_' . $handoff_id );
+
+		$status = ! empty( $_POST['status'] ) ? sanitize_text_field( (string) $_POST['status'] ) : '';
+
+		if ( $this->handoff_service && ! empty( $handoff_id ) ) {
+			$this->handoff_service->update_status( $handoff_id, $status );
+		}
+
+		wp_safe_redirect( add_query_arg( [
+			'page'       => self::HANDOFFS_MENU_SLUG,
+			'handoff_id' => $handoff_id,
+			'updated'    => 1,
+		], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to delete a handoff record.
+	 */
+	public function handle_delete_handoff(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$handoff_id = ! empty( $_POST['handoff_id'] ) ? sanitize_text_field( (string) $_POST['handoff_id'] ) : '';
+		check_admin_referer( 'gca_delete_handoff_' . $handoff_id );
+
+		if ( $this->handoff_repo && ! empty( $handoff_id ) ) {
+			$this->handoff_repo->delete_by_public_id( $handoff_id );
+		}
+
+		wp_safe_redirect( add_query_arg( [
+			'page'    => self::HANDOFFS_MENU_SLUG,
+			'deleted' => 1,
+		], admin_url( 'admin.php' ) ) );
+		exit;
 	}
 }

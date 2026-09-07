@@ -61,3 +61,10 @@
 - **Publication Status Filtering:** Only products with `publish` status are returned. Drafts, private products, and trashed items are unconditionally excluded from lookups.
 - **Query Bounds & Denial-of-Service Defense:** Search queries are limited to a maximum of 200 characters and category terms to 100 characters. Result sets are clamped to a hard ceiling of 10 items to prevent memory exhaustion and expensive database joins.
 - **Sanitized Output Normalization:** Output data is filtered through `WooCommerceFormatter`, which strips all HTML tags, sanitizes text fields, formats prices, and produces clean JSON-serializable associative arrays with zero internal objects or sensitive properties exposed.
+
+## 9. Human Handoff Security Policy (Node N17.3)
+- **Controlled Status & Reason Validation:** Statuses are constrained strictly to `pending`, `assigned`, `resolved`, `cancelled`. Reason classifications are constrained to `customer_request`, `unknown_answer`, `complex_question`, `sales_request`, `technical_issue`. Rogue statuses and reasons are rejected at the service and repository layers.
+- **Access Control & Capability Checks:** Viewing and updating handoffs in the WordPress admin panel strictly requires the `manage_options` capability. Unauthorized users (such as Subscribers or Authors) are immediately denied via `current_user_can('manage_options')` checks.
+- **CSRF & Nonce Protection:** All status transition and deletion actions in the admin panel are protected by specific WordPress nonces (`gca_update_handoff_{id}`, `gca_delete_handoff_{id}`).
+- **Zero Outbound Transports in N17.3:** No live notification dispatchers (`wp_mail`, SMS, WhatsApp, Webhooks) are invoked during handoff creation in N17.3, eliminating unauthorized communication risks until N17.4.
+- **No Direct Visitor REST Execution:** No public `/handoff` REST endpoint exists. Handoffs can only be initiated through validated chat turn orchestration in `ChatService` or internal business actions.
