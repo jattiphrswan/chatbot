@@ -13,7 +13,7 @@
   - `POST /wp-json/gca/v1/reset`
   - `GET /wp-json/gca/v1/health`
 - **Shortcode:** `[gemini_chat]` (supports floating widget and inline embed modes).
-- **Admin Dashboard:** Includes Settings (Model: `gemini-3.7-flash`, System Prompt, Rate Limits, Widget Toggles), Logs & Analytics, and Health Diagnostics.
+- **Admin Dashboard:** Includes Settings (Model: `gemini-3.8-flash`, System Prompt, Rate Limits, Widget Toggles), Logs & Analytics, and Health Diagnostics.
 - **Database Architecture:** Optimized custom tables `wp_gca_conversations`, `wp_gca_messages`, and `wp_gca_logs`.
 
 ## System Requirements

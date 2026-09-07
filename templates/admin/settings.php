@@ -106,7 +106,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<div class="gca-field-row">
 						<label for="gca_model"><?php esc_html_e( 'Model Slug', 'gemini-chat-assistant' ); ?></label>
 						<input type="text" id="gca_model" name="gca_settings[model]" value="<?php echo esc_attr( $settings['model'] ); ?>" />
-						<span class="description"><?php esc_html_e( 'Configured Gemini model (default: gemini-3.7-flash).', 'gemini-chat-assistant' ); ?></span>
+						<span class="description"><?php esc_html_e( 'Configured Gemini model (default: gemini-3.8-flash).', 'gemini-chat-assistant' ); ?></span>
 					</div>
 					<div class="gca-field-row">
 						<label for="gca_system_instruction"><?php esc_html_e( 'System Instruction / Prompt', 'gemini-chat-assistant' ); ?></label>

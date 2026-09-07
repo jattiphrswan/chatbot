@@ -9,7 +9,8 @@
   "shortcode": "[gemini_chat]",
   "requires_php": "8.0",
   "requires_wp": "6.2",
-  "default_model": "gemini-3.7-flash",
+  "default_model": "gemini-3.8-flash",
+  "endpoint": "https://generativelanguage.googleapis.com/v1/interactions",
   "routes": {
     "chat": {
       "method": "POST",
@@ -47,5 +48,5 @@
     "capability_checks": true,
     "rate_limiting": true
   },
-  "roadmap_current_node": "N3"
+  "roadmap_current_node": "N4"
 }

@@ -258,7 +258,7 @@ class DatabaseSystemTest {
 
 		$this->assert( $conv_id > 0, 'Test 7.1: Conversation record created' );
 
-		$msg_id = $msg_repo->create( $conv_id, 'user', 'Hello there!', 'gemini-3.7-flash', 10, 20, 150 );
+		$msg_id = $msg_repo->create( $conv_id, 'user', 'Hello there!', 'gemini-3.8-flash', 10, 20, 150 );
 		$this->assert( $msg_id > 0, 'Test 7.2: Message record created with metrics' );
 	}
 

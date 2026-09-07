@@ -34,7 +34,7 @@ class Activator {
 			'placeholder'           => 'Type your message...',
 
 			// AI.
-			'model'                 => 'gemini-3.7-flash',
+			'model'                 => 'gemini-3.8-flash',
 			'system_instruction'    => 'You are a helpful customer support assistant for this website.',
 
 			// Widget.

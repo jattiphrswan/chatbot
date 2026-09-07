@@ -105,6 +105,9 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/SettingsService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/AdminMenu.php';
 
+		// Load Gemini API Client.
+		require_once GCA_PLUGIN_DIR . 'includes/class-gemini-client.php';
+
 		// Load Provider Abstraction.
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderInterface.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderResponse.php';
@@ -113,6 +116,25 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/GeminiProvider.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIProvider.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ClaudeProvider.php';
+	}
+
+	/**
+	 * Gemini API client instance.
+	 *
+	 * @var GeminiClient|null
+	 */
+	private ?GeminiClient $gemini_client = null;
+
+	/**
+	 * Accessor to GeminiClient.
+	 *
+	 * @return GeminiClient
+	 */
+	public function get_gemini_client(): GeminiClient {
+		if ( null === $this->gemini_client ) {
+			$this->gemini_client = new GeminiClient();
+		}
+		return $this->gemini_client;
 	}
 
 	/**

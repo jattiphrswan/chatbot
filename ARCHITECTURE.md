@@ -46,7 +46,7 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 ┌─────────────────────────────────────────────────────────────┐
 │                   Google Gemini API Gateway                 │
 │         https://generativelanguage.googleapis.com/          │
-│                (v1beta models:generateContent)              │
+│                    (v1/interactions API)                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -65,7 +65,7 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 
 ### 2.3 PHP Application & Service Tier
 - **Core Orchestration (`SkyFish\GeminiChat\Core\Plugin`):** Bootstraps services, hooks into WordPress lifecycle, registers autoloader, and manages singleton container.
-- **Gemini Client (`SkyFish\GeminiChat\Services\GeminiClient`):** Communicates with Google Gemini API endpoint via `wp_remote_post`. Manages payload assembly, timeout handling, error mapping, and response parsing.
+- **Gemini Client (`SkyFish\GeminiChat\GeminiClient`):** Communicates with Google Gemini Interactions API (`/v1/interactions`) via WordPress `wp_remote_post()`. Handles server-side API keys (`x-goog-api-key` header), payload assembly (`model`, `input`, `system_instruction`, `previous_interaction_id`), `steps[]` response parsing, usage metrics, and error normalization.
 - **Context Manager (`SkyFish\GeminiChat\Services\ContextManager`):** Retrieves previous message history for a session, formats conversation history according to Gemini multi-turn format, and applies token/message window constraints.
 - **Security & Rate Limiting (`SkyFish\GeminiChat\Security\*`):** Enforces transient-based rate limits per IP/session, validates nonces, and manages server-side credential isolation.
 

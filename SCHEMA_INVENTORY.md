@@ -122,7 +122,7 @@
     "greeting": { "type": "string", "default": "Welcome!" },
     "welcome_message": { "type": "string", "default": "Hi! How can I help you today?" },
     "placeholder": { "type": "string", "default": "Type your message..." },
-    "model": { "type": "string", "default": "gemini-3.7-flash" },
+    "model": { "type": "string", "default": "gemini-3.8-flash" },
     "system_instruction": { "type": "string", "default": "You are a helpful customer support assistant for this website." },
     "widget_enabled": { "type": "boolean", "default": true },
     "embedded_chat_enabled": { "type": "boolean", "default": true },
@@ -146,6 +146,40 @@
     "store_messages": { "type": "boolean", "default": true },
     "store_leads": { "type": "boolean", "default": true },
     "retention_days": { "type": "integer", "default": 30, "minimum": 1, "maximum": 365 }
+  }
+}
+```
+
+---
+
+## 3. Gemini Client Internal Normalized Response Schema
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GeminiClientNormalizedResult",
+  "type": "object",
+  "required": ["interaction_id", "text", "model", "status", "usage"],
+  "properties": {
+    "interaction_id": { "type": "string" },
+    "text": { "type": "string" },
+    "model": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed", "cancelled", "incomplete", "in_progress", "requires_action"]
+    },
+    "usage": {
+      "type": "object",
+      "required": ["input_tokens", "output_tokens", "thought_tokens", "total_tokens"],
+      "properties": {
+        "input_tokens": { "type": "integer" },
+        "output_tokens": { "type": "integer" },
+        "thought_tokens": { "type": "integer" },
+        "total_tokens": { "type": "integer" },
+        "cached_tokens": { "type": ["integer", "null"] },
+        "tool_use_tokens": { "type": ["integer", "null"] }
+      }
+    }
   }
 }
 ```

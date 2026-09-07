@@ -17,7 +17,7 @@ Build a robust, secure, and production-ready WordPress plugin named **`gemini-ch
    - `{$wpdb->prefix}gca_messages`
    - `{$wpdb->prefix}gca_logs`
 5. **Dashboard Modules:**
-   - Configuration / Settings (Model: `gemini-3.7-flash`, System Prompt, Rate Limits, Widget Toggles)
+   - Configuration / Settings (Model: `gemini-3.8-flash`, System Prompt, Rate Limits, Widget Toggles)
    - Logs & Conversation History
    - Health Check & API Status Diagnostics
 6. **Execution Protocol:**

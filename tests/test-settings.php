@@ -155,10 +155,10 @@ class SettingsSystemTest {
 		$this->assert( $all_present, 'Test 1: Default settings include all N2 configuration categories' );
 	}
 
-	private function test_2_default_model_is_gemini_3_7(): void {
+	private function test_2_default_model_is_gemini_3_8(): void {
 		$defaults = Activator::get_default_settings();
-		$this->assert( $defaults['model'] === 'gemini-3.7-flash', 'Test 2.1: Default model is gemini-3.7-flash' );
-		$this->assert( SettingsService::get_model() === 'gemini-3.7-flash', 'Test 2.2: SettingsService returns gemini-3.7-flash' );
+		$this->assert( $defaults['model'] === 'gemini-3.8-flash', 'Test 2.1: Default model is gemini-3.8-flash' );
+		$this->assert( SettingsService::get_model() === 'gemini-3.8-flash', 'Test 2.2: SettingsService returns gemini-3.8-flash' );
 	}
 
 	private function test_3_sanitization_and_clamping(): void {

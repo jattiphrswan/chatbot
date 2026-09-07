@@ -44,7 +44,8 @@
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      Google Gemini API                      │
-│            (generativelanguage.googleapis.com)              │
+│            (generativelanguage.googleapis.com/v1)           │
+│                    (v1/interactions API)                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -62,7 +63,7 @@
    - `POST /wp-json/gca/v1/reset`: Clears user session history and starts a fresh conversation.
    - `GET /wp-json/gca/v1/health`: Verifies database health, API key validity, and external Gemini API connectivity.
 3. **Comprehensive Admin Dashboard:**
-   - **Settings Module:** Model configuration (`gemini-3.7-flash`), server-side credential status indicator, system prompt customization, temperature, top_p, and token constraints.
+   - **Settings Module:** Model configuration (`gemini-3.8-flash`), server-side credential status indicator, system prompt customization, temperature, top_p, and token constraints.
    - **Logs & Analytics Module:** Real-time logging of chat traffic, error rates, token consumption, and active user sessions.
    - **Health & Diagnostics Module:** Self-test tool for API connectivity, database status, and REST route verification.
 4. **Resilient Data Architecture:**

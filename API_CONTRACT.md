@@ -128,7 +128,7 @@ Performs end-to-end self-tests including database integrity, option configuratio
       "gemini_api": {
         "status": "ok",
         "api_key_configured": true,
-        "model": "gemini-3.7-flash",
+        "model": "gemini-3.8-flash",
         "latency_ms": 342
       },
       "environment": {

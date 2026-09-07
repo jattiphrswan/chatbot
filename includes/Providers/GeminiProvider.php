@@ -43,11 +43,11 @@ class GeminiProvider implements ProviderInterface {
 	public function get_models(): array {
 		return [
 			[
-				'id'                => 'gemini-3.7-flash',
-				'name'              => 'Gemini 3.7 Flash',
+				'id'                => 'gemini-3.8-flash',
+				'name'              => 'Gemini 3.8 Flash',
 				'context_window'    => 1048576,
 				'max_output_tokens' => 8192,
-				'description'       => 'High-speed, cost-effective multimodal model with strong reasoning and low latency.',
+				'description'       => 'High-speed, cost-effective multimodal model for Interactions API (v1).',
 			],
 		];
 	}

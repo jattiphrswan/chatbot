@@ -57,8 +57,8 @@ class SettingsService {
 	 * @return string
 	 */
 	public static function get_model(): string {
-		$model = (string) self::get( 'model', 'gemini-3.7-flash' );
-		return ! empty( $model ) ? sanitize_text_field( $model ) : 'gemini-3.7-flash';
+		$model = (string) self::get( 'model', 'gemini-3.8-flash' );
+		return ! empty( $model ) ? sanitize_text_field( $model ) : 'gemini-3.8-flash';
 	}
 
 	/**
@@ -129,7 +129,7 @@ class SettingsService {
 		$sanitized['system_instruction'] = isset( $input['system_instruction'] ) ? sanitize_textarea_field( $input['system_instruction'] ) : $defaults['system_instruction'];
 
 		if ( empty( $sanitized['model'] ) ) {
-			$sanitized['model'] = 'gemini-3.7-flash';
+			$sanitized['model'] = 'gemini-3.8-flash';
 		}
 
 		// Widget.
