@@ -2,8 +2,8 @@
 
 ## Active Issues
 - **TASK-DEFERRED-001:** Runtime Environment Verification (Deferred).
-  - *Context:* PHP CLI syntax validation, browser JavaScript interaction, and WordPress runtime tests were unavailable in current build environment for Nodes N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, and N13.
-  - *Action Required:* Perform end-to-end WordPress runtime testing, admin appearance customizer live preview and media uploader verification, admin analytics dashboard layout and query performance verification, admin conversation management workflow verification, admin dashboard layout verification, multi-device mobile responsive testing, rate limit transient verification under load, multi-turn live conversation tests, Elementor shortcode verification, browser UI testing, and PHP CLI linting when compatible WordPress environment is available and prior to production release.
+  - *Context:* PHP CLI syntax validation, browser JavaScript interaction, and WordPress runtime tests were unavailable in current build environment for Nodes N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, and N14.
+  - *Action Required:* Perform end-to-end WordPress runtime testing, admin pre-chat lead submission and admin leads management workflow verification, admin appearance customizer live preview and media uploader verification, admin analytics dashboard layout and query performance verification, admin conversation management workflow verification, admin dashboard layout verification, multi-device mobile responsive testing, rate limit transient verification under load, multi-turn live conversation tests, Elementor shortcode verification, browser UI testing, and PHP CLI linting when compatible WordPress environment is available and prior to production release.
 
 ## Resolved Issues
 - **ISSUE-000:** Initial documentation suite alignment and Node N0 specification validation.

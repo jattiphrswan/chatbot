@@ -35,6 +35,7 @@ class RestController extends WP_REST_Controller {
 	private ChatService $chat_service;
 	private GeminiClient $gemini_client;
 	private RateLimiter $rate_limiter;
+	private LeadService $lead_service;
 
 	/**
 	 * RestController constructor.
@@ -43,18 +44,21 @@ class RestController extends WP_REST_Controller {
 	 * @param ChatService|null     $chat_service     Optional chat service.
 	 * @param GeminiClient|null    $gemini_client    Optional Gemini client.
 	 * @param RateLimiter|null     $rate_limiter     Optional rate limiter service.
+	 * @param LeadService|null     $lead_service     Optional lead service.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
 		?ChatService $chat_service = null,
 		?GeminiClient $gemini_client = null,
-		?RateLimiter $rate_limiter = null
+		?RateLimiter $rate_limiter = null,
+		?LeadService $lead_service = null
 	) {
 		$this->namespace        = self::REST_NAMESPACE;
 		$this->settings_service = $settings_service ?? SettingsService::get_instance();
 		$this->gemini_client    = $gemini_client ?? new GeminiClient( $this->settings_service );
 		$this->chat_service     = $chat_service ?? new ChatService( $this->settings_service, null, null, null, $this->gemini_client );
 		$this->rate_limiter     = $rate_limiter ?? new RateLimiter( $this->settings_service );
+		$this->lead_service     = $lead_service ?? new LeadService( $this->settings_service );
 	}
 
 	/**
@@ -118,7 +122,52 @@ class RestController extends WP_REST_Controller {
 			]
 		);
 
-		// 3. GET /wp-json/gca/v1/health (Admin only)
+		// 3. POST /wp-json/gca/v1/prechat
+		register_rest_route(
+			$this->namespace,
+			'/prechat',
+			[
+				[
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => [ $this, 'handle_prechat' ],
+					'permission_callback' => [ $this, 'check_chat_permissions' ],
+					'args'                => [
+						'session_id'  => [
+							'description' => __( 'Opaque client session identifier.', 'gemini-chat-assistant' ),
+							'type'        => 'string',
+							'required'    => true,
+						],
+						'name'        => [
+							'description' => __( 'Visitor name.', 'gemini-chat-assistant' ),
+							'type'        => 'string',
+							'required'    => false,
+						],
+						'email'       => [
+							'description' => __( 'Visitor email address.', 'gemini-chat-assistant' ),
+							'type'        => 'string',
+							'required'    => false,
+						],
+						'phone'       => [
+							'description' => __( 'Visitor phone number.', 'gemini-chat-assistant' ),
+							'type'        => 'string',
+							'required'    => false,
+						],
+						'requirement' => [
+							'description' => __( 'Visitor requirement or message.', 'gemini-chat-assistant' ),
+							'type'        => 'string',
+							'required'    => false,
+						],
+						'website_url' => [
+							'description' => __( 'Honeypot field (must remain empty).', 'gemini-chat-assistant' ),
+							'type'        => 'string',
+							'required'    => false,
+						],
+					],
+				],
+			]
+		);
+
+		// 4. GET /wp-json/gca/v1/health (Admin only)
 		register_rest_route(
 			$this->namespace,
 			'/health',
@@ -256,6 +305,54 @@ class RestController extends WP_REST_Controller {
 	}
 
 	/**
+	 * Handles POST /wp-json/gca/v1/prechat request.
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 * @return WP_REST_Response
+	 */
+	public function handle_prechat( WP_REST_Request $request ): WP_REST_Response {
+		$request_id = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : uniqid( 'req_', true );
+
+		// 1. Extract and validate session ID.
+		$raw_session = $request->get_param( 'session_id' );
+		$session_id  = Validator::validate_session_id( $raw_session );
+
+		if ( is_wp_error( $session_id ) ) {
+			return $this->format_error_response( $session_id, $request_id );
+		}
+
+		// 2. Rate limiting check & consume before processing.
+		$rate_check = $this->rate_limiter->check_and_consume( $session_id );
+		if ( is_wp_error( $rate_check ) ) {
+			return $this->format_error_response( $rate_check, $request_id );
+		}
+
+		// 3. Extract submitted prechat payload fields.
+		$payload = [
+			'name'        => $request->get_param( 'name' ),
+			'email'       => $request->get_param( 'email' ),
+			'phone'       => $request->get_param( 'phone' ),
+			'requirement' => $request->get_param( 'requirement' ),
+			'website_url' => $request->get_param( 'website_url' ),
+		];
+
+		// 4. Delegate to LeadService.
+		$result = $this->lead_service->handle_prechat_submission( $payload, $session_id );
+
+		if ( is_wp_error( $result ) ) {
+			return $this->format_error_response( $result, $request_id );
+		}
+
+		return new WP_REST_Response(
+			[
+				'success' => true,
+				'data'    => $result,
+			],
+			200
+		);
+	}
+
+	/**
 	 * Handles GET /wp-json/gca/v1/health request.
 	 *
 	 * @param WP_REST_Request $request Request instance.
@@ -298,6 +395,10 @@ class RestController extends WP_REST_Controller {
 			'message'    => $message,
 			'request_id' => $request_id,
 		];
+
+		if ( is_array( $err_data ) && isset( $err_data['fields'] ) ) {
+			$error_payload['fields'] = $err_data['fields'];
+		}
 
 		if ( is_array( $err_data ) && isset( $err_data['retry_after'] ) ) {
 			$error_payload['retry_after'] = absint( $err_data['retry_after'] );

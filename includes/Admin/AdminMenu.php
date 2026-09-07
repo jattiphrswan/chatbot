@@ -24,6 +24,7 @@ class AdminMenu {
 
 	public const MAIN_MENU_SLUG          = 'gemini-chat-assistant';
 	public const CONVERSATIONS_MENU_SLUG = 'gca-conversations';
+	public const LEADS_MENU_SLUG         = 'gca-leads';
 	public const ANALYTICS_MENU_SLUG     = 'gca-analytics';
 	public const APPEARANCE_MENU_SLUG    = 'gca-appearance';
 	public const SETTINGS_MENU_SLUG      = 'gca-settings';
@@ -31,6 +32,7 @@ class AdminMenu {
 	private ConversationRepository $conversation_repo;
 	private MessageRepository $message_repo;
 	private AnalyticsService $analytics_service;
+	private LeadRepository $lead_repo;
 
 	/**
 	 * AdminMenu constructor.
@@ -38,15 +40,18 @@ class AdminMenu {
 	 * @param ConversationRepository|null $conversation_repo Optional conversation repository.
 	 * @param MessageRepository|null      $message_repo      Optional message repository.
 	 * @param AnalyticsService|null       $analytics_service Optional analytics service.
+	 * @param LeadRepository|null         $lead_repo         Optional lead repository.
 	 */
 	public function __construct(
 		?ConversationRepository $conversation_repo = null,
 		?MessageRepository $message_repo = null,
-		?AnalyticsService $analytics_service = null
+		?AnalyticsService $analytics_service = null,
+		?LeadRepository $lead_repo = null
 	) {
 		$this->conversation_repo = $conversation_repo ?? new ConversationRepository();
 		$this->message_repo      = $message_repo ?? new MessageRepository();
 		$this->analytics_service = $analytics_service ?? new AnalyticsService();
+		$this->lead_repo         = $lead_repo ?? new LeadRepository();
 	}
 
 	/**
@@ -61,6 +66,10 @@ class AdminMenu {
 		add_action( 'admin_post_gca_delete_conversation', [ $this, 'handle_delete_conversation' ] );
 		add_action( 'admin_post_gca_close_conversation', [ $this, 'handle_close_conversation' ] );
 		add_action( 'admin_post_gca_reopen_conversation', [ $this, 'handle_reopen_conversation' ] );
+
+		// Admin post action hooks for leads
+		add_action( 'admin_post_gca_delete_lead', [ $this, 'handle_delete_lead' ] );
+		add_action( 'admin_post_gca_update_lead_status', [ $this, 'handle_update_lead_status' ] );
 
 		// Admin post action hooks for appearance
 		add_action( 'admin_post_gca_reset_appearance', [ $this, 'handle_reset_appearance' ] );
@@ -96,6 +105,15 @@ class AdminMenu {
 			'manage_options',
 			self::CONVERSATIONS_MENU_SLUG,
 			[ $this, 'render_conversations_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
+			__( 'Leads', 'gemini-chat-assistant' ),
+			__( 'Leads', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::LEADS_MENU_SLUG,
+			[ $this, 'render_leads_page' ]
 		);
 
 		add_submenu_page(
@@ -151,6 +169,8 @@ class AdminMenu {
 			'toplevel_page_' . self::MAIN_MENU_SLUG,
 			'gemini-chat_page_' . self::CONVERSATIONS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::CONVERSATIONS_MENU_SLUG,
+			'gemini-chat_page_' . self::LEADS_MENU_SLUG,
+			'gemini-chat-assistant_page_' . self::LEADS_MENU_SLUG,
 			'gemini-chat_page_' . self::ANALYTICS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::ANALYTICS_MENU_SLUG,
 			'gemini-chat_page_' . self::APPEARANCE_MENU_SLUG,
@@ -313,6 +333,97 @@ class AdminMenu {
 		}
 
 		wp_safe_redirect( add_query_arg( [ 'page' => self::CONVERSATIONS_MENU_SLUG, 'conversation_id' => $public_id, 'reopened' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Renders the lead inquiries management list or detail view.
+	 */
+	public function render_leads_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$lead_id = ! empty( $_GET['lead_id'] ) ? sanitize_text_field( (string) $_GET['lead_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		if ( ! empty( $lead_id ) ) {
+			// Detail view
+			$lead = $this->lead_repo->get_by_public_id( $lead_id );
+			if ( ! $lead ) {
+				wp_safe_redirect( admin_url( 'admin.php?page=' . self::LEADS_MENU_SLUG ) );
+				exit;
+			}
+
+			$conversation = null;
+			if ( ! empty( $lead['conversation_id'] ) ) {
+				$conversation = $this->conversation_repo->get_by_id( (int) $lead['conversation_id'] );
+			}
+
+			$back_url = admin_url( 'admin.php?page=' . self::LEADS_MENU_SLUG );
+
+			include GCA_PLUGIN_DIR . 'templates/admin/lead-detail.php';
+			return;
+		}
+
+		// List view
+		$current_page   = max( 1, absint( $_GET['paged'] ?? 1 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$per_page       = 20;
+		$current_status = ! empty( $_GET['status'] ) ? sanitize_text_field( (string) $_GET['status'] ) : 'all'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$search_term    = ! empty( $_GET['s'] ) ? sanitize_text_field( (string) $_GET['s'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		$filter_args = [
+			'page'     => $current_page,
+			'per_page' => $per_page,
+			'status'   => 'all' !== $current_status ? $current_status : null,
+			'search'   => $search_term,
+			'orderby'  => 'created_at',
+			'order'    => 'DESC',
+		];
+
+		$leads       = $this->lead_repo->get_admin_list( $filter_args );
+		$total_items = $this->lead_repo->count_admin_list( $filter_args );
+		$total_pages = (int) ceil( $total_items / $per_page );
+		$base_url    = admin_url( 'admin.php?page=' . self::LEADS_MENU_SLUG );
+
+		include GCA_PLUGIN_DIR . 'templates/admin/leads.php';
+	}
+
+	/**
+	 * Handles POST action to delete a lead inquiry.
+	 */
+	public function handle_delete_lead(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$lead_id = ! empty( $_POST['lead_id'] ) ? sanitize_text_field( (string) $_POST['lead_id'] ) : '';
+		check_admin_referer( 'gca_delete_lead_' . $lead_id );
+
+		if ( ! empty( $lead_id ) ) {
+			$this->lead_repo->delete_by_public_id( $lead_id );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::LEADS_MENU_SLUG, 'deleted' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to update lead inquiry status.
+	 */
+	public function handle_update_lead_status(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$lead_id = ! empty( $_POST['lead_id'] ) ? sanitize_text_field( (string) $_POST['lead_id'] ) : '';
+		$status  = ! empty( $_POST['status'] ) ? sanitize_text_field( (string) $_POST['status'] ) : '';
+		check_admin_referer( 'gca_update_lead_status_' . $lead_id );
+
+		if ( ! empty( $lead_id ) && in_array( $status, [ 'new', 'contacted', 'closed' ], true ) ) {
+			$this->lead_repo->update_status_by_public_id( $lead_id, $status );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::LEADS_MENU_SLUG, 'lead_id' => $lead_id, 'updated' => 1 ], admin_url( 'admin.php' ) ) );
 		exit;
 	}
 

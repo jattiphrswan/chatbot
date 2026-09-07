@@ -71,6 +71,20 @@ class Plugin {
 	private ?MessageRepository $message_repo = null;
 
 	/**
+	 * Lead repository instance.
+	 *
+	 * @var LeadRepository|null
+	 */
+	private ?LeadRepository $lead_repo = null;
+
+	/**
+	 * Lead service instance.
+	 *
+	 * @var LeadService|null
+	 */
+	private ?LeadService $lead_service = null;
+
+	/**
 	 * Gets the singleton instance.
 	 *
 	 * @return Plugin
@@ -99,6 +113,7 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Database/Migrator.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/ConversationRepository.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/MessageRepository.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Database/LeadRepository.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/AnalyticsRepository.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/SessionService.php';
 
@@ -115,6 +130,7 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/class-rate-limiter.php';
 		require_once GCA_PLUGIN_DIR . 'includes/class-validator.php';
 		require_once GCA_PLUGIN_DIR . 'includes/class-chat-service.php';
+		require_once GCA_PLUGIN_DIR . 'includes/class-lead-service.php';
 		require_once GCA_PLUGIN_DIR . 'includes/class-rest-controller.php';
 
 		// Public Frontend UI & Shortcode.
@@ -250,10 +266,40 @@ class Plugin {
 				SettingsService::get_instance(),
 				$this->get_chat_service(),
 				$this->get_gemini_client(),
-				$this->get_rate_limiter()
+				$this->get_rate_limiter(),
+				$this->get_lead_service()
 			);
 		}
 		return $this->rest_controller;
+	}
+
+	/**
+	 * Accessor to LeadRepository.
+	 *
+	 * @return LeadRepository
+	 */
+	public function get_lead_repository(): LeadRepository {
+		if ( null === $this->lead_repo ) {
+			$this->lead_repo = new LeadRepository();
+		}
+		return $this->lead_repo;
+	}
+
+	/**
+	 * Accessor to LeadService.
+	 *
+	 * @return LeadService
+	 */
+	public function get_lead_service(): LeadService {
+		if ( null === $this->lead_service ) {
+			$this->lead_service = new LeadService(
+				SettingsService::get_instance(),
+				$this->get_session_service(),
+				$this->get_conversation_repository(),
+				$this->get_lead_repository()
+			);
+		}
+		return $this->lead_service;
 	}
 
 	/**

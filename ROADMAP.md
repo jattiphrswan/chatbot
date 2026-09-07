@@ -27,6 +27,11 @@ flowchart TD
     N2 --> N13[N13: Appearance Builder]
     N6 --> N13
     N10 --> N13
+    N2 --> N14[N14: Leads & Pre-Chat Capture]
+    N3 --> N14
+    N5 --> N14
+    N9 --> N14
+    N10 --> N14
 ```
 
 ## 2. Approved Node Breakdown
@@ -47,3 +52,4 @@ flowchart TD
 | **N11** | **Conversation Management** | Secure WordPress Admin conversation module (Conversations submenu `gca-conversations`, server-side pagination, search/filtering, transcript thread view, close/reopen/delete actions with cascading message cleanup). | **COMPLETED** |
 | **N12** | **Analytics & Insights** | Native WordPress Analytics module (Analytics submenu `gca-analytics`, date range filtering, real KPI aggregates, daily activity charts, status & audience & model breakdowns). | **COMPLETED** |
 | **N13** | **Appearance Builder** | WordPress-native visual customizer (`gca-appearance`), live mock preview, avatar upload via Media Library, color palette, dimensions/radius clamping, launcher icons, device visibility, safe CSS variable injection, reset to defaults. | **COMPLETED** |
+| **N14** | **Leads & Pre-Chat Capture** | Configurable pre-chat lead capture form (name, email, phone, requirement), server/client validation, Leads database table (`gca_leads`), LeadRepository, LeadService, REST `/prechat` endpoint, conversation association, Admin Leads management (`gca-leads`). | **COMPLETED** |

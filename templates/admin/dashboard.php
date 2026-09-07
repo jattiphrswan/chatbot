@@ -247,6 +247,16 @@ $site_url       = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
 					</div>
 					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
 				</a>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-leads' ) ); ?>" class="gca-admin-action-item">
+					<div class="gca-admin-action-item__icon" aria-hidden="true">
+						<span class="dashicons dashicons-id-alt"></span>
+					</div>
+					<div class="gca-admin-action-item__text">
+						<strong><?php esc_html_e( 'Manage Lead Inquiries', 'gemini-chat-assistant' ); ?></strong>
+						<span><?php esc_html_e( 'View, filter, and respond to pre-chat contact submissions.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
+				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-analytics' ) ); ?>" class="gca-admin-action-item">
 					<div class="gca-admin-action-item__icon" aria-hidden="true">
 						<span class="dashicons dashicons-chart-bar"></span>
@@ -341,13 +351,17 @@ $site_url       = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
 				<p class="gca-admin-card__desc"><?php esc_html_e( 'Live visual customizer for brand colors, widget placement, and avatars.', 'gemini-chat-assistant' ); ?></p>
 			</div>
 
-			<div class="gca-admin-card gca-admin-card--future">
+			<div class="gca-admin-card">
 				<div class="gca-admin-card__header">
-					<span class="dashicons dashicons-id-alt"></span>
-					<span class="gca-admin-pill gca-admin-pill--planned"><?php esc_html_e( 'Node N14', 'gemini-chat-assistant' ); ?></span>
+					<span class="dashicons dashicons-id-alt" style="color: #2271b1;"></span>
+					<span class="gca-admin-pill gca-admin-pill--success"><?php esc_html_e( 'Node N14 • Active', 'gemini-chat-assistant' ); ?></span>
 				</div>
-				<h4><?php esc_html_e( 'Lead Capture & Pre-Chat', 'gemini-chat-assistant' ); ?></h4>
-				<p><?php esc_html_e( 'Capture names, emails, and visitor inquiry details before chatting.', 'gemini-chat-assistant' ); ?></p>
+				<h4>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=gca-leads' ) ); ?>" style="text-decoration: none; color: inherit;">
+						<?php esc_html_e( 'Leads & Pre-Chat', 'gemini-chat-assistant' ); ?> &rarr;
+					</a>
+				</h4>
+				<p class="gca-admin-card__desc"><?php esc_html_e( 'Configurable pre-chat lead capture form, lead repository, and admin inquiries management.', 'gemini-chat-assistant' ); ?></p>
 			</div>
 
 			<div class="gca-admin-card gca-admin-card--future">

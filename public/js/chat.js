@@ -112,14 +112,31 @@
 			rateLimitRemaining: 0,
 			rateLimitTimer: null,
 			userScrolledUp: false,
+			prechatCompleted: false,
 		};
+
+		// Check sessionStorage for pre-chat completion in current session
+		try {
+			if (sessionStorage.getItem('gca_prechat_' + sessionToken) === '1') {
+				state.prechatCompleted = true;
+			}
+		} catch (e) {
+			// Storage unavailable
+		}
 
 		// Screen Elements
 		const screenHome = widgetElem.querySelector('.gca-screen--home');
+		const screenPrechat = widgetElem.querySelector('.gca-screen--prechat');
 		const screenChat = widgetElem.querySelector('.gca-screen--chat');
 		const navBtnHome = widgetElem.querySelector('.gca-nav__btn--home');
 		const navBtnChat = widgetElem.querySelector('.gca-nav__btn--chat');
 		const startCard = widgetElem.querySelector('.gca-start-card');
+
+		// Pre-chat Elements
+		const prechatForm = widgetElem.querySelector('.gca-prechat-form');
+		const prechatBackBtn = widgetElem.querySelector('.gca-prechat__back');
+		const prechatSubmitBtn = widgetElem.querySelector('.gca-prechat-submit');
+		const prechatErrorBanner = widgetElem.querySelector('.gca-prechat__error-banner');
 
 		// Chat Elements
 		const messagesContainer = widgetElem.querySelector('.gca-messages');
@@ -142,13 +159,16 @@
 		/**
 		 * Switches active screen view.
 		 *
-		 * @param {'home'|'chat'} targetScreen
+		 * @param {'home'|'prechat'|'chat'} targetScreen
 		 */
 		function switchScreen(targetScreen) {
 			state.activeScreen = targetScreen;
 
+			if (screenHome) screenHome.classList.remove('gca-screen--active');
+			if (screenPrechat) screenPrechat.classList.remove('gca-screen--active');
+			if (screenChat) screenChat.classList.remove('gca-screen--active');
+
 			if (targetScreen === 'chat') {
-				if (screenHome) screenHome.classList.remove('gca-screen--active');
 				if (screenChat) screenChat.classList.add('gca-screen--active');
 				if (navBtnHome) {
 					navBtnHome.classList.remove('gca-nav__btn--active');
@@ -163,8 +183,25 @@
 						composerInput.focus();
 					}, 100);
 				}
+			} else if (targetScreen === 'prechat') {
+				if (screenPrechat) screenPrechat.classList.add('gca-screen--active');
+				if (navBtnHome) {
+					navBtnHome.classList.add('gca-nav__btn--active');
+					navBtnHome.removeAttribute('aria-current');
+				}
+				if (navBtnChat) {
+					navBtnChat.classList.remove('gca-nav__btn--active');
+					navBtnChat.removeAttribute('aria-current');
+				}
+				if (screenPrechat) {
+					const firstInput = screenPrechat.querySelector('.gca-input, .gca-textarea');
+					if (firstInput) {
+						setTimeout(function () {
+							firstInput.focus();
+						}, 100);
+					}
+				}
 			} else {
-				if (screenChat) screenChat.classList.remove('gca-screen--active');
 				if (screenHome) screenHome.classList.add('gca-screen--active');
 				if (navBtnChat) {
 					navBtnChat.classList.remove('gca-nav__btn--active');
@@ -670,10 +707,200 @@
 			});
 		}
 
+		// ---------------------------------------------------------------------
+		// Pre-Chat Submission & Validation
+		// ---------------------------------------------------------------------
+
+		function setFieldError(fieldName, errorMsg) {
+			if (!prechatForm) return;
+			const input = prechatForm.querySelector('[name="' + fieldName + '"]');
+			const group = prechatForm.querySelector('.gca-form-group[data-field="' + fieldName + '"]');
+			const errorSpan = group ? group.querySelector('.gca-field-error') : null;
+
+			if (input) {
+				input.setAttribute('aria-invalid', 'true');
+			}
+			if (errorSpan) {
+				errorSpan.textContent = errorMsg;
+			}
+		}
+
+		function clearPrechatErrors() {
+			if (!prechatForm) return;
+			const inputs = prechatForm.querySelectorAll('.gca-input, .gca-textarea');
+			inputs.forEach(function (input) {
+				input.removeAttribute('aria-invalid');
+			});
+
+			const errorSpans = prechatForm.querySelectorAll('.gca-field-error');
+			errorSpans.forEach(function (span) {
+				span.textContent = '';
+			});
+
+			if (prechatErrorBanner) {
+				prechatErrorBanner.textContent = '';
+				prechatErrorBanner.style.display = 'none';
+			}
+		}
+
+		function showPrechatErrorBanner(msg) {
+			if (prechatErrorBanner) {
+				prechatErrorBanner.textContent = msg;
+				prechatErrorBanner.style.display = 'block';
+			}
+		}
+
+		function setPrechatSubmitting(isSubmitting) {
+			if (!prechatSubmitBtn) return;
+			prechatSubmitBtn.disabled = isSubmitting;
+			const textSpan = prechatSubmitBtn.querySelector('.gca-prechat-submit__text');
+			const spinnerSpan = prechatSubmitBtn.querySelector('.gca-prechat-submit__spinner');
+
+			if (isSubmitting) {
+				if (textSpan) textSpan.textContent = i18n.submitting || 'Starting chat...';
+				if (spinnerSpan) spinnerSpan.style.display = 'inline';
+			} else {
+				if (textSpan) textSpan.textContent = i18n.startChat || 'Start Chat';
+				if (spinnerSpan) spinnerSpan.style.display = 'none';
+			}
+		}
+
+		function handlePrechatSubmit() {
+			if (!prechatForm) return;
+
+			clearPrechatErrors();
+
+			const prechatConfig = config.prechat || {};
+			const formData = new FormData(prechatForm);
+			const name = (formData.get('name') || '').trim();
+			const email = (formData.get('email') || '').trim();
+			const phone = (formData.get('phone') || '').trim();
+			const requirement = (formData.get('requirement') || '').trim();
+			const websiteUrl = (formData.get('website_url') || '').trim();
+
+			let hasClientErrors = false;
+			let firstErrorField = null;
+
+			// 1. Client-side Name validation
+			if (prechatConfig.collectName && prechatConfig.requireName && !name) {
+				setFieldError('name', i18n.errorRequired || 'Please enter your name.');
+				hasClientErrors = true;
+				firstErrorField = firstErrorField || prechatForm.querySelector('[name="name"]');
+			}
+
+			// 2. Client-side Email validation
+			if (prechatConfig.collectEmail) {
+				if (prechatConfig.requireEmail && !email) {
+					setFieldError('email', i18n.errorRequired || 'Please enter your email address.');
+					hasClientErrors = true;
+					firstErrorField = firstErrorField || prechatForm.querySelector('[name="email"]');
+				} else if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+					setFieldError('email', 'Please enter a valid email address.');
+					hasClientErrors = true;
+					firstErrorField = firstErrorField || prechatForm.querySelector('[name="email"]');
+				}
+			}
+
+			// 3. Client-side Phone validation
+			if (prechatConfig.collectPhone) {
+				if (prechatConfig.requirePhone && !phone) {
+					setFieldError('phone', i18n.errorRequired || 'Please enter your phone number.');
+					hasClientErrors = true;
+					firstErrorField = firstErrorField || prechatForm.querySelector('[name="phone"]');
+				} else if (phone && !/^[0-9+\s\-\(\)\.]{6,50}$/.test(phone)) {
+					setFieldError('phone', 'Please enter a valid phone number.');
+					hasClientErrors = true;
+					firstErrorField = firstErrorField || prechatForm.querySelector('[name="phone"]');
+				}
+			}
+
+			// 4. Client-side Requirement validation
+			if (prechatConfig.collectRequirement && prechatConfig.requireRequirement && !requirement) {
+				setFieldError('requirement', i18n.errorRequired || 'Please describe how we can help you.');
+				hasClientErrors = true;
+				firstErrorField = firstErrorField || prechatForm.querySelector('[name="requirement"]');
+			}
+
+			if (hasClientErrors) {
+				if (firstErrorField) firstErrorField.focus();
+				return;
+			}
+
+			setPrechatSubmitting(true);
+
+			const payload = {
+				session_id: sessionToken,
+				name: name,
+				email: email,
+				phone: phone,
+				requirement: requirement,
+				website_url: websiteUrl,
+			};
+
+			fetch(config.restUrl + '/prechat', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload),
+			})
+			.then(function (response) {
+				return response.json();
+			})
+			.then(function (data) {
+				setPrechatSubmitting(false);
+
+				if (data && data.success) {
+					state.prechatCompleted = true;
+					try {
+						sessionStorage.setItem('gca_prechat_' + sessionToken, '1');
+					} catch (e) {}
+
+					switchScreen('chat');
+				} else {
+					if (data && data.error) {
+						if (data.error.fields && typeof data.error.fields === 'object') {
+							for (const field in data.error.fields) {
+								setFieldError(field, data.error.fields[field]);
+							}
+						} else {
+							showPrechatErrorBanner(data.error.message || i18n.errorGeneric || 'Something went wrong.');
+						}
+					} else {
+						showPrechatErrorBanner(i18n.errorGeneric || 'Something went wrong.');
+					}
+				}
+			})
+			.catch(function () {
+				setPrechatSubmitting(false);
+				showPrechatErrorBanner(i18n.networkError || 'Network connection failed.');
+			});
+		}
+
+		// Pre-chat Form Submission Listener
+		if (prechatForm) {
+			prechatForm.addEventListener('submit', function (e) {
+				e.preventDefault();
+				handlePrechatSubmit();
+			});
+		}
+
+		// Pre-chat Back Button Listener
+		if (prechatBackBtn) {
+			prechatBackBtn.addEventListener('click', function () {
+				switchScreen('home');
+			});
+		}
+
 		// Start Conversation Card
 		if (startCard) {
 			startCard.addEventListener('click', function () {
-				switchScreen('chat');
+				const prechat = config.prechat || {};
+				if (prechat.enabled && !state.prechatCompleted) {
+					switchScreen('prechat');
+				} else {
+					switchScreen('chat');
+				}
 			});
 		}
 

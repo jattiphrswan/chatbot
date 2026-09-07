@@ -22,7 +22,7 @@ class Migrator {
 	/**
 	 * Target database schema version.
 	 */
-	public const SCHEMA_VERSION = '1.0.0';
+	public const SCHEMA_VERSION = '1.1.0';
 
 	/**
 	 * Option key storing installed schema version.
@@ -47,6 +47,7 @@ class Migrator {
 		$charset_collate = $wpdb->get_charset_collate();
 		$conversations   = $wpdb->prefix . 'gca_conversations';
 		$messages        = $wpdb->prefix . 'gca_messages';
+		$leads           = $wpdb->prefix . 'gca_leads';
 
 		// Schema definitions formatted strictly according to dbDelta specifications.
 		$sql = "CREATE TABLE {$conversations} (
@@ -80,6 +81,26 @@ latency_ms int(10) unsigned default 0,
 created_at datetime default current_timestamp not null,
 PRIMARY KEY  (id),
 KEY idx_conversation_id (conversation_id),
+KEY idx_created_at (created_at)
+) {$charset_collate};
+CREATE TABLE {$leads} (
+id bigint(20) unsigned not null auto_increment,
+public_id varchar(64) not null,
+conversation_id bigint(20) unsigned default null,
+user_id bigint(20) unsigned default 0,
+name varchar(191) default null,
+email varchar(254) default null,
+phone varchar(100) default null,
+requirement text default null,
+status varchar(30) default 'new' not null,
+created_at datetime default current_timestamp not null,
+updated_at datetime default current_timestamp not null,
+PRIMARY KEY  (id),
+UNIQUE KEY uk_public_id (public_id),
+KEY idx_conversation_id (conversation_id),
+KEY idx_user_id (user_id),
+KEY idx_email (email(191)),
+KEY idx_status (status),
 KEY idx_created_at (created_at)
 ) {$charset_collate};";
 

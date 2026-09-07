@@ -5,6 +5,18 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N14] - 2026-09-07
+### Added
+- Configurable Pre-Chat lead capture form (`templates/chat-widget.php`, `public/js/chat.js`, `public/css/chat.css`) supporting name, email, phone, and inquiry requirement fields with individual collect and require controls.
+- Dedicated Leads database schema (`{$wpdb->prefix}gca_leads`) managed via `Migrator` (bumped schema to v1.1.0) storing public UUID, conversation association, user ID, contact info, requirement text, status, and timestamps.
+- Database abstraction layer in `includes/Database/LeadRepository.php` providing CRUD operations, server-side pagination, search across name/email/phone/UUID, status filtering, and public ID resolution.
+- Lead application service (`includes/class-lead-service.php`) managing honeypot validation, rate limiting, duplicate protection per conversation, `store_leads` privacy enforcement, and conversation linking.
+- Authoritative server-side validation in `includes/class-validator.php` (`validate_name`, `validate_email`, `validate_phone`, `validate_requirement`, `validate_prechat`) with support for international phone numbers, Unicode names, and character limits.
+- REST API endpoint `POST /gca/v1/prechat` in `includes/class-rest-controller.php` with guest access checks, transient rate limiting, detailed field error responses, and honeypot protection.
+- WordPress Admin Leads Management module (`templates/admin/leads.php`, `templates/admin/lead-detail.php`) accessible via submenu `Gemini Chat -> Leads` (`gca-leads`) with search, status filtering (`new`, `contacted`, `closed`), pagination, safe `mailto:`/`tel:` contact links, conversation transcript deep links, status updates, and single lead deletion with nonce verification.
+- Admin Dashboard integration linking to Lead Inquiries and active Roadmap status card.
+- Standalone test suites in `tests/test-leads.php` and `tests/test-prechat.php`.
+
 ## [1.0.0-N13] - 2026-09-07
 ### Added
 - Native WordPress Appearance Builder module (`templates/admin/appearance.php`, `admin/js/admin-appearance.js`) accessible via submenu `Gemini Chat -> Appearance` (`gca-appearance`).

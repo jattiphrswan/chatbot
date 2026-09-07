@@ -26,10 +26,19 @@ $assistant_name  = (string) ( $settings['assistant_name'] ?? __( 'AI Assistant',
 $greeting        = (string) ( $settings['greeting'] ?? __( 'Welcome!', 'gemini-chat-assistant' ) );
 $welcome_message = (string) ( $settings['welcome_message'] ?? __( 'Hi! How can I help you today?', 'gemini-chat-assistant' ) );
 $placeholder     = (string) ( $settings['placeholder'] ?? __( 'Type your message...', 'gemini-chat-assistant' ) );
-$max_length      = absint( $settings['max_message_length'] ?? 1000 );
-$avatar_id       = absint( $settings['avatar_id'] ?? 0 );
-$avatar_url      = AppearanceService::get_avatar_url( $avatar_id );
-$launcher_icon   = (string) ( $settings['launcher_icon'] ?? 'chat' );
+$max_length          = absint( $settings['max_message_length'] ?? 1000 );
+$avatar_id           = absint( $settings['avatar_id'] ?? 0 );
+$avatar_url          = AppearanceService::get_avatar_url( $avatar_id );
+$launcher_icon       = (string) ( $settings['launcher_icon'] ?? 'chat' );
+$prechat_enabled     = ! empty( $settings['prechat_enabled'] );
+$collect_name        = ! empty( $settings['collect_name'] );
+$require_name        = ! empty( $settings['require_name'] );
+$collect_email       = ! empty( $settings['collect_email'] );
+$require_email       = ! empty( $settings['require_email'] );
+$collect_phone       = ! empty( $settings['collect_phone'] );
+$require_phone       = ! empty( $settings['require_phone'] );
+$collect_requirement = ! empty( $settings['collect_requirement'] );
+$require_requirement = ! empty( $settings['require_requirement'] );
 ?>
 
 <?php if ( 'floating' === $mode ) : ?>
@@ -164,6 +173,136 @@ $launcher_icon   = (string) ( $settings['launcher_icon'] ?? 'chat' );
 
 				<!-- FAQ Slot Placeholder (Reserved for future N16) -->
 				<div class="gca-faq-slot" aria-hidden="true"></div>
+			</div>
+		</section>
+
+		<!-- Screen: Pre-Chat Lead Capture Form -->
+		<section class="gca-screen gca-screen--prechat" aria-label="<?php esc_attr_e( 'Pre-Chat Form', 'gemini-chat-assistant' ); ?>">
+			<div class="gca-prechat">
+				<div class="gca-prechat__header">
+					<button type="button" class="gca-prechat__back" aria-label="<?php esc_attr_e( 'Back to Home screen', 'gemini-chat-assistant' ); ?>">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<line x1="19" y1="12" x2="5" y2="12"></line>
+							<polyline points="12 19 5 12 12 5"></polyline>
+						</svg>
+						<span><?php esc_html_e( 'Start a Conversation', 'gemini-chat-assistant' ); ?></span>
+					</button>
+					<p class="gca-prechat__intro"><?php esc_html_e( 'Please share a few details so we can best assist you.', 'gemini-chat-assistant' ); ?></p>
+				</div>
+
+				<form class="gca-prechat-form" novalidate onsubmit="return false;">
+					<!-- Invisible Honeypot field (anti-spam) -->
+					<div class="gca-sr-only" aria-hidden="true">
+						<label for="<?php echo esc_attr( $instance_id ); ?>-website-url"><?php esc_html_e( 'Leave this field blank', 'gemini-chat-assistant' ); ?></label>
+						<input type="text" id="<?php echo esc_attr( $instance_id ); ?>-website-url" name="website_url" tabindex="-1" autocomplete="off" />
+					</div>
+
+					<!-- Form Top General Error Notice -->
+					<div class="gca-prechat__error-banner" role="alert" style="display: none;"></div>
+
+					<!-- Name Field -->
+					<?php if ( $collect_name ) : ?>
+						<div class="gca-form-group" data-field="name">
+							<label for="<?php echo esc_attr( $instance_id ); ?>-prechat-name" class="gca-form-label">
+								<?php esc_html_e( 'Name', 'gemini-chat-assistant' ); ?>
+								<?php if ( $require_name ) : ?>
+									<span class="gca-req" aria-hidden="true">*</span>
+								<?php endif; ?>
+							</label>
+							<input
+								type="text"
+								id="<?php echo esc_attr( $instance_id ); ?>-prechat-name"
+								name="name"
+								class="gca-input"
+								placeholder="<?php esc_attr_e( 'Your name', 'gemini-chat-assistant' ); ?>"
+								maxlength="100"
+								<?php if ( $require_name ) echo 'aria-required="true"'; ?>
+								aria-describedby="<?php echo esc_attr( $instance_id ); ?>-name-error"
+							/>
+							<span class="gca-field-error" id="<?php echo esc_attr( $instance_id ); ?>-name-error" role="alert"></span>
+						</div>
+					<?php endif; ?>
+
+					<!-- Email Field -->
+					<?php if ( $collect_email ) : ?>
+						<div class="gca-form-group" data-field="email">
+							<label for="<?php echo esc_attr( $instance_id ); ?>-prechat-email" class="gca-form-label">
+								<?php esc_html_e( 'Email', 'gemini-chat-assistant' ); ?>
+								<?php if ( $require_email ) : ?>
+									<span class="gca-req" aria-hidden="true">*</span>
+								<?php endif; ?>
+							</label>
+							<input
+								type="email"
+								id="<?php echo esc_attr( $instance_id ); ?>-prechat-email"
+								name="email"
+								class="gca-input"
+								placeholder="<?php esc_attr_e( 'your.email@example.com', 'gemini-chat-assistant' ); ?>"
+								maxlength="254"
+								<?php if ( $require_email ) echo 'aria-required="true"'; ?>
+								aria-describedby="<?php echo esc_attr( $instance_id ); ?>-email-error"
+							/>
+							<span class="gca-field-error" id="<?php echo esc_attr( $instance_id ); ?>-email-error" role="alert"></span>
+						</div>
+					<?php endif; ?>
+
+					<!-- Phone Field -->
+					<?php if ( $collect_phone ) : ?>
+						<div class="gca-form-group" data-field="phone">
+							<label for="<?php echo esc_attr( $instance_id ); ?>-prechat-phone" class="gca-form-label">
+								<?php esc_html_e( 'Phone', 'gemini-chat-assistant' ); ?>
+								<?php if ( $require_phone ) : ?>
+									<span class="gca-req" aria-hidden="true">*</span>
+								<?php endif; ?>
+							</label>
+							<input
+								type="tel"
+								id="<?php echo esc_attr( $instance_id ); ?>-prechat-phone"
+								name="phone"
+								class="gca-input"
+								placeholder="<?php esc_attr_e( '+1 (555) 000-0000', 'gemini-chat-assistant' ); ?>"
+								maxlength="50"
+								<?php if ( $require_phone ) echo 'aria-required="true"'; ?>
+								aria-describedby="<?php echo esc_attr( $instance_id ); ?>-phone-error"
+							/>
+							<span class="gca-field-error" id="<?php echo esc_attr( $instance_id ); ?>-phone-error" role="alert"></span>
+						</div>
+					<?php endif; ?>
+
+					<!-- Requirement / Message Field -->
+					<?php if ( $collect_requirement ) : ?>
+						<div class="gca-form-group" data-field="requirement">
+							<label for="<?php echo esc_attr( $instance_id ); ?>-prechat-req" class="gca-form-label">
+								<?php esc_html_e( 'What can we help you with?', 'gemini-chat-assistant' ); ?>
+								<?php if ( $require_requirement ) : ?>
+									<span class="gca-req" aria-hidden="true">*</span>
+								<?php endif; ?>
+							</label>
+							<textarea
+								id="<?php echo esc_attr( $instance_id ); ?>-prechat-req"
+								name="requirement"
+								rows="3"
+								class="gca-textarea"
+								placeholder="<?php esc_attr_e( 'Describe your question or requirement...', 'gemini-chat-assistant' ); ?>"
+								maxlength="2000"
+								<?php if ( $require_requirement ) echo 'aria-required="true"'; ?>
+								aria-describedby="<?php echo esc_attr( $instance_id ); ?>-req-error"
+							></textarea>
+							<span class="gca-field-error" id="<?php echo esc_attr( $instance_id ); ?>-req-error" role="alert"></span>
+						</div>
+					<?php endif; ?>
+
+					<p class="gca-prechat__consent">
+						<?php esc_html_e( 'By starting a conversation, you agree that the information you provide may be used to respond to your inquiry.', 'gemini-chat-assistant' ); ?>
+					</p>
+
+					<div class="gca-prechat__actions">
+						<button type="submit" class="gca-btn gca-btn--primary gca-prechat-submit">
+							<span class="gca-prechat-submit__text"><?php esc_html_e( 'Start Chat', 'gemini-chat-assistant' ); ?></span>
+							<span class="gca-prechat-submit__spinner" aria-hidden="true" style="display: none;">⏳</span>
+						</button>
+					</div>
+				</form>
 			</div>
 		</section>
 
