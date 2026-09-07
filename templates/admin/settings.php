@@ -46,6 +46,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<code>define( 'GCA_GEMINI_API_KEY', 'your-gemini-api-key-here' );</code>
 			<p><?php esc_html_e( 'Or export the environment variable on your web server:', 'gemini-chat-assistant' ); ?> <code>GEMINI_API_KEY="your-gemini-api-key-here"</code></p>
 		</div>
+	<?php if ( ! empty( $_GET['test_sent'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+		<div class="notice notice-success is-dismissible gca-admin-notice">
+			<p><?php esc_html_e( 'Test email accepted for sending by WordPress mail transport.', 'gemini-chat-assistant' ); ?></p>
+		</div>
+	<?php elseif ( ! empty( $_GET['test_failed'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+		<div class="notice notice-error is-dismissible gca-admin-notice">
+			<p><?php esc_html_e( 'Test email could not be sent. WordPress wp_mail() returned false.', 'gemini-chat-assistant' ); ?></p>
+		</div>
 	<?php endif; ?>
 
 	<form method="post" action="options.php">
@@ -62,6 +70,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<button type="button" class="gca-tab-btn" data-tab="faq"><?php esc_html_e( 'FAQ & Content', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="access"><?php esc_html_e( 'Access', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="limits"><?php esc_html_e( 'Limits', 'gemini-chat-assistant' ); ?></button>
+			<button type="button" class="gca-tab-btn" data-tab="notifications"><?php esc_html_e( 'Notifications', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="privacy"><?php esc_html_e( 'Privacy', 'gemini-chat-assistant' ); ?></button>
 		</div>
 
@@ -286,6 +295,52 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<span class="description"><?php esc_html_e( 'Maximum messages allowed from a single IP within any 1-hour window.', 'gemini-chat-assistant' ); ?></span>
 					</div>
 				</div>
+			</div>
+		</div>
+
+		<!-- Panel: Notifications (N17.4) -->
+		<div class="gca-tab-panel" id="gca-panel-notifications">
+			<div class="gca-section-card">
+				<h3><?php esc_html_e( 'Human Handoff Email Notifications', 'gemini-chat-assistant' ); ?></h3>
+				<p class="description" style="margin-bottom: 16px;">
+					<?php esc_html_e( 'Automatically notify administrators and support personnel via WordPress native wp_mail() when a visitor requests human assistance.', 'gemini-chat-assistant' ); ?>
+				</p>
+				<div class="gca-form-grid">
+					<div class="gca-field-row">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[handoff_email_enabled]" value="1" <?php checked( ! empty( $settings['handoff_email_enabled'] ) ); ?> />
+							<strong><?php esc_html_e( 'Enable Email Notifications for Handoff Requests', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+						<span class="description"><?php esc_html_e( 'When enabled, new handoffs will trigger operational emails to configured team recipients.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+
+					<div class="gca-field-row">
+						<label for="gca_handoff_email_recipients"><?php esc_html_e( 'Recipient Email Addresses', 'gemini-chat-assistant' ); ?></label>
+						<textarea id="gca_handoff_email_recipients" name="gca_settings[handoff_email_recipients]" rows="3" class="large-text code" placeholder="support@example.com&#10;sales@example.com"><?php echo esc_textarea( $settings['handoff_email_recipients'] ?? '' ); ?></textarea>
+						<span class="description">
+							<?php esc_html_e( 'Enter up to 10 recipient email addresses (one per line or comma-separated). If left empty, defaults to WordPress admin email.', 'gemini-chat-assistant' ); ?>
+						</span>
+					</div>
+
+					<div class="gca-field-row">
+						<label for="gca_handoff_email_subject"><?php esc_html_e( 'Email Subject Line', 'gemini-chat-assistant' ); ?></label>
+						<input type="text" id="gca_handoff_email_subject" name="gca_settings[handoff_email_subject]" value="<?php echo esc_attr( $settings['handoff_email_subject'] ?? 'New Chatbot Handoff Request' ); ?>" class="regular-text" maxlength="150" />
+						<span class="description"><?php esc_html_e( 'Subject line for internal notification emails (maximum 150 characters).', 'gemini-chat-assistant' ); ?></span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Test Email Dispatch Card -->
+			<div class="gca-section-card" style="margin-top: 20px; border-top: 1px solid #f0f0f1; padding-top: 16px;">
+				<h4><?php esc_html_e( 'Test WordPress Mail Transport', 'gemini-chat-assistant' ); ?></h4>
+				<p class="description" style="margin-bottom: 12px;">
+					<?php esc_html_e( 'Send a verification email to your configured recipient(s) to confirm WordPress wp_mail() delivery.', 'gemini-chat-assistant' ); ?>
+				</p>
+				<button type="submit" name="action" value="gca_send_test_email" class="button" formmethod="post" formaction="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onclick="this.form.querySelector('[name=action]').value='gca_send_test_email';">
+					<span class="dashicons dashicons-email-alt" style="vertical-align: middle; margin-right: 4px;"></span>
+					<?php esc_html_e( 'Send Test Email', 'gemini-chat-assistant' ); ?>
+				</button>
+				<?php wp_nonce_field( 'gca_send_test_email', '_wpnonce_test_email' ); ?>
 			</div>
 		</div>
 

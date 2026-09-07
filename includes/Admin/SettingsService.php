@@ -168,6 +168,18 @@ class SettingsService {
 		$max_chars = isset( $input['knowledge_max_context_chars'] ) ? absint( $input['knowledge_max_context_chars'] ) : ( $defaults['knowledge_max_context_chars'] ?? 6000 );
 		$sanitized['knowledge_max_context_chars'] = max( 500, min( 12000, $max_chars ) );
 
+		// Human Handoff Email Notifications (N17.4).
+		$sanitized['handoff_email_enabled'] = ! empty( $input['handoff_email_enabled'] );
+
+		if ( isset( $input['handoff_email_recipients'] ) ) {
+			$sanitized['handoff_email_recipients'] = \SkyFish\GeminiChat\Notifications\NotificationService::format_recipients_for_display( $input['handoff_email_recipients'] );
+		} else {
+			$sanitized['handoff_email_recipients'] = $defaults['handoff_email_recipients'] ?? '';
+		}
+
+		$subject = isset( $input['handoff_email_subject'] ) ? (string) $input['handoff_email_subject'] : ( $defaults['handoff_email_subject'] ?? 'New Chatbot Handoff Request' );
+		$sanitized['handoff_email_subject'] = \SkyFish\GeminiChat\Notifications\NotificationService::sanitize_subject( $subject );
+
 		// Access.
 		$sanitized['guest_access'] = ! empty( $input['guest_access'] );
 

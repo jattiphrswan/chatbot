@@ -32,16 +32,23 @@ class HandoffIntegration implements IntegrationInterface {
 	private array $actions = [];
 
 	private HandoffService $handoff_service;
+	private ?\SkyFish\GeminiChat\Notifications\NotificationService $notification_service;
 
 	/**
 	 * HandoffIntegration constructor.
 	 *
-	 * @param HandoffService|null $handoff_service Optional handoff service.
+	 * @param HandoffService|null                                         $handoff_service      Optional handoff service.
+	 * @param \SkyFish\GeminiChat\Notifications\NotificationService|null $notification_service Optional notification service.
 	 */
-	public function __construct( ?HandoffService $handoff_service = null ) {
-		$this->handoff_service = $handoff_service ?? new HandoffService();
-		$this->actions         = [
-			CreateHandoffAction::ID => new CreateHandoffAction( $this->handoff_service ),
+	public function __construct(
+		?HandoffService $handoff_service = null,
+		?\SkyFish\GeminiChat\Notifications\NotificationService $notification_service = null
+	) {
+		$this->handoff_service      = $handoff_service ?? new HandoffService();
+		$this->notification_service = $notification_service ?? new \SkyFish\GeminiChat\Notifications\NotificationService();
+		$this->actions              = [
+			CreateHandoffAction::ID           => new CreateHandoffAction( $this->handoff_service ),
+			SendHandoffNotificationAction::ID => new SendHandoffNotificationAction( $this->notification_service ),
 		];
 	}
 

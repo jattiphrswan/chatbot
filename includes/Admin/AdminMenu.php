@@ -50,6 +50,7 @@ class AdminMenu {
 	private ?\SkyFish\GeminiChat\Integrations\IntegrationRegistry $integration_registry;
 	private ?\SkyFish\GeminiChat\Database\HandoffRepository $handoff_repo;
 	private ?\SkyFish\GeminiChat\Handoff\HandoffService $handoff_service;
+	private ?\SkyFish\GeminiChat\Notifications\NotificationService $notification_service;
 
 	/**
 	 * AdminMenu constructor.
@@ -79,7 +80,8 @@ class AdminMenu {
 		?KnowledgeRetriever $knowledge_retriever = null,
 		?\SkyFish\GeminiChat\Integrations\IntegrationRegistry $integration_registry = null,
 		?\SkyFish\GeminiChat\Database\HandoffRepository $handoff_repo = null,
-		?\SkyFish\GeminiChat\Handoff\HandoffService $handoff_service = null
+		?\SkyFish\GeminiChat\Handoff\HandoffService $handoff_service = null,
+		?\SkyFish\GeminiChat\Notifications\NotificationService $notification_service = null
 	) {
 		$this->conversation_repo   = $conversation_repo ?? new ConversationRepository();
 		$this->message_repo        = $message_repo ?? new MessageRepository();
@@ -93,6 +95,7 @@ class AdminMenu {
 		$this->integration_registry = $integration_registry;
 		$this->handoff_repo        = $handoff_repo ?? new \SkyFish\GeminiChat\Database\HandoffRepository();
 		$this->handoff_service     = $handoff_service ?? new \SkyFish\GeminiChat\Handoff\HandoffService( $this->handoff_repo, $this->conversation_repo, $this->lead_repo );
+		$this->notification_service= $notification_service ?? new \SkyFish\GeminiChat\Notifications\NotificationService( $this->handoff_repo, $this->conversation_repo, $this->lead_repo );
 	}
 
 	/**
@@ -136,6 +139,9 @@ class AdminMenu {
 		// Admin post action hooks for Human Handoff (N17.3)
 		add_action( 'admin_post_gca_update_handoff_status', [ $this, 'handle_update_handoff_status' ] );
 		add_action( 'admin_post_gca_delete_handoff', [ $this, 'handle_delete_handoff' ] );
+
+		// Admin post action hooks for Email Notifications (N17.4)
+		add_action( 'admin_post_gca_send_test_email', [ $this, 'handle_send_test_email' ] );
 	}
 
 	/**
@@ -1137,6 +1143,29 @@ class AdminMenu {
 		wp_safe_redirect( add_query_arg( [
 			'page'    => self::HANDOFFS_MENU_SLUG,
 			'deleted' => 1,
+		], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to send a test email notification.
+	 */
+	public function handle_send_test_email(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		check_admin_referer( 'gca_send_test_email' );
+
+		$result = [ 'success' => false, 'code' => 'NOT_AVAILABLE' ];
+		if ( $this->notification_service ) {
+			$result = $this->notification_service->send_test_notification();
+		}
+
+		$param = $result['success'] ? 'test_sent' : 'test_failed';
+		wp_safe_redirect( add_query_arg( [
+			'page' => self::SETTINGS_MENU_SLUG,
+			$param => 1,
 		], admin_url( 'admin.php' ) ) );
 		exit;
 	}

@@ -28,9 +28,11 @@
 | `GetProductAction` | `SkyFish\GeminiChat\Integrations\WooCommerce` | Read-only action retrieving single product details via `wc_get_product()`. | `wc_get_product()`, `WooCommerceFormatter` |
 | `SearchByCategoryAction` | `SkyFish\GeminiChat\Integrations\WooCommerce` | Read-only action querying products by category term slug via `wc_get_products()`. | `wc_get_products()`, `WooCommerceFormatter` |
 | `HandoffRepository` | `SkyFish\GeminiChat\Database` | CRUD operations and admin joins for `wp_gca_handoffs`. | `$wpdb` |
-| `HandoffService` | `SkyFish\GeminiChat\Handoff` | Orchestrates escalation detection, controlled status transitions, and lead linkage. | `HandoffRepository`, `ConversationRepository`, `LeadRepository` |
-| `HandoffIntegration` | `SkyFish\GeminiChat\Integrations\Handoff` | Human handoff integration adapter registered under slug `handoff`. | `CreateHandoffAction`, `HandoffService` |
+| `HandoffService` | `SkyFish\GeminiChat\Handoff` | Orchestrates escalation detection, controlled status transitions, and lead linkage. | `HandoffRepository`, `ConversationRepository`, `LeadRepository`, `NotificationService` |
+| `HandoffIntegration` | `SkyFish\GeminiChat\Integrations\Handoff` | Human handoff integration adapter registered under slug `handoff`. | `CreateHandoffAction`, `SendHandoffNotificationAction`, `HandoffService` |
 | `CreateHandoffAction` | `SkyFish\GeminiChat\Integrations\Handoff` | Write action for recording handoff requests with conversation context. | `HandoffService` |
+| `SendHandoffNotificationAction` | `SkyFish\GeminiChat\Integrations\Handoff` | External action for dispatching handoff notification emails via `wp_mail()`. | `NotificationService`, `HandoffRepository` |
+| `NotificationService` | `SkyFish\GeminiChat\Notifications` | Internal team email notification dispatcher via WordPress native `wp_mail()`. | `wp_mail()`, `SettingsService`, `HandoffRepository`, Transients |
 | `LogRepository` | `SkyFish\GeminiChat\Database` | Writes logs to `wp_gca_logs`. | `$wpdb` |
 | `GeminiClient` | `SkyFish\GeminiChat\Services` | Makes HTTP calls to Google Gemini API endpoints. | `wp_remote_post`, `Encryption` |
 | `ContextManager` | `SkyFish\GeminiChat\Services` | Compiles conversation history into Gemini format. | `MessageRepository`, `TokenCounter` |

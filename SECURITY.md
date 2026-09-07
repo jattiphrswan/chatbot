@@ -68,3 +68,12 @@
 - **CSRF & Nonce Protection:** All status transition and deletion actions in the admin panel are protected by specific WordPress nonces (`gca_update_handoff_{id}`, `gca_delete_handoff_{id}`).
 - **Zero Outbound Transports in N17.3:** No live notification dispatchers (`wp_mail`, SMS, WhatsApp, Webhooks) are invoked during handoff creation in N17.3, eliminating unauthorized communication risks until N17.4.
 - **No Direct Visitor REST Execution:** No public `/handoff` REST endpoint exists. Handoffs can only be initiated through validated chat turn orchestration in `ChatService` or internal business actions.
+
+## 10. Email Notifications Security Policy (Node N17.4)
+- **Native wp_mail() Transport Only:** Dispatches rely solely on WordPress core `wp_mail()`. Zero direct socket operations, zero direct PHPMailer calls, and zero external third-party email API credentials (SendGrid, Mailgun, Brevo, SES) stored or exposed.
+- **Header Injection & CRLF Defense:** Recipient addresses and subject lines are aggressively sanitized against carriage return (`\r`), line feed (`\n`), and control characters (`\x00-\x1F\x7F`). Multiline attacker injections are completely neutralized.
+- **Recipient Bounds & Validation:** Recipient lists are clamped to a hard ceiling of 10 email addresses. Every address is individually verified with `sanitize_email()` and `is_email()`. Invalid addresses are stripped.
+- **PII & Credential Minimization:** Email notifications contain only operational data needed for responding (reason, status, lead contact details if captured, and admin links). Session hashes, visitor IP addresses, Gemini API keys, model parameters, and raw conversation transcripts are unconditionally excluded.
+- **Idempotency Protection:** Prevents duplicate notification spam through 7-day transient markers keyed by handoff public UUID (`gca_notif_sent_{md5}`). Repeated requests for the same handoff return `ALREADY_NOTIFIED` without triggering redundant emails.
+- **Strict Error Isolation:** If `wp_mail()` returns false or fails, the failure is normalized internally (`EMAIL_SEND_FAILED`). The handoff remains valid, lead data remains intact, and no error message is exposed to the visitor.
+- **Zero Visitor Autoresponders:** Notifications are strictly sent to internal team members. Visitors are never emailed automatically in N17.4.

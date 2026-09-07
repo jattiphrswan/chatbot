@@ -40,7 +40,10 @@ SkyFish\GeminiChat
 │   │   └── SearchByCategoryAction: Read action for querying products by category.
 │   └── Handoff/
 │       ├── HandoffIntegration: Business integration for human assistance and escalation.
-│       └── CreateHandoffAction: Write action for recording handoff requests with conversation context.
+│       ├── CreateHandoffAction: Write action for recording handoff requests with conversation context.
+│       └── SendHandoffNotificationAction: External action for internal team email notification dispatches.
+├── Notifications/
+│   └── NotificationService: Internal operational email dispatcher via wp_mail() with header injection defense and idempotency.
 ├── Services/
 │   ├── GeminiClient: HTTP transport wrapper for Google Gemini REST API.
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.

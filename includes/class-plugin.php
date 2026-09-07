@@ -160,7 +160,11 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Database/HandoffRepository.php';
 		require_once GCA_PLUGIN_DIR . 'includes/handoff/class-handoff-service.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Integrations/Handoff/CreateHandoffAction.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Integrations/Handoff/SendHandoffNotificationAction.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Integrations/Handoff/HandoffIntegration.php';
+
+		// Email Notifications (N17.4).
+		require_once GCA_PLUGIN_DIR . 'includes/notifications/class-notification-service.php';
 	}
 
 	/**
@@ -457,6 +461,23 @@ class Plugin {
 	}
 
 	/**
+	 * Accessor to NotificationService.
+	 *
+	 * @return \SkyFish\GeminiChat\Notifications\NotificationService
+	 */
+	public function get_notification_service(): \SkyFish\GeminiChat\Notifications\NotificationService {
+		static $notification_service = null;
+		if ( null === $notification_service ) {
+			$notification_service = new \SkyFish\GeminiChat\Notifications\NotificationService(
+				$this->get_handoff_repository(),
+				$this->get_conversation_repository(),
+				$this->get_lead_repository()
+			);
+		}
+		return $notification_service;
+	}
+
+	/**
 	 * Accessor to HandoffService.
 	 *
 	 * @return \SkyFish\GeminiChat\Handoff\HandoffService
@@ -467,7 +488,8 @@ class Plugin {
 			$handoff_service = new \SkyFish\GeminiChat\Handoff\HandoffService(
 				$this->get_handoff_repository(),
 				$this->get_conversation_repository(),
-				$this->get_lead_repository()
+				$this->get_lead_repository(),
+				$this->get_notification_service()
 			);
 		}
 		return $handoff_service;
@@ -484,8 +506,8 @@ class Plugin {
 			$registry = new \SkyFish\GeminiChat\Integrations\IntegrationRegistry();
 			// Register WooCommerce business integration (N17.2).
 			$registry->register( new \SkyFish\GeminiChat\Integrations\WooCommerce\WooCommerceIntegration() );
-			// Register Human Handoff business integration (N17.3).
-			$registry->register( new \SkyFish\GeminiChat\Integrations\Handoff\HandoffIntegration( $this->get_handoff_service() ) );
+			// Register Human Handoff business integration (N17.3) with email notification action (N17.4).
+			$registry->register( new \SkyFish\GeminiChat\Integrations\Handoff\HandoffIntegration( $this->get_handoff_service(), $this->get_notification_service() ) );
 		}
 		return $registry;
 	}
@@ -529,7 +551,10 @@ class Plugin {
 				$this->get_knowledge_repository(),
 				$this->get_knowledge_indexer(),
 				$this->get_knowledge_retriever(),
-				$this->get_integration_registry()
+				$this->get_integration_registry(),
+				$this->get_handoff_repository(),
+				$this->get_handoff_service(),
+				$this->get_notification_service()
 			);
 			$this->admin_menu->init();
 		}

@@ -60,22 +60,26 @@ class HandoffService {
 	private HandoffRepository $handoff_repo;
 	private ConversationRepository $conversation_repo;
 	private LeadRepository $lead_repo;
+	private ?\SkyFish\GeminiChat\Notifications\NotificationService $notification_service;
 
 	/**
 	 * HandoffService constructor.
 	 *
-	 * @param HandoffRepository|null      $handoff_repo      Optional handoff repository.
-	 * @param ConversationRepository|null $conversation_repo Optional conversation repository.
-	 * @param LeadRepository|null         $lead_repo         Optional lead repository.
+	 * @param HandoffRepository|null                                      $handoff_repo         Optional handoff repository.
+	 * @param ConversationRepository|null                                 $conversation_repo    Optional conversation repository.
+	 * @param LeadRepository|null                                         $lead_repo            Optional lead repository.
+	 * @param \SkyFish\GeminiChat\Notifications\NotificationService|null $notification_service    Optional notification service.
 	 */
 	public function __construct(
 		?HandoffRepository $handoff_repo = null,
 		?ConversationRepository $conversation_repo = null,
-		?LeadRepository $lead_repo = null
+		?LeadRepository $lead_repo = null,
+		?\SkyFish\GeminiChat\Notifications\NotificationService $notification_service = null
 	) {
-		$this->handoff_repo      = $handoff_repo ?? new HandoffRepository();
-		$this->conversation_repo = $conversation_repo ?? new ConversationRepository();
-		$this->lead_repo         = $lead_repo ?? new LeadRepository();
+		$this->handoff_repo         = $handoff_repo ?? new HandoffRepository();
+		$this->conversation_repo    = $conversation_repo ?? new ConversationRepository();
+		$this->lead_repo            = $lead_repo ?? new LeadRepository();
+		$this->notification_service = $notification_service;
 	}
 
 	/**
@@ -224,6 +228,16 @@ class HandoffService {
 				__( 'Failed to record handoff request in database.', 'gemini-chat-assistant' ),
 				[ 'status' => 500 ]
 			);
+		}
+
+		// 6. Safe Operational Email Notification Dispatch (N17.4).
+		// Sent only after successful database persistence. Failure does not break handoff or throw errors.
+		if ( null !== $this->notification_service ) {
+			try {
+				$this->notification_service->send_handoff_notification( $created );
+			} catch ( \Throwable $e ) {
+				// Suppress any unexpected exception so handoff remains valid and conversation continues safely.
+			}
 		}
 
 		return $created;

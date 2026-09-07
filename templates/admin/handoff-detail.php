@@ -112,6 +112,23 @@ if ( 'pending' === $status ) {
 								?>
 							</td>
 						</tr>
+						<tr>
+							<th scope="row" style="font-weight: 600;"><?php esc_html_e( 'Email Notification', 'gemini-chat-assistant' ); ?></th>
+							<td>
+								<?php
+								$notif_service = new \SkyFish\GeminiChat\Notifications\NotificationService();
+								$is_notified   = $notif_service->has_been_sent( $h_id );
+								$is_enabled    = $notif_service->is_enabled();
+								if ( ! $is_enabled ) {
+									echo '<span class="gca-admin-pill gca-admin-pill--muted">' . esc_html__( 'Disabled in Settings', 'gemini-chat-assistant' ) . '</span>';
+								} elseif ( $is_notified ) {
+									echo '<span class="gca-admin-pill gca-admin-pill--success">' . esc_html__( 'Sent (Accepted by Transport)', 'gemini-chat-assistant' ) . '</span>';
+								} else {
+									echo '<span class="gca-admin-pill gca-admin-pill--warning">' . esc_html__( 'Pending / Not Sent', 'gemini-chat-assistant' ) . '</span>';
+								}
+								?>
+							</td>
+						</tr>
 					</tbody>
 				</table>
 			</div>

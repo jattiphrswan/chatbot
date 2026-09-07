@@ -55,9 +55,12 @@ gemini-chat-assistant/
 │   │   │   └── SearchByCategoryAction.php
 │   │   └── Handoff/
 │   │       ├── HandoffIntegration.php
-│   │       └── CreateHandoffAction.php
+│   │       ├── CreateHandoffAction.php
+│   │       └── SendHandoffNotificationAction.php
 │   ├── handoff/
 │   │   └── class-handoff-service.php
+│   ├── notifications/
+│   │   └── class-notification-service.php
 │   ├── REST/
 │   │   ├── RestServer.php
 │   │   ├── ChatController.php
@@ -113,6 +116,7 @@ gemini-chat-assistant/
 │   ├── test-integrations-framework.php
 │   ├── test-woocommerce-integration.php
 │   ├── test-handoff-service.php
+│   ├── test-email-notifications.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig

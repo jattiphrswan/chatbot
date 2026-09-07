@@ -5,6 +5,21 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3-N17.4] - 2026-09-07
+### Added
+- WordPress Native Human Handoff Email Notifications (`includes/notifications/class-notification-service.php`, `includes/Integrations/Handoff/SendHandoffNotificationAction.php`):
+  - Service layer `NotificationService` coordinating internal team notifications for new handoff requests via WordPress core `wp_mail()`.
+  - Recipient management: supports up to 10 email addresses parsed from comma- or newline-separated input, aggressive whitespace trimming, control-character stripping, and graceful fallback to `get_option('admin_email')`.
+  - Email header injection defense: strips CR (`\r`), LF (`\n`), and ASCII control characters from email subjects and recipient inputs.
+  - Plain-text notification formatter with strict PII minimization: includes handoff reason label, status, formatted creation timestamp, lead contact details (if captured), and safe admin deep-links (`admin_url()`), while strictly excluding session tokens, visitor IP addresses, Gemini API keys, and raw conversation transcripts.
+  - Idempotency protection: 7-day transient marker keyed by handoff public UUID (`gca_notif_sent_{md5}`) prevents duplicate email alerts from repeated chat turns or retries.
+  - Error isolation: `wp_mail()` failures are caught and normalized internally (`EMAIL_SEND_FAILED`); handoffs and conversations remain completely unaffected.
+  - Business Integration Framework Action `SendHandoffNotificationAction` (`handoff.send_notification`) registering with risk classification `external`.
+  - WordPress Admin Settings UI integration: dedicated "Notifications" tab with toggles, recipients textarea, configurable subject line, and explicit "Send Test Email" action guarded by `manage_options` and nonces.
+  - Admin Handoff Detail view enhancement: shows live notification dispatch status badge (`Sent`, `Pending / Not Sent`, `Disabled`).
+  - Business Integrations dashboard update: displays live status of Email Notifications integration (`wp_mail()` transport).
+  - Comprehensive unit test suite in `tests/test-email-notifications.php` covering recipient parsing & limits, subject CRLF stripping, body formatting, idempotency, failure isolation, settings sanitization, and framework action registration.
+
 ## [1.3.2-N17.3] - 2026-09-07
 ### Added
 - Native WordPress Human Handoff System (`includes/handoff/`, `includes/Database/HandoffRepository.php`, `includes/Integrations/Handoff/`):

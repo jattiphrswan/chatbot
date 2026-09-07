@@ -210,4 +210,39 @@ Admin Dashboard (Gemini Chat -> Handoffs)
 2. **Controlled Statuses & Reasons:** Status transitions (`pending`, `assigned`, `resolved`, `cancelled`) and reason types (`customer_request`, `unknown_answer`, `complex_question`, `sales_request`, `technical_issue`) are strictly constrained.
 3. **Lead Association:** Integrates directly with N14 leads; if the visitor has submitted contact details, the existing lead is linked rather than creating duplicates.
 4. **Integration Framework Connection:** Provides `HandoffIntegration` (`handoff`) and `CreateHandoffAction` (`handoff.create`, `RISK_WRITE`) registered in `IntegrationRegistry`.
-5. **No Outbound Notifications in N17.3:** Email, SMS, WhatsApp, and CRM dispatches are excluded and reserved for N17.4+.
+5. **Handoff Persistence:** Guaranteed before notification dispatch. Handoff remains valid if email transport fails.
+
+## 7. Email Notifications Framework (Node N17.4)
+
+```
+Handoff Successfully Persisted in wp_gca_handoffs
+       │
+       ▼
+NotificationService::send_handoff_notification()
+       │
+       ├─► 1. Check is_enabled() from gca_settings
+       │       └─► Disabled: Return early (NOTIFICATIONS_DISABLED)
+       │
+       ├─► 2. Check has_been_sent() via transient (idempotency key)
+       │       └─► Already sent: Return (ALREADY_NOTIFIED)
+       │
+       ├─► 3. Validate & sanitize recipients (max 10, is_email, strip CR/LF)
+       │       └─► Fallback to get_option('admin_email') if none configured
+       │
+       ├─► 4. Build plain-text body with strict PII minimization
+       │       └─► Excludes: session tokens, IP addresses, Gemini API keys, chat transcripts
+       │       └─► Includes: Reason, Status, Lead Name/Email/Phone (if captured), Admin URLs
+       │
+       ├─► 5. Dispatch via WordPress native wp_mail()
+       │       ├─► Sent (accepted by transport) -> mark_as_sent() transient
+       │       └─► Failed -> normalize EMAIL_SEND_FAILED (handoff remains safe)
+       │
+       └─► 6. Action Integration: SendHandoffNotificationAction (handoff.send_notification, RISK_EXTERNAL)
+```
+
+### Core Tenets of N17.4:
+1. **WordPress Native Transport:** Relies exclusively on `wp_mail()`. Zero direct PHPMailer calls, zero raw `mail()`, zero external third-party email APIs (SendGrid, Mailgun, Brevo, SES).
+2. **Header Injection Defense:** Recipient addresses and subject lines are aggressively sanitized against CR (`\r`) and LF (`\n`) characters.
+3. **Failure Isolation:** Any `wp_mail()` failure is caught and normalized internally. It never deletes the handoff, deletes the lead, breaks conversation flow, or leaks errors to the visitor.
+4. **Delivery Semantics:** wp_mail() returning true confirms WordPress accepted the message for delivery; it is documented accurately as "Sent / Accepted for sending" rather than guaranteed inbox receipt.
+5. **Idempotency Protection:** Uses a 7-day transient flag keyed by handoff public UUID (`gca_notif_sent_{md5}`) to prevent duplicate email alerts on retries.

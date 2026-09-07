@@ -68,6 +68,11 @@ class Activator {
 			'knowledge_max_chunks'       => 4,
 			'knowledge_max_context_chars'=> 6000,
 
+			// Human Handoff Email Notifications (N17.4).
+			'handoff_email_enabled'      => false,
+			'handoff_email_recipients'   => '',
+			'handoff_email_subject'      => 'New Chatbot Handoff Request',
+
 			// Access.
 			'guest_access'          => true,
 

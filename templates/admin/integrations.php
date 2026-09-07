@@ -162,21 +162,29 @@ $registered_count        = count( $registered_integrations );
 				</div>
 			</div>
 
-			<!-- Email Notifications -->
+			<!-- Email Notifications (Node N17.4) -->
+			<?php
+			$notif_enabled = (bool) \SkyFish\GeminiChat\Admin\SettingsService::get( 'handoff_email_enabled', false );
+			?>
 			<div class="gca-admin-card">
 				<div class="gca-admin-card__header">
 					<span class="dashicons dashicons-email-alt" style="color: #46b450;"></span>
-					<span class="gca-admin-pill gca-admin-pill--info">
-						<?php esc_html_e( 'Subnode N17.4 • Framework Ready', 'gemini-chat-assistant' ); ?>
+					<span class="gca-admin-pill <?php echo $notif_enabled ? 'gca-admin-pill--success' : 'gca-admin-pill--muted'; ?>">
+						<?php echo $notif_enabled ? esc_html__( 'Active • Node N17.4', 'gemini-chat-assistant' ) : esc_html__( 'Disabled • Node N17.4', 'gemini-chat-assistant' ); ?>
 					</span>
 				</div>
 				<h3 class="gca-admin-card__title"><?php esc_html_e( 'Email Notifications & Alerts', 'gemini-chat-assistant' ); ?></h3>
 				<p class="gca-admin-card__desc">
-					<?php esc_html_e( 'Automated email dispatches for lead captures, urgent inquiry alerts, and visitor transcript digests.', 'gemini-chat-assistant' ); ?>
+					<?php esc_html_e( 'Automated email alerts for human handoff requests dispatched to configured team recipients via WordPress native wp_mail().', 'gemini-chat-assistant' ); ?>
 				</p>
 				<div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0f0f1; font-size: 12px; color: #646970;">
+					<div style="display: flex; gap: 16px; margin-bottom: 6px;">
+						<span><strong><?php esc_html_e( 'Available:', 'gemini-chat-assistant' ); ?></strong> <?php esc_html_e( 'Yes', 'gemini-chat-assistant' ); ?></span>
+						<span><strong><?php esc_html_e( 'Transport:', 'gemini-chat-assistant' ); ?></strong> <code>wp_mail()</code></span>
+						<span><strong><?php esc_html_e( 'Enabled:', 'gemini-chat-assistant' ); ?></strong> <?php echo $notif_enabled ? esc_html__( 'Yes', 'gemini-chat-assistant' ) : esc_html__( 'No', 'gemini-chat-assistant' ); ?></span>
+					</div>
 					<span class="dashicons dashicons-info" style="font-size: 16px; line-height: 1; vertical-align: text-top;"></span>
-					<?php esc_html_e( 'Status: Framework contracts defined. Implementation scheduled in Subnode N17.4.', 'gemini-chat-assistant' ); ?>
+					<?php esc_html_e( 'Delivery: wp_mail() accepts messages for delivery via your hosting SMTP or mail plugin (WP Mail SMTP, Brevo, etc.).', 'gemini-chat-assistant' ); ?>
 				</div>
 			</div>
 
