@@ -1,8 +1,8 @@
 # Issue Tracker: Gemini Chat Assistant
 
 ## Active Issues
-- **TASK-DEFERRED-001:** N2 Runtime Environment Verification (Deferred).
-  - *Context:* PHP CLI syntax validation and WordPress runtime tests were unavailable in current build environment.
+- **TASK-DEFERRED-001:** Runtime Environment Verification (Deferred).
+  - *Context:* PHP CLI syntax validation and WordPress runtime tests were unavailable in current build environment for Nodes N2, N3, and N4.
   - *Action Required:* Perform end-to-end WordPress runtime testing and PHP CLI linting when compatible WordPress environment is available and prior to production release.
 
 ## Resolved Issues
