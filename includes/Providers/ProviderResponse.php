@@ -123,30 +123,10 @@ class ProviderResponse {
 	}
 
 	/**
-	 * Alias for get_model_id().
-	 */
-	public function get_model(): string {
-		return $this->model_id;
-	}
-
-	/**
 	 * Returns input tokens.
 	 */
 	public function get_input_tokens(): ?int {
 		return $this->input_tokens;
-	}
-
-	/**
-	 * Returns tokens array summary.
-	 *
-	 * @return array{input: ?int, output: ?int, total: ?int}
-	 */
-	public function get_tokens(): array {
-		return [
-			'input'  => $this->input_tokens,
-			'output' => $this->output_tokens,
-			'total'  => $this->total_tokens,
-		];
 	}
 
 	/**

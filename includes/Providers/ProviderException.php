@@ -22,20 +22,15 @@ class ProviderException extends \Exception {
 	/**
 	 * Error type constants.
 	 */
-	public const TYPE_AUTH_FAILED          = 'auth_failed';
-	public const TYPE_AUTHENTICATION_ERROR = 'authentication_error';
-	public const TYPE_RATE_LIMITED         = 'rate_limited';
-	public const TYPE_RATE_LIMIT           = 'rate_limit';
-	public const TYPE_TIMEOUT              = 'timeout';
-	public const TYPE_INVALID_REQUEST      = 'invalid_request';
-	public const TYPE_MODEL_UNAVAILABLE    = 'model_unavailable';
-	public const TYPE_PROVIDER_UNAVAILABLE = 'provider_unavailable';
-	public const TYPE_MALFORMED_RESPONSE   = 'malformed_response';
-	public const TYPE_INVALID_RESPONSE     = 'invalid_response';
-	public const TYPE_NOT_CONFIGURED       = 'not_configured';
-	public const TYPE_CONFIGURATION_ERROR  = 'configuration_error';
-	public const TYPE_GENERIC              = 'generic_error';
-	public const TYPE_UNKNOWN_ERROR        = 'unknown_error';
+	public const TYPE_AUTH_FAILED         = 'auth_failed';
+	public const TYPE_RATE_LIMITED        = 'rate_limited';
+	public const TYPE_TIMEOUT             = 'timeout';
+	public const TYPE_INVALID_REQUEST     = 'invalid_request';
+	public const TYPE_MODEL_UNAVAILABLE   = 'model_unavailable';
+	public const TYPE_PROVIDER_UNAVAILABLE= 'provider_unavailable';
+	public const TYPE_MALFORMED_RESPONSE  = 'malformed_response';
+	public const TYPE_NOT_CONFIGURED      = 'not_configured';
+	public const TYPE_GENERIC             = 'generic_error';
 
 	/**
 	 * Machine-readable provider ID associated with this exception.
@@ -176,45 +171,6 @@ class ProviderException extends \Exception {
 			self::TYPE_INVALID_REQUEST,
 			'Invalid request sent to AI provider.',
 			400,
-			$details
-		);
-	}
-
-	/**
-	 * Factory helper: Provider unavailable.
-	 */
-	public static function provider_unavailable( string $provider_id, string $details = '' ): self {
-		return new self(
-			$provider_id,
-			self::TYPE_PROVIDER_UNAVAILABLE,
-			'The requested AI provider is currently unavailable.',
-			503,
-			$details
-		);
-	}
-
-	/**
-	 * Factory helper: Configuration error.
-	 */
-	public static function configuration_error( string $provider_id, string $details = '' ): self {
-		return new self(
-			$provider_id,
-			self::TYPE_CONFIGURATION_ERROR,
-			'Configuration error encountered for AI provider.',
-			500,
-			$details
-		);
-	}
-
-	/**
-	 * Factory helper: Malformed response.
-	 */
-	public static function malformed_response( string $provider_id, string $details = '' ): self {
-		return new self(
-			$provider_id,
-			self::TYPE_MALFORMED_RESPONSE,
-			'Received an invalid or malformed response from the AI provider.',
-			502,
 			$details
 		);
 	}

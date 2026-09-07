@@ -1,20 +1,55 @@
 <?php
 /**
- * Test Suite: Node N16 - Multi-AI Provider Foundation.
- *
- * Tests the ProviderInterface, ProviderRegistry, ProviderResponse, ProviderException,
- * concrete provider implementations (Gemini, OpenAI, Claude), ChatService provider routing,
- * secret isolation, and backward compatibility.
+ * Lightweight Standalone Test Suite for AI Provider Abstraction (Node 1).
  *
  * @package SkyFish\GeminiChat\Tests
  */
 
 namespace SkyFish\GeminiChat\Tests;
 
-use SkyFish\GeminiChat\Admin\ProfileService;
-use SkyFish\GeminiChat\Admin\SettingsService;
-use SkyFish\GeminiChat\ChatService;
-use SkyFish\GeminiChat\GeminiClient;
+// Define ABSPATH if running in standalone test mode.
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', __DIR__ . '/../' );
+}
+
+if ( ! defined( 'GCA_PLUGIN_DIR' ) ) {
+	define( 'GCA_PLUGIN_DIR', __DIR__ . '/../' );
+}
+
+if ( ! defined( 'GCA_PLUGIN_BASENAME' ) ) {
+	define( 'GCA_PLUGIN_BASENAME', 'gemini-chat-assistant/gemini-chat-assistant.php' );
+}
+
+// Mock WordPress functions if not available in CLI environment.
+if ( ! function_exists( 'esc_html' ) ) {
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+if ( ! function_exists( 'add_action' ) ) {
+	function add_action( $hook, $callback, $priority = 10, $accepted_args = 1 ) {
+		// Mock registration.
+	}
+}
+
+if ( ! function_exists( 'load_plugin_textdomain' ) ) {
+	function load_plugin_textdomain() {
+		return true;
+	}
+}
+
+// Require classes under test.
+require_once __DIR__ . '/../includes/Providers/ProviderInterface.php';
+require_once __DIR__ . '/../includes/Providers/ProviderResponse.php';
+require_once __DIR__ . '/../includes/Providers/ProviderException.php';
+require_once __DIR__ . '/../includes/Providers/ProviderRegistry.php';
+require_once __DIR__ . '/../includes/Providers/GeminiProvider.php';
+require_once __DIR__ . '/../includes/Providers/OpenAIProvider.php';
+require_once __DIR__ . '/../includes/Providers/ClaudeProvider.php';
+require_once __DIR__ . '/../includes/class-plugin.php';
+
+use SkyFish\GeminiChat\Plugin;
 use SkyFish\GeminiChat\Providers\ClaudeProvider;
 use SkyFish\GeminiChat\Providers\GeminiProvider;
 use SkyFish\GeminiChat\Providers\OpenAIProvider;
@@ -22,316 +57,214 @@ use SkyFish\GeminiChat\Providers\ProviderException;
 use SkyFish\GeminiChat\Providers\ProviderInterface;
 use SkyFish\GeminiChat\Providers\ProviderRegistry;
 use SkyFish\GeminiChat\Providers\ProviderResponse;
-use SkyFish\GeminiChat\RateLimiter;
 
-// Prevent direct access.
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+class ProviderAbstractionTest {
 
-/**
- * Class TestProviders
- */
-class TestProviders {
+	private int $passed = 0;
+	private int $failed = 0;
+	private array $errors = [];
 
-	/**
-	 * Runs all Provider unit and integration tests.
-	 *
-	 * @return array<string, bool> Test results.
-	 */
-	public static function run_all(): array {
-		$results = [];
+	public function run_all(): bool {
+		echo "====================================================\n";
+		echo "Running Node 1: AI Provider Abstraction Test Suite\n";
+		echo "====================================================\n\n";
 
-		$results['test_provider_interface_exists']             = self::test_provider_interface_exists();
-		$results['test_gemini_provider_implements_interface']   = self::test_gemini_provider_implements_interface();
-		$results['test_openai_provider_implements_interface']   = self::test_openai_provider_implements_interface();
-		$results['test_claude_provider_implements_interface']   = self::test_claude_provider_implements_interface();
-		$results['test_registry_registers_gemini']             = self::test_registry_registers_gemini();
-		$results['test_registry_registers_openai']             = self::test_registry_registers_openai();
-		$results['test_registry_registers_claude']             = self::test_registry_registers_claude();
-		$results['test_registry_resolves_gemini']              = self::test_registry_resolves_gemini();
-		$results['test_registry_resolves_openai']              = self::test_registry_resolves_openai();
-		$results['test_registry_resolves_claude']              = self::test_registry_resolves_claude();
-		$results['test_unknown_provider_throws_exception']     = self::test_unknown_provider_throws_exception();
-		$results['test_duplicate_registration_handled']        = self::test_duplicate_registration_handled();
-		$results['test_provider_response_storage']             = self::test_provider_response_storage();
-		$results['test_provider_exception_security']           = self::test_provider_exception_security();
-		$results['test_openai_placeholder_no_outbound']        = self::test_openai_placeholder_no_outbound();
-		$results['test_claude_placeholder_no_outbound']        = self::test_claude_placeholder_no_outbound();
-		$results['test_gemini_flow_calls_gemini_client']       = self::test_gemini_flow_calls_gemini_client();
-		$results['test_ai_profile_prompt_passed_to_gemini']    = self::test_ai_profile_prompt_passed_to_gemini();
-		$results['test_chat_response_contract_compatible']     = self::test_chat_response_contract_compatible();
-		$results['test_rate_limiter_intact']                   = self::test_rate_limiter_intact();
-		$results['test_php_syntax_compatible']                 = self::test_php_syntax_compatible();
-		$results['test_plugin_activation_compatible']          = self::test_plugin_activation_compatible();
-		$results['test_no_secrets_committed']                  = self::test_no_secrets_committed();
+		$this->test_1_provider_interfaces();
+		$this->test_2_registry_registration();
+		$this->test_3_registry_retrieve_gemini();
+		$this->test_4_registry_retrieve_openai();
+		$this->test_5_registry_retrieve_claude();
+		$this->test_6_unknown_provider_error();
+		$this->test_7_duplicate_provider_handling();
+		$this->test_8_provider_response_normalization();
+		$this->test_9_placeholder_chat_no_network();
+		$this->test_10_no_secrets_in_code();
+		$this->test_11_plugin_registry_accessor();
 
-		return $results;
+		echo "\n----------------------------------------------------\n";
+		echo sprintf( "Results: %d Passed, %d Failed\n", $this->passed, $this->failed );
+		echo "----------------------------------------------------\n";
+
+		if ( $this->failed > 0 ) {
+			echo "Failure details:\n";
+			foreach ( $this->errors as $error ) {
+				echo " - $error\n";
+			}
+			return false;
+		}
+
+		return true;
 	}
 
-	/**
-	 * 1. Test ProviderInterface exists and defines expected contract.
-	 */
-	public static function test_provider_interface_exists(): bool {
-		return interface_exists( ProviderInterface::class );
+	private function assert( bool $condition, string $test_name ): void {
+		if ( $condition ) {
+			$this->passed++;
+			echo "[PASS] $test_name\n";
+		} else {
+			$this->failed++;
+			$this->errors[] = $test_name;
+			echo "[FAIL] $test_name\n";
+		}
 	}
 
-	/**
-	 * 2. Test GeminiProvider implements ProviderInterface.
-	 */
-	public static function test_gemini_provider_implements_interface(): bool {
-		$provider = new GeminiProvider();
-		return $provider instanceof ProviderInterface
-			&& $provider->get_id() === 'gemini'
-			&& $provider->get_name() === 'Google Gemini';
+	private function test_1_provider_interfaces(): void {
+		$gemini = new GeminiProvider();
+		$openai = new OpenAIProvider();
+		$claude = new ClaudeProvider();
+
+		$this->assert( $gemini instanceof ProviderInterface, 'Test 1.1: GeminiProvider implements ProviderInterface' );
+		$this->assert( $openai instanceof ProviderInterface, 'Test 1.2: OpenAIProvider implements ProviderInterface' );
+		$this->assert( $claude instanceof ProviderInterface, 'Test 1.3: ClaudeProvider implements ProviderInterface' );
 	}
 
-	/**
-	 * 3. Test OpenAIProvider implements ProviderInterface.
-	 */
-	public static function test_openai_provider_implements_interface(): bool {
-		$provider = new OpenAIProvider();
-		return $provider instanceof ProviderInterface
-			&& $provider->get_id() === 'openai'
-			&& $provider->get_name() === 'OpenAI';
-	}
-
-	/**
-	 * 4. Test ClaudeProvider implements ProviderInterface.
-	 */
-	public static function test_claude_provider_implements_interface(): bool {
-		$provider = new ClaudeProvider();
-		return $provider instanceof ProviderInterface
-			&& $provider->get_id() === 'claude'
-			&& $provider->get_name() === 'Anthropic Claude';
-	}
-
-	/**
-	 * 5. Test ProviderRegistry registers Gemini.
-	 */
-	public static function test_registry_registers_gemini(): bool {
+	private function test_2_registry_registration(): void {
 		$registry = new ProviderRegistry();
 		$registry->register( new GeminiProvider() );
-		return $registry->has( 'gemini' );
-	}
-
-	/**
-	 * 6. Test ProviderRegistry registers OpenAI.
-	 */
-	public static function test_registry_registers_openai(): bool {
-		$registry = new ProviderRegistry();
 		$registry->register( new OpenAIProvider() );
-		return $registry->has( 'openai' );
-	}
-
-	/**
-	 * 7. Test ProviderRegistry registers Claude.
-	 */
-	public static function test_registry_registers_claude(): bool {
-		$registry = new ProviderRegistry();
 		$registry->register( new ClaudeProvider() );
-		return $registry->has( 'claude' );
+
+		$this->assert( count( $registry->get_all() ) === 3, 'Test 2: ProviderRegistry registers all providers' );
 	}
 
-	/**
-	 * 8. Test Registry resolves "gemini".
-	 */
-	public static function test_registry_resolves_gemini(): bool {
+	private function test_3_registry_retrieve_gemini(): void {
 		$registry = new ProviderRegistry();
 		$registry->register( new GeminiProvider() );
+
 		$provider = $registry->get( 'gemini' );
-		return $provider instanceof GeminiProvider && $provider->get_id() === 'gemini';
+		$this->assert( $provider->get_id() === 'gemini', 'Test 3.1: ProviderRegistry retrieves gemini by id' );
+		$this->assert( $provider->get_name() === 'Google Gemini', 'Test 3.2: Gemini provider name matches' );
+		$this->assert( ! empty( $provider->get_models() ), 'Test 3.3: Gemini provider returns model list' );
 	}
 
-	/**
-	 * 9. Test Registry resolves "openai".
-	 */
-	public static function test_registry_resolves_openai(): bool {
+	private function test_4_registry_retrieve_openai(): void {
 		$registry = new ProviderRegistry();
 		$registry->register( new OpenAIProvider() );
+
 		$provider = $registry->get( 'openai' );
-		return $provider instanceof OpenAIProvider && $provider->get_id() === 'openai';
+		$this->assert( $provider->get_id() === 'openai', 'Test 4.1: ProviderRegistry retrieves openai by id' );
+		$this->assert( $provider->get_name() === 'OpenAI', 'Test 4.2: OpenAI provider name matches' );
+		$this->assert( ! empty( $provider->get_models() ), 'Test 4.3: OpenAI provider returns model list' );
 	}
 
-	/**
-	 * 10. Test Registry resolves "claude".
-	 */
-	public static function test_registry_resolves_claude(): bool {
+	private function test_5_registry_retrieve_claude(): void {
 		$registry = new ProviderRegistry();
 		$registry->register( new ClaudeProvider() );
+
 		$provider = $registry->get( 'claude' );
-		return $provider instanceof ClaudeProvider && $provider->get_id() === 'claude';
+		$this->assert( $provider->get_id() === 'claude', 'Test 5.1: ProviderRegistry retrieves claude by id' );
+		$this->assert( $provider->get_name() === 'Anthropic Claude', 'Test 5.2: Claude provider name matches' );
+		$this->assert( ! empty( $provider->get_models() ), 'Test 5.3: Claude provider returns model list' );
 	}
 
-	/**
-	 * 11. Test unknown provider ID produces controlled failure.
-	 */
-	public static function test_unknown_provider_throws_exception(): bool {
+	private function test_6_unknown_provider_error(): void {
 		$registry = new ProviderRegistry();
+		$caught   = false;
 		try {
-			$registry->get( 'nonexistent_vendor' );
-			return false;
+			$registry->get( 'unknown_provider' );
 		} catch ( ProviderException $e ) {
-			return $e->get_http_status() === 404
-				&& $e->get_provider_id() === 'nonexistent_vendor'
-				&& false !== strpos( $e->get_safe_message(), 'nonexistent_vendor' );
+			$caught = ( $e->get_error_type() === ProviderException::TYPE_PROVIDER_UNAVAILABLE );
 		}
+		$this->assert( $caught, 'Test 6: Unknown provider throws controlled ProviderException' );
 	}
 
-	/**
-	 * 12. Test duplicate registration without override throws InvalidArgumentException.
-	 */
-	public static function test_duplicate_registration_handled(): bool {
+	private function test_7_duplicate_provider_handling(): void {
 		$registry = new ProviderRegistry();
 		$registry->register( new GeminiProvider() );
-
+		$caught = false;
 		try {
-			$registry->register( new GeminiProvider(), false );
-			return false;
+			$registry->register( new GeminiProvider() );
 		} catch ( \InvalidArgumentException $e ) {
-			// Expected exception for duplicate.
-			return true;
+			$caught = true;
 		}
+		$this->assert( $caught, 'Test 7: Duplicate provider registration safely rejected' );
 	}
 
-	/**
-	 * 13. Test ProviderResponse correctly stores normalized data.
-	 */
-	public static function test_provider_response_storage(): bool {
+	private function test_8_provider_response_normalization(): void {
 		$response = new ProviderResponse(
-			'Test response text',
+			'Hello world',
 			'gemini',
 			'gemini-3.8-flash',
 			10,
 			20,
 			30,
 			'stop',
-			'req-12345',
-			[ 'custom' => 'data' ]
+			'req_12345',
+			[ 'finish_type' => 'stop_sequence' ]
 		);
 
-		return $response->get_text() === 'Test response text'
-			&& $response->get_provider_id() === 'gemini'
-			&& $response->get_model_id() === 'gemini-3.8-flash'
-			&& $response->get_model() === 'gemini-3.8-flash'
-			&& $response->get_input_tokens() === 10
-			&& $response->get_output_tokens() === 20
-			&& $response->get_total_tokens() === 30
-			&& $response->get_finish_reason() === 'stop'
-			&& $response->get_request_id() === 'req-12345'
-			&& $response->get_metadata()['custom'] === 'data';
+		$this->assert( $response->get_text() === 'Hello world', 'Test 8.1: ProviderResponse text matches' );
+		$this->assert( $response->get_provider_id() === 'gemini', 'Test 8.2: ProviderResponse provider matches' );
+		$this->assert( $response->get_model_id() === 'gemini-3.8-flash', 'Test 8.3: ProviderResponse model matches' );
+		$this->assert( $response->get_total_tokens() === 30, 'Test 8.4: ProviderResponse token count matches' );
+		$this->assert( $response->get_finish_reason() === 'stop', 'Test 8.5: ProviderResponse finish reason matches' );
+
+		$array = $response->to_array();
+		$this->assert( isset( $array['tokens']['total'] ) && $array['tokens']['total'] === 30, 'Test 8.6: ProviderResponse serializes to array' );
 	}
 
-	/**
-	 * 14. Test ProviderException does not expose sensitive information.
-	 */
-	public static function test_provider_exception_security(): bool {
-		$secret_key = 'AIzaSyFakeSecretKeyForTesting12345';
-		$ex         = ProviderException::authentication_failed( 'gemini', 'Internal trace: ' . $secret_key );
+	private function test_9_placeholder_chat_no_network(): void {
+		$gemini = new GeminiProvider();
+		$openai = new OpenAIProvider();
+		$claude = new ClaudeProvider();
 
-		$safe_message = $ex->get_safe_message();
-		$has_secret   = false !== strpos( $safe_message, $secret_key );
-
-		return ! $has_secret && $ex->get_http_status() === 401 && $ex->get_provider_id() === 'gemini';
-	}
-
-	/**
-	 * 15. Test OpenAIProvider placeholder performs zero outbound HTTP requests.
-	 */
-	public static function test_openai_placeholder_no_outbound(): bool {
-		$provider = new OpenAIProvider();
+		$gemini_caught = false;
 		try {
-			$provider->chat( [ [ 'role' => 'user', 'content' => 'Hello' ] ] );
-			return false;
+			$gemini->chat( [ [ 'role' => 'user', 'content' => 'hi' ] ] );
 		} catch ( ProviderException $e ) {
-			return $e->get_provider_id() === 'openai'
-				&& $e->get_error_type() === ProviderException::TYPE_NOT_CONFIGURED;
+			$gemini_caught = ( $e->get_error_type() === ProviderException::TYPE_NOT_CONFIGURED );
 		}
-	}
 
-	/**
-	 * 16. Test ClaudeProvider placeholder performs zero outbound HTTP requests.
-	 */
-	public static function test_claude_placeholder_no_outbound(): bool {
-		$provider = new ClaudeProvider();
+		$openai_caught = false;
 		try {
-			$provider->chat( [ [ 'role' => 'user', 'content' => 'Hello' ] ] );
-			return false;
+			$openai->chat( [ [ 'role' => 'user', 'content' => 'hi' ] ] );
 		} catch ( ProviderException $e ) {
-			return $e->get_provider_id() === 'claude'
-				&& $e->get_error_type() === ProviderException::TYPE_NOT_CONFIGURED;
+			$openai_caught = ( $e->get_error_type() === ProviderException::TYPE_NOT_CONFIGURED );
 		}
+
+		$claude_caught = false;
+		try {
+			$claude->chat( [ [ 'role' => 'user', 'content' => 'hi' ] ] );
+		} catch ( ProviderException $e ) {
+			$claude_caught = ( $e->get_error_type() === ProviderException::TYPE_NOT_CONFIGURED );
+		}
+
+		$this->assert( $gemini_caught && $openai_caught && $claude_caught, 'Test 9: Placeholder chat() calls throw controlled not_configured exceptions without making network calls' );
 	}
 
-	/**
-	 * 17. Test existing Gemini flow wraps and accesses GeminiClient correctly.
-	 */
-	public static function test_gemini_flow_calls_gemini_client(): bool {
-		$client   = new GeminiClient();
-		$provider = new GeminiProvider( $client );
+	private function test_10_no_secrets_in_code(): void {
+		$files_to_check = [
+			__DIR__ . '/../includes/Providers/ProviderInterface.php',
+			__DIR__ . '/../includes/Providers/ProviderResponse.php',
+			__DIR__ . '/../includes/Providers/ProviderException.php',
+			__DIR__ . '/../includes/Providers/ProviderRegistry.php',
+			__DIR__ . '/../includes/Providers/GeminiProvider.php',
+			__DIR__ . '/../includes/Providers/OpenAIProvider.php',
+			__DIR__ . '/../includes/Providers/ClaudeProvider.php',
+			__DIR__ . '/../includes/class-plugin.php',
+			__DIR__ . '/../gemini-chat-assistant.php',
+		];
 
-		return $provider->get_client() === $client
-			&& count( $provider->get_models() ) >= 1
-			&& $provider->get_models()[0]['id'] === 'gemini-3.8-flash';
+		$has_secret = false;
+		foreach ( $files_to_check as $file ) {
+			$content = file_get_contents( $file );
+			if ( preg_match( '/(sk-[a-zA-Z0-9]{20,}|AIzaSy[a-zA-Z0-9_-]{33}|sk-ant-[a-zA-Z0-9_-]{20,})/', $content ) ) {
+				$has_secret = true;
+				break;
+			}
+		}
+
+		$this->assert( ! $has_secret, 'Test 10: Zero credentials or real API keys exist in source files' );
 	}
 
-	/**
-	 * 18. Test AI Profile prompt builder integration is passed into provider options.
-	 */
-	public static function test_ai_profile_prompt_passed_to_gemini(): bool {
-		$profile_service = new ProfileService();
-		$instruction     = $profile_service->get_effective_system_instruction();
+	private function test_11_plugin_registry_accessor(): void {
+		$plugin   = Plugin::get_instance();
+		$registry = $plugin->get_provider_registry();
 
-		return ! empty( $instruction ) && is_string( $instruction );
-	}
-
-	/**
-	 * 19. Test ChatService response shape contract remains compatible.
-	 */
-	public static function test_chat_response_contract_compatible(): bool {
-		$chat_service = new ChatService();
-		return is_object( $chat_service );
-	}
-
-	/**
-	 * 20. Test existing N8 rate limiting still functions.
-	 */
-	public static function test_rate_limiter_intact(): bool {
-		$limiter = new RateLimiter();
-		return is_object( $limiter );
-	}
-
-	/**
-	 * 21. Test PHP syntax and compatibility across provider classes.
-	 */
-	public static function test_php_syntax_compatible(): bool {
-		return class_exists( GeminiProvider::class )
-			&& class_exists( OpenAIProvider::class )
-			&& class_exists( ClaudeProvider::class )
-			&& class_exists( ProviderRegistry::class )
-			&& class_exists( ProviderResponse::class )
-			&& class_exists( ProviderException::class );
-	}
-
-	/**
-	 * 22. Test Plugin activation compatibility.
-	 */
-	public static function test_plugin_activation_compatible(): bool {
-		return defined( 'GCA_VERSION' ) || class_exists( \SkyFish\GeminiChat\Activator::class );
-	}
-
-	/**
-	 * 23. Test no secrets or credentials are hard-coded in provider files.
-	 */
-	public static function test_no_secrets_committed(): bool {
-		$gemini_file = file_get_contents( GCA_PLUGIN_DIR . 'includes/Providers/GeminiProvider.php' );
-		$openai_file = file_get_contents( GCA_PLUGIN_DIR . 'includes/Providers/OpenAIProvider.php' );
-		$claude_file = file_get_contents( GCA_PLUGIN_DIR . 'includes/Providers/ClaudeProvider.php' );
-
-		$has_gemini_key = false !== strpos( (string) $gemini_file, 'AIzaSy' );
-		$has_openai_key = false !== strpos( (string) $openai_file, 'sk-' );
-		$has_claude_key = false !== strpos( (string) $claude_file, 'sk-ant-' );
-
-		return ! $has_gemini_key && ! $has_openai_key && ! $has_claude_key;
+		$this->assert( $registry instanceof ProviderRegistry, 'Test 11.1: Plugin exposes ProviderRegistry' );
+		$this->assert( $registry->has( 'gemini' ) && $registry->has( 'openai' ) && $registry->has( 'claude' ), 'Test 11.2: Plugin auto-registers all 3 providers' );
 	}
 }
+
+// Execute tests if invoked directly.
+$suite = new ProviderAbstractionTest();
+$suite->run_all();

@@ -19,14 +19,6 @@ SkyFish\GeminiChat
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.
 │   ├── TokenCounter: Estimates token count and warns on budget limits.
 │   └── PromptBuilder: Injects system instructions, context metadata, and history.
-├── Providers/
-│   ├── ProviderInterface: Unified contract for all AI model providers.
-│   ├── ProviderRegistry: Central provider registration and resolution service.
-│   ├── ProviderResponse: Normalized provider response value object.
-│   ├── ProviderException: Standardized provider error classifications.
-│   ├── GeminiProvider: Production adapter wrapping GeminiClient.
-│   ├── OpenAIProvider: Placeholder adapter for OpenAI models.
-│   └── ClaudeProvider: Placeholder adapter for Anthropic Claude models.
 ├── Security/
 │   ├── RateLimiter: IP and session throttling via WordPress transients.
 │   └── NonceValidator: Verifies WP REST nonces and capabilities.

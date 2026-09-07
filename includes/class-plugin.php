@@ -271,8 +271,7 @@ class Plugin {
 				$this->get_conversation_repository(),
 				$this->get_message_repository(),
 				$this->get_gemini_client(),
-				$this->get_profile_service(),
-				$this->get_provider_registry()
+				$this->get_profile_service()
 			);
 		}
 		return $this->chat_service;
@@ -334,7 +333,7 @@ class Plugin {
 		}
 
 		$this->provider_registry = new ProviderRegistry();
-		$this->provider_registry->register( new GeminiProvider( $this->get_gemini_client() ) );
+		$this->provider_registry->register( new GeminiProvider() );
 		$this->provider_registry->register( new OpenAIProvider() );
 		$this->provider_registry->register( new ClaudeProvider() );
 	}

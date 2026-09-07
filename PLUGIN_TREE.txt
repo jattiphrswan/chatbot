@@ -45,14 +45,6 @@ gemini-chat-assistant/
 │   │   ├── ContextManager.php
 │   │   ├── TokenCounter.php
 │   │   └── PromptBuilder.php
-│   ├── Providers/
-│   │   ├── ProviderInterface.php
-│   │   ├── ProviderRegistry.php
-│   │   ├── ProviderResponse.php
-│   │   ├── ProviderException.php
-│   │   ├── GeminiProvider.php
-│   │   ├── OpenAIProvider.php
-│   │   └── ClaudeProvider.php
 │   └── Shortcode/
 │       └── ChatShortcode.php
 ├── templates/

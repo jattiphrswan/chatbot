@@ -37,9 +37,3 @@
 - **Admin Capability:** Profile creation, editing, activation, duplication, and deletion strictly require `current_user_can('manage_options')` and unique action nonces.
 - **Zero Credential Contamination:** Stored profiles and constructed prompts are audited to ensure they never include API keys, database credentials, or visitor PII.
 - **Safe Options Quota:** Total profiles are capped at 25 and saved with `autoload = 'no'` to prevent database and cache bloat.
-
-## 6. Multi-AI Provider Security & Credential Isolation
-- **No Third-Party Credentials Required:** In N16, OpenAI and Anthropic Claude are architectural placeholders. No OpenAI or Anthropic API keys are stored, accepted, or required.
-- **Outbound Network Isolation:** Placeholder providers perform strictly zero external HTTP network requests.
-- **Safe Provider Errors:** `ProviderException` strips raw internal headers and API keys, providing only sanitized safe messages and standard HTTP status codes.
-- **Zero Frontend Secret Exposure:** Provider identifiers, request traces, and metadata sent to clients contain zero authentication credentials or Authorization headers.

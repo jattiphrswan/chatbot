@@ -12,11 +12,6 @@ use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\Database\ConversationRepository;
 use SkyFish\GeminiChat\Database\MessageRepository;
 use SkyFish\GeminiChat\Database\SessionService;
-use SkyFish\GeminiChat\Providers\GeminiProvider;
-use SkyFish\GeminiChat\Providers\ProviderException;
-use SkyFish\GeminiChat\Providers\ProviderInterface;
-use SkyFish\GeminiChat\Providers\ProviderRegistry;
-use SkyFish\GeminiChat\Providers\ProviderResponse;
 use WP_Error;
 
 // Prevent direct access.
@@ -27,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class ChatService
  *
- * Orchestrates chat interaction flow between REST controller, session state, persistence repositories, and AI providers.
+ * Orchestrates chat interaction flow between REST controller, session state, persistence repositories, and Gemini API client.
  */
 class ChatService {
 
@@ -37,7 +32,6 @@ class ChatService {
 	private MessageRepository $message_repo;
 	private GeminiClient $gemini_client;
 	private ProfileService $profile_service;
-	private ProviderRegistry $provider_registry;
 
 	/**
 	 * ChatService constructor.
@@ -48,7 +42,6 @@ class ChatService {
 	 * @param MessageRepository|null      $message_repo      Optional message repository.
 	 * @param GeminiClient|null           $gemini_client     Optional Gemini client.
 	 * @param ProfileService|null         $profile_service   Optional profile service.
-	 * @param ProviderRegistry|null       $provider_registry Optional provider registry.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
@@ -56,8 +49,7 @@ class ChatService {
 		?ConversationRepository $conversation_repo = null,
 		?MessageRepository $message_repo = null,
 		?GeminiClient $gemini_client = null,
-		?ProfileService $profile_service = null,
-		?ProviderRegistry $provider_registry = null
+		?ProfileService $profile_service = null
 	) {
 		$this->settings_service  = $settings_service ?? SettingsService::get_instance();
 		$this->conversation_repo = $conversation_repo ?? new ConversationRepository();
@@ -65,14 +57,6 @@ class ChatService {
 		$this->session_service   = $session_service ?? new SessionService( $this->conversation_repo, $this->message_repo );
 		$this->gemini_client     = $gemini_client ?? new GeminiClient( $this->settings_service );
 		$this->profile_service   = $profile_service ?? new ProfileService( $this->settings_service );
-
-		if ( null === $provider_registry ) {
-			$registry = new ProviderRegistry();
-			$registry->register( new GeminiProvider( $this->gemini_client ) );
-			$this->provider_registry = $registry;
-		} else {
-			$this->provider_registry = $provider_registry;
-		}
 	}
 
 	/**
@@ -122,57 +106,54 @@ class ChatService {
 		// 5. Retrieve active conversation memory (previous_interaction_id).
 		$previous_interaction_id = $this->session_service->get_interaction_id( $session_id, $conv_db_id );
 
-		// 6. Prepare provider request.
-		$provider_id        = (string) $this->settings_service->get( 'ai_provider', 'gemini' );
+		// 6. Prepare Gemini client request.
 		$model              = SettingsService::get_model();
 		$system_instruction = $this->profile_service->get_effective_system_instruction();
 
-		$messages = [
-			[ 'role' => 'user', 'content' => $message ],
-		];
+		$start_time  = microtime( true );
+		$ai_response = $this->gemini_client->create_interaction(
+			$message,
+			$previous_interaction_id,
+			[
+				'model'              => $model,
+				'system_instruction' => $system_instruction,
+			]
+		);
+		$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
 
-		$provider_options = [
-			'model'                   => $model,
-			'system_instruction'      => $system_instruction,
-			'previous_interaction_id' => $previous_interaction_id,
-		];
-
-		try {
-			$provider = $this->provider_registry->get( $provider_id );
-		} catch ( ProviderException $e ) {
-			return $this->map_provider_exception( $e, $req_id );
-		}
-
-		$start_time = microtime( true );
-		try {
-			$provider_response = $provider->chat( $messages, $provider_options );
-			$latency_ms        = (int) round( ( microtime( true ) - $start_time ) * 1000 );
-		} catch ( ProviderException $e ) {
-			// 7. Handle AI transport or API error with stale interaction recovery.
-			if ( ! empty( $previous_interaction_id ) && $this->is_stale_provider_exception( $e ) ) {
+		// 7. Handle AI transport or API error with stale interaction recovery.
+		if ( is_wp_error( $ai_response ) ) {
+			// Check if error is due to an invalid/stale previous interaction ID.
+			if ( ! empty( $previous_interaction_id ) && $this->is_stale_interaction_error( $ai_response ) ) {
 				// Clear stale interaction context.
 				$this->session_service->clear_interaction_id( $session_id, $conv_db_id );
-				$provider_options['previous_interaction_id'] = null;
 
 				// Retry message ONCE as a fresh interaction without previous_interaction_id.
-				$start_time = microtime( true );
-				try {
-					$provider_response = $provider->chat( $messages, $provider_options );
-					$latency_ms        = (int) round( ( microtime( true ) - $start_time ) * 1000 );
-				} catch ( ProviderException $retry_e ) {
-					return $this->map_provider_exception( $retry_e, $req_id );
-				}
-			} else {
-				return $this->map_provider_exception( $e, $req_id );
+				$start_time  = microtime( true );
+				$ai_response = $this->gemini_client->create_interaction(
+					$message,
+					null,
+					[
+						'model'              => $model,
+						'system_instruction' => $system_instruction,
+					]
+				);
+				$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
+			}
+
+			// If still failing after recovery attempt or for ordinary network/auth/quota errors.
+			if ( is_wp_error( $ai_response ) ) {
+				return $this->map_gemini_error( $ai_response, $req_id );
 			}
 		}
 
-		$assistant_text = $provider_response->get_text();
-		$input_tokens   = absint( $provider_response->get_input_tokens() ?? 0 );
-		$output_tokens  = absint( $provider_response->get_output_tokens() ?? 0 );
+		$assistant_text = $ai_response['text'] ?? '';
+		$usage          = $ai_response['usage'] ?? [];
+		$input_tokens   = absint( $usage['input_tokens'] ?? 0 );
+		$output_tokens  = absint( $usage['output_tokens'] ?? 0 );
 
 		// 8. Synchronize new interaction ID into session transient and database.
-		$new_interaction_id = $provider_response->get_request_id();
+		$new_interaction_id = $ai_response['interaction_id'] ?? '';
 		if ( ! empty( $new_interaction_id ) ) {
 			$this->session_service->set_interaction_id( $session_id, $conv_db_id, (string) $new_interaction_id );
 		}
@@ -202,84 +183,6 @@ class ChatService {
 				'model' => $model,
 			],
 		];
-	}
-
-	/**
-	 * Detects whether a ProviderException indicates a stale, expired, or invalid interaction ID.
-	 *
-	 * @param ProviderException $e Provider exception.
-	 * @return bool
-	 */
-	private function is_stale_provider_exception( ProviderException $e ): bool {
-		$msg = strtolower( $e->getMessage() . ' ' . $e->get_safe_message() );
-		return false !== strpos( $msg, 'previous_interaction_id' )
-			|| false !== strpos( $msg, 'interaction not found' )
-			|| false !== strpos( $msg, 'invalid interaction' )
-			|| false !== strpos( $msg, 'interaction expired' );
-	}
-
-	/**
-	 * Maps ProviderException to standardized public error codes.
-	 *
-	 * @param ProviderException $e          Provider exception.
-	 * @param string            $request_id Diagnostic request ID.
-	 * @return WP_Error
-	 */
-	private function map_provider_exception( ProviderException $e, string $request_id ): WP_Error {
-		$type   = $e->get_error_type();
-		$status = $e->get_http_status();
-
-		switch ( $type ) {
-			case ProviderException::TYPE_NOT_CONFIGURED:
-			case ProviderException::TYPE_AUTH_FAILED:
-			case ProviderException::TYPE_AUTHENTICATION_ERROR:
-				$public_code    = 'AI_AUTH_ERROR';
-				$public_message = __( 'AI service authentication failed or is unconfigured.', 'gemini-chat-assistant' );
-				$status         = 500;
-				break;
-
-			case ProviderException::TYPE_RATE_LIMITED:
-			case ProviderException::TYPE_RATE_LIMIT:
-				$public_code    = 'AI_RATE_LIMITED';
-				$public_message = __( 'Too many requests. Please wait a moment before sending another message.', 'gemini-chat-assistant' );
-				$status         = 429;
-				break;
-
-			case ProviderException::TYPE_TIMEOUT:
-				$public_code    = 'AI_TIMEOUT';
-				$public_message = __( 'The AI service timed out responding to your request.', 'gemini-chat-assistant' );
-				$status         = 504;
-				break;
-
-			case ProviderException::TYPE_PROVIDER_UNAVAILABLE:
-			case ProviderException::TYPE_MODEL_UNAVAILABLE:
-				$public_code    = 'AI_UNAVAILABLE';
-				$public_message = __( 'The AI service is temporarily unavailable. Please try again shortly.', 'gemini-chat-assistant' );
-				$status         = 503;
-				break;
-
-			case ProviderException::TYPE_MALFORMED_RESPONSE:
-			case ProviderException::TYPE_INVALID_RESPONSE:
-				$public_code    = 'AI_INVALID_RESPONSE';
-				$public_message = __( 'Received an invalid or empty response from the AI service.', 'gemini-chat-assistant' );
-				$status         = 502;
-				break;
-
-			default:
-				$public_code    = 'INTERNAL_ERROR';
-				$public_message = __( 'An internal error occurred while processing your request.', 'gemini-chat-assistant' );
-				$status         = ( $status >= 400 && $status < 600 ) ? $status : 500;
-				break;
-		}
-
-		return new WP_Error(
-			$public_code,
-			$public_message,
-			[
-				'status'     => $status,
-				'request_id' => $request_id,
-			]
-		);
 	}
 
 	/**
