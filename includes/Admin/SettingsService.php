@@ -173,6 +173,66 @@ class SettingsService {
 		$retention = isset( $input['retention_days'] ) ? absint( $input['retention_days'] ) : $defaults['retention_days'];
 		$sanitized['retention_days'] = ( $retention >= 1 && $retention <= 365 ) ? $retention : 30;
 
+		// Appearance & Branding (N13).
+		$sanitized['avatar_id'] = isset( $input['avatar_id'] ) ? absint( $input['avatar_id'] ) : $defaults['avatar_id'];
+
+		$color_keys = [
+			'primary_color',
+			'header_bg_color',
+			'header_text_color',
+			'panel_bg_color',
+			'text_color',
+			'assistant_bubble_color',
+			'assistant_text_color',
+			'user_bubble_color',
+			'user_text_color',
+			'button_color',
+			'button_text_color',
+			'launcher_bg_color',
+			'launcher_icon_color',
+		];
+
+		foreach ( $color_keys as $ck ) {
+			if ( isset( $input[ $ck ] ) ) {
+				$hex = function_exists( 'sanitize_hex_color' ) ? sanitize_hex_color( (string) $input[ $ck ] ) : null;
+				if ( empty( $hex ) && preg_match( '/^#([a-fA-F0-9]{3}){1,2}$/', (string) $input[ $ck ] ) ) {
+					$hex = (string) $input[ $ck ];
+				}
+				$sanitized[ $ck ] = ! empty( $hex ) ? strtoupper( $hex ) : $defaults[ $ck ];
+			} else {
+				$sanitized[ $ck ] = $defaults[ $ck ];
+			}
+		}
+
+		// Position whitelist.
+		$allowed_positions = [ 'bottom-right', 'bottom-left' ];
+		$pos = isset( $input['widget_position'] ) ? strtolower( trim( (string) $input['widget_position'] ) ) : $defaults['widget_position'];
+		$sanitized['widget_position'] = in_array( $pos, $allowed_positions, true ) ? $pos : 'bottom-right';
+
+		// Launcher icon whitelist.
+		$allowed_icons = [ 'chat', 'message', 'headset', 'sparkle' ];
+		$icon = isset( $input['launcher_icon'] ) ? strtolower( trim( (string) $input['launcher_icon'] ) ) : $defaults['launcher_icon'];
+		$sanitized['launcher_icon'] = in_array( $icon, $allowed_icons, true ) ? $icon : 'chat';
+
+		// Panel Width (320 - 600px).
+		$width = isset( $input['panel_width'] ) ? absint( $input['panel_width'] ) : $defaults['panel_width'];
+		$sanitized['panel_width'] = max( 320, min( 600, $width ) );
+
+		// Panel Height (450 - 850px).
+		$height = isset( $input['panel_height'] ) ? absint( $input['panel_height'] ) : $defaults['panel_height'];
+		$sanitized['panel_height'] = max( 450, min( 850, $height ) );
+
+		// Border Radius (0 - 40px).
+		$radius = isset( $input['border_radius'] ) ? absint( $input['border_radius'] ) : $defaults['border_radius'];
+		$sanitized['border_radius'] = max( 0, min( 40, $radius ) );
+
+		// Launcher Size (44 - 80px).
+		$size = isset( $input['launcher_size'] ) ? absint( $input['launcher_size'] ) : $defaults['launcher_size'];
+		$sanitized['launcher_size'] = max( 44, min( 80, $size ) );
+
+		// Responsive visibility.
+		$sanitized['tablet_enabled'] = ! empty( $input['tablet_enabled'] );
+
 		return $sanitized;
 	}
 }

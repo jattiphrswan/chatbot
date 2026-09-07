@@ -11,6 +11,7 @@
  */
 
 use SkyFish\GeminiChat\Admin\SettingsService;
+use SkyFish\GeminiChat\Admin\AppearanceService;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -26,6 +27,9 @@ $greeting        = (string) ( $settings['greeting'] ?? __( 'Welcome!', 'gemini-c
 $welcome_message = (string) ( $settings['welcome_message'] ?? __( 'Hi! How can I help you today?', 'gemini-chat-assistant' ) );
 $placeholder     = (string) ( $settings['placeholder'] ?? __( 'Type your message...', 'gemini-chat-assistant' ) );
 $max_length      = absint( $settings['max_message_length'] ?? 1000 );
+$avatar_id       = absint( $settings['avatar_id'] ?? 0 );
+$avatar_url      = AppearanceService::get_avatar_url( $avatar_id );
+$launcher_icon   = (string) ( $settings['launcher_icon'] ?? 'chat' );
 ?>
 
 <?php if ( 'floating' === $mode ) : ?>
@@ -39,9 +43,25 @@ $max_length      = absint( $settings['max_message_length'] ?? 1000 );
 >
 	<span class="gca-launcher__badge" aria-hidden="true" style="display: none;">0</span>
 	<span class="gca-launcher__icon gca-launcher__icon--open" aria-hidden="true">
-		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-			<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-		</svg>
+		<?php if ( 'message' === $launcher_icon ) : ?>
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+				<polyline points="22,6 12,13 2,6"></polyline>
+			</svg>
+		<?php elseif ( 'headset' === $launcher_icon ) : ?>
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+				<path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+			</svg>
+		<?php elseif ( 'sparkle' === $launcher_icon ) : ?>
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+			</svg>
+		<?php else : // default 'chat' ?>
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+			</svg>
+		<?php endif; ?>
 	</span>
 	<span class="gca-launcher__icon gca-launcher__icon--close" aria-hidden="true">
 		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -63,12 +83,16 @@ $max_length      = absint( $settings['max_message_length'] ?? 1000 );
 	<header class="gca-header">
 		<div class="gca-header__info">
 			<div class="gca-header__avatar" aria-hidden="true">
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
-					<rect x="3" y="8" width="18" height="12" rx="2"></rect>
-					<circle cx="9" cy="14" r="1"></circle>
-					<circle cx="15" cy="14" r="1"></circle>
-				</svg>
+				<?php if ( ! empty( $avatar_url ) ) : ?>
+					<img src="<?php echo esc_url( $avatar_url ); ?>" alt="" class="gca-avatar-img" />
+				<?php else : ?>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+						<rect x="3" y="8" width="18" height="12" rx="2"></rect>
+						<circle cx="9" cy="14" r="1"></circle>
+						<circle cx="15" cy="14" r="1"></circle>
+					</svg>
+				<?php endif; ?>
 			</div>
 			<div>
 				<h3 class="gca-header__title"><?php echo esc_html( $assistant_name ); ?></h3>
@@ -151,10 +175,14 @@ $max_length      = absint( $settings['max_message_length'] ?? 1000 );
 					<!-- Assistant Initial Welcome Bubble -->
 					<div class="gca-message gca-message--assistant" data-role="assistant">
 						<div class="gca-message__avatar" aria-hidden="true">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<rect x="3" y="8" width="18" height="12" rx="2"></rect>
-								<path d="M12 2v6"></path>
-							</svg>
+							<?php if ( ! empty( $avatar_url ) ) : ?>
+								<img src="<?php echo esc_url( $avatar_url ); ?>" alt="" class="gca-avatar-img" />
+							<?php else : ?>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="3" y="8" width="18" height="12" rx="2"></rect>
+									<path d="M12 2v6"></path>
+								</svg>
+							<?php endif; ?>
 						</div>
 						<div class="gca-message__bubble">
 							<p class="gca-message__text"><?php echo esc_html( $welcome_message ); ?></p>
@@ -164,10 +192,14 @@ $max_length      = absint( $settings['max_message_length'] ?? 1000 );
 					<!-- Loading Indicator (Hidden by default) -->
 					<div class="gca-loading" aria-live="polite" aria-hidden="true" style="display: none;">
 						<div class="gca-message__avatar" aria-hidden="true">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<rect x="3" y="8" width="18" height="12" rx="2"></rect>
-								<path d="M12 2v6"></path>
-							</svg>
+							<?php if ( ! empty( $avatar_url ) ) : ?>
+								<img src="<?php echo esc_url( $avatar_url ); ?>" alt="" class="gca-avatar-img" />
+							<?php else : ?>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="3" y="8" width="18" height="12" rx="2"></rect>
+									<path d="M12 2v6"></path>
+								</svg>
+							<?php endif; ?>
 						</div>
 						<div class="gca-loading__bubble">
 							<span class="gca-loading__dot"></span>

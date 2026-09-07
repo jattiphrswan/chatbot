@@ -1060,3 +1060,333 @@
 .gca-admin-progress-fill--muted {
 	background: #8c8f94;
 }
+
+/* -------------------------------------------------------------------------
+ * Appearance Builder (N13)
+ * ------------------------------------------------------------------------- */
+.gca-admin-appearance-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 360px;
+	gap: 24px;
+	align-items: flex-start;
+	margin-top: 16px;
+}
+
+@media (max-width: 1080px) {
+	.gca-admin-appearance-layout {
+		grid-template-columns: 1fr;
+	}
+}
+
+.gca-admin-appearance-controls {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+/* Color Grid */
+.gca-color-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 16px;
+	margin-top: 8px;
+}
+
+.gca-color-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.gca-color-field label {
+	font-size: 12px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.gca-color-input-wrap {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.gca-color-picker-native {
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border: 1px solid #8c8f94;
+	border-radius: 6px;
+	cursor: pointer;
+	background: none;
+}
+
+.gca-color-picker-native::-webkit-color-swatch-wrapper {
+	padding: 2px;
+}
+
+.gca-color-picker-native::-webkit-color-swatch {
+	border: none;
+	border-radius: 4px;
+}
+
+.gca-color-hex {
+	font-family: monospace;
+	font-size: 13px;
+	text-transform: uppercase;
+	width: 100px !important;
+	height: 36px;
+	padding: 0 8px;
+}
+
+/* Avatar Uploader */
+.gca-avatar-uploader {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-top: 6px;
+}
+
+.gca-avatar-preview-box {
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	background: #f0f0f1;
+	border: 2px solid #dcdcde;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.gca-avatar-preview-box img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.gca-avatar-preview-box .dashicons {
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+	color: #8c8f94;
+}
+
+.gca-avatar-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* Icon Choices */
+.gca-icon-choices {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+	gap: 12px;
+	margin-top: 6px;
+}
+
+.gca-icon-choice {
+	cursor: pointer;
+}
+
+.gca-icon-choice input[type="radio"] {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.gca-icon-choice__box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 12px 8px;
+	border: 2px solid #dcdcde;
+	border-radius: 8px;
+	background: #ffffff;
+	text-align: center;
+	transition: all 0.15s ease;
+}
+
+.gca-icon-choice__box .dashicons {
+	font-size: 22px;
+	width: 22px;
+	height: 22px;
+	color: #50575e;
+}
+
+.gca-icon-choice__box span {
+	font-size: 12px;
+	font-weight: 500;
+	color: #2c3338;
+}
+
+.gca-icon-choice input[type="radio"]:checked + .gca-icon-choice__box {
+	border-color: #2271b1;
+	background: #f0f6fc;
+}
+
+.gca-icon-choice input[type="radio"]:checked + .gca-icon-choice__box .dashicons,
+.gca-icon-choice input[type="radio"]:checked + .gca-icon-choice__box span {
+	color: #2271b1;
+}
+
+/* Dimensions Grid */
+.gca-dimensions-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 16px;
+	margin-top: 8px;
+}
+
+/* Live Mock Preview */
+.gca-preview-card {
+	background: #ffffff;
+	border: 1px solid #c3c4c7;
+	border-radius: 12px;
+	padding: 20px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.gca-mock-preview-wrap {
+	border: 1px solid #dcdcde;
+	border-radius: 16px;
+	overflow: hidden;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+	margin-top: 14px;
+	background: #ffffff;
+	display: flex;
+	flex-direction: column;
+	min-height: 400px;
+	transition: border-radius 0.2s ease;
+}
+
+.gca-mock-header {
+	padding: 14px 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gca-mock-header__avatar {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.gca-mock-header__avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.gca-mock-header__avatar .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+.gca-mock-header__title {
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.gca-mock-header__status {
+	font-size: 11px;
+	opacity: 0.85;
+	margin-top: 2px;
+}
+
+.gca-mock-body {
+	padding: 16px;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 14px;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gca-mock-greeting strong {
+	font-size: 14px;
+	display: block;
+	margin-bottom: 4px;
+}
+
+.gca-mock-greeting p {
+	font-size: 12px;
+	margin: 0;
+	opacity: 0.85;
+	line-height: 1.4;
+}
+
+.gca-mock-bubbles {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.gca-mock-bubble {
+	padding: 10px 12px;
+	border-radius: 12px;
+	font-size: 12px;
+	line-height: 1.4;
+	max-width: 85%;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gca-mock-bubble--ai {
+	align-self: flex-start;
+	border-bottom-left-radius: 4px;
+}
+
+.gca-mock-bubble--user {
+	align-self: flex-end;
+	border-bottom-right-radius: 4px;
+}
+
+.gca-mock-btn {
+	padding: 10px 14px;
+	border-radius: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	text-align: center;
+	cursor: default;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gca-mock-launcher-wrap {
+	display: flex;
+	justify-content: flex-end;
+	padding-top: 8px;
+}
+
+.gca-mock-launcher {
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	cursor: default;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gca-mock-launcher .dashicons {
+	font-size: 22px;
+	width: 22px;
+	height: 22px;
+}

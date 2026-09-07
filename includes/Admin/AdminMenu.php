@@ -25,6 +25,7 @@ class AdminMenu {
 	public const MAIN_MENU_SLUG          = 'gemini-chat-assistant';
 	public const CONVERSATIONS_MENU_SLUG = 'gca-conversations';
 	public const ANALYTICS_MENU_SLUG     = 'gca-analytics';
+	public const APPEARANCE_MENU_SLUG    = 'gca-appearance';
 	public const SETTINGS_MENU_SLUG      = 'gca-settings';
 
 	private ConversationRepository $conversation_repo;
@@ -60,6 +61,9 @@ class AdminMenu {
 		add_action( 'admin_post_gca_delete_conversation', [ $this, 'handle_delete_conversation' ] );
 		add_action( 'admin_post_gca_close_conversation', [ $this, 'handle_close_conversation' ] );
 		add_action( 'admin_post_gca_reopen_conversation', [ $this, 'handle_reopen_conversation' ] );
+
+		// Admin post action hooks for appearance
+		add_action( 'admin_post_gca_reset_appearance', [ $this, 'handle_reset_appearance' ] );
 	}
 
 	/**
@@ -105,6 +109,15 @@ class AdminMenu {
 
 		add_submenu_page(
 			self::MAIN_MENU_SLUG,
+			__( 'Appearance', 'gemini-chat-assistant' ),
+			__( 'Appearance', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::APPEARANCE_MENU_SLUG,
+			[ $this, 'render_appearance_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
 			__( 'Settings', 'gemini-chat-assistant' ),
 			__( 'Settings', 'gemini-chat-assistant' ),
 			'manage_options',
@@ -140,6 +153,8 @@ class AdminMenu {
 			'gemini-chat-assistant_page_' . self::CONVERSATIONS_MENU_SLUG,
 			'gemini-chat_page_' . self::ANALYTICS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::ANALYTICS_MENU_SLUG,
+			'gemini-chat_page_' . self::APPEARANCE_MENU_SLUG,
+			'gemini-chat-assistant_page_' . self::APPEARANCE_MENU_SLUG,
 			'gemini-chat_page_' . self::SETTINGS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::SETTINGS_MENU_SLUG,
 		];
@@ -159,6 +174,17 @@ class AdminMenu {
 			wp_enqueue_script(
 				'gca-admin-settings',
 				GCA_PLUGIN_URL . 'admin/js/admin-settings.js',
+				[],
+				GCA_VERSION,
+				true
+			);
+		}
+
+		if ( false !== strpos( $hook_suffix, self::APPEARANCE_MENU_SLUG ) ) {
+			wp_enqueue_media();
+			wp_enqueue_script(
+				'gca-admin-appearance',
+				GCA_PLUGIN_URL . 'admin/js/admin-appearance.js',
 				[],
 				GCA_VERSION,
 				true
@@ -308,6 +334,35 @@ class AdminMenu {
 		$conversations_url  = admin_url( 'admin.php?page=' . self::CONVERSATIONS_MENU_SLUG );
 
 		include GCA_PLUGIN_DIR . 'templates/admin/analytics.php';
+	}
+
+	/**
+	 * Renders the appearance builder page view.
+	 */
+	public function render_appearance_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$settings = SettingsService::get_all();
+
+		include GCA_PLUGIN_DIR . 'templates/admin/appearance.php';
+	}
+
+	/**
+	 * Handles POST action to reset appearance settings to default values.
+	 */
+	public function handle_reset_appearance(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		check_admin_referer( 'gca_reset_appearance' );
+
+		AppearanceService::reset_to_defaults();
+
+		wp_safe_redirect( add_query_arg( [ 'page' => self::APPEARANCE_MENU_SLUG, 'reset' => 1 ], admin_url( 'admin.php' ) ) );
+		exit;
 	}
 
 	/**

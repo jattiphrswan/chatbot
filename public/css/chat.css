@@ -199,6 +199,14 @@
 	justify-content: center;
 	color: #ffffff;
 	flex-shrink: 0;
+	overflow: hidden;
+}
+
+.gca-avatar-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: inherit;
 }
 
 .gca-header__title {

@@ -105,6 +105,7 @@ class Plugin {
 		// Admin & Settings Services.
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/SettingsService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/AnalyticsService.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Admin/AppearanceService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/AdminMenu.php';
 
 		// Load Gemini API Client.

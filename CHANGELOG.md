@@ -5,6 +5,19 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N13] - 2026-09-07
+### Added
+- Native WordPress Appearance Builder module (`templates/admin/appearance.php`, `admin/js/admin-appearance.js`) accessible via submenu `Gemini Chat -> Appearance` (`gca-appearance`).
+- Chatbot identity controls including Assistant Name, Greeting headline, Welcome description, and Avatar / Logo upload using the native WordPress Media Library modal (`wp.media`) with instant preview and removal.
+- Comprehensive color palette controls with two-way synchronization between native HTML5 color pickers and validated 6-digit hex input fields: Primary Accent, Header Background, Header Text, Panel Background, Main Body Text, Assistant Bubble Background/Text, User Bubble Background/Text, Button Background/Text, and Launcher Button Background/Icon.
+- Layout, dimension, and launcher customization: Screen Position (`bottom-right`, `bottom-left`), Launcher Icon choices (`chat`, `message`, `headset`, `sparkle`), clamped Desktop Panel Width (320–600px), clamped Desktop Panel Height (450–850px), Border Radius (0–40px), and Launcher Button Diameter (44–80px).
+- Device and responsive viewport visibility controls: Desktop (>1024px), Tablet (601px–1024px), and Mobile (<=600px, fullscreen responsive mode).
+- Dynamic, scoped CSS custom variable generation (`includes/Admin/AppearanceService.php`) injected cleanly via `wp_add_inline_style()` on frontend asset enqueuing with zero custom CSS textareas.
+- Interactive live admin preview sidebar card reflecting all branding text, custom colors, border curvature, launcher icon, and avatar changes in real time without external Gemini API calls.
+- Safe Reset to Defaults administrative action (`admin_post_gca_reset_appearance`) resetting all appearance attributes to defaults while strictly preserving AI model, rate limits, API keys, and message storage settings.
+- Dashboard integration with Quick Actions linking to Appearance customizer and updated Roadmap status card.
+- Comprehensive unit and mock test suite in `tests/test-appearance.php`.
+
 ## [1.0.0-N12] - 2026-09-07
 ### Added
 - Native WordPress Admin Analytics & Insights module (`templates/admin/analytics.php`) accessible via submenu `Gemini Chat -> Analytics` (`gca-analytics`).

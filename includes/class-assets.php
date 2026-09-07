@@ -8,6 +8,7 @@
 namespace SkyFish\GeminiChat;
 
 use SkyFish\GeminiChat\Admin\SettingsService;
+use SkyFish\GeminiChat\Admin\AppearanceService;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -44,6 +45,13 @@ class Assets {
 			[],
 			$version
 		);
+
+		// Apply scoped appearance CSS variables.
+		$settings   = SettingsService::get_all();
+		$inline_css = AppearanceService::generate_inline_css( $settings );
+		if ( ! empty( $inline_css ) ) {
+			wp_add_inline_style( self::CSS_HANDLE, $inline_css );
+		}
 
 		wp_register_script(
 			self::JS_HANDLE,
@@ -91,7 +99,9 @@ class Assets {
 	 * @return array<string, mixed>
 	 */
 	public static function get_localized_config(): array {
-		$settings = SettingsService::get_all();
+		$settings   = SettingsService::get_all();
+		$avatar_id  = absint( $settings['avatar_id'] ?? 0 );
+		$avatar_url = AppearanceService::get_avatar_url( $avatar_id );
 
 		return [
 			'restUrl'          => esc_url_raw( rest_url( 'gca/v1' ) ),
@@ -99,6 +109,7 @@ class Assets {
 			'greeting'         => esc_html( (string) ( $settings['greeting'] ?? 'Welcome!' ) ),
 			'welcomeMessage'   => esc_html( (string) ( $settings['welcome_message'] ?? 'Hi! How can I help you today?' ) ),
 			'placeholder'      => esc_attr( (string) ( $settings['placeholder'] ?? 'Type your message...' ) ),
+			'avatarUrl'        => esc_url( $avatar_url ),
 			'maxMessageLength' => absint( $settings['max_message_length'] ?? 1000 ),
 			'widgetEnabled'    => (bool) ( $settings['widget_enabled'] ?? true ),
 			'enabled'          => (bool) ( $settings['enabled'] ?? true ),

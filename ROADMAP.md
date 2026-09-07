@@ -24,6 +24,9 @@ flowchart TD
     N10 --> N11
     N3 --> N12[N12: Analytics & Insights]
     N10 --> N12
+    N2 --> N13[N13: Appearance Builder]
+    N6 --> N13
+    N10 --> N13
 ```
 
 ## 2. Approved Node Breakdown
@@ -43,3 +46,4 @@ flowchart TD
 | **N10** | **Admin Dashboard Shell** | Top-level Gemini Chat menu, Dashboard overview, system status cards, setup checklist, quick actions, scoped admin styles. | **COMPLETED** |
 | **N11** | **Conversation Management** | Secure WordPress Admin conversation module (Conversations submenu `gca-conversations`, server-side pagination, search/filtering, transcript thread view, close/reopen/delete actions with cascading message cleanup). | **COMPLETED** |
 | **N12** | **Analytics & Insights** | Native WordPress Analytics module (Analytics submenu `gca-analytics`, date range filtering, real KPI aggregates, daily activity charts, status & audience & model breakdowns). | **COMPLETED** |
+| **N13** | **Appearance Builder** | WordPress-native visual customizer (`gca-appearance`), live mock preview, avatar upload via Media Library, color palette, dimensions/radius clamping, launcher icons, device visibility, safe CSS variable injection, reset to defaults. | **COMPLETED** |
