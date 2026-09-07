@@ -1,0 +1,98 @@
+gemini-chat-assistant/
+├── .github/
+│   └── workflows/
+│       ├── lint.yml
+│       └── test.yml
+├── assets/
+│   ├── css/
+│   │   ├── admin-dashboard.css
+│   │   └── frontend-chat.css
+│   ├── js/
+│   │   ├── admin-dashboard.js
+│   │   └── frontend-chat.js
+│   └── images/
+│       ├── icon-128x128.png
+│       └── icon-256x256.png
+├── includes/
+│   ├── Admin/
+│   │   ├── AdminMenu.php
+│   │   ├── SettingsPage.php
+│   │   ├── LogsPage.php
+│   │   └── HealthPage.php
+│   ├── Core/
+│   │   ├── Activator.php
+│   │   ├── Deactivator.php
+│   │   ├── Uninstaller.php
+│   │   ├── Plugin.php
+│   │   └── I18n.php
+│   ├── Database/
+│   │   ├── Migrator.php
+│   │   ├── ConversationRepository.php
+│   │   ├── MessageRepository.php
+│   │   └── LogRepository.php
+│   ├── REST/
+│   │   ├── RestServer.php
+│   │   ├── ChatController.php
+│   │   ├── HealthController.php
+│   │   └── SettingsController.php
+│   ├── Security/
+│   │   ├── Encryption.php
+│   │   ├── RateLimiter.php
+│   │   └── NonceValidator.php
+│   ├── Services/
+│   │   ├── GeminiClient.php
+│   │   ├── ContextManager.php
+│   │   ├── TokenCounter.php
+│   │   └── PromptBuilder.php
+│   └── Shortcode/
+│       └── ChatShortcode.php
+├── templates/
+│   ├── admin/
+│   │   ├── dashboard.php
+│   │   ├── settings.php
+│   │   ├── logs.php
+│   │   └── health.php
+│   └── frontend/
+│       ├── chat-widget.php
+│       └── chat-popup.php
+├── tests/
+│   ├── Unit/
+│   │   ├── GeminiClientTest.php
+│   │   ├── RateLimiterTest.php
+│   │   ├── EncryptionTest.php
+│   │   └── ContextManagerTest.php
+│   ├── Integration/
+│   │   ├── RestRoutesTest.php
+│   │   ├── ShortcodeTest.php
+│   │   └── DatabaseMigrationTest.php
+│   └── bootstrap.php
+├── vendor/
+├── .editorconfig
+├── .gitignore
+├── .phpcs.xml.dist
+├── API_CONTRACT.md
+├── ARCHITECTURE.md
+├── CHANGELOG.md
+├── COMPONENTS.md
+├── COMPONENT_INVENTORY.md
+├── composer.json
+├── CONTRIBUTING.md
+├── DB_SHAPES.md
+├── DESIGN_SYSTEM.md
+├── EDITING_GUIDE.md
+├── gemini-chat-assistant.php
+├── ISSUE_TRACKER.md
+├── LICENSE
+├── manifest.json
+├── MASTER_BUILD_PROMPT.md
+├── package.json
+├── phpunit.xml.dist
+├── PLUGIN_TREE.txt
+├── PROJECT_INSTRUCTIONS.md
+├── PROJECT_OVERVIEW.md
+├── README.md
+├── ROADMAP.md
+├── SCHEMA_INVENTORY.md
+├── SECURITY.md
+├── TESTING.md
+└── uninstall.php
