@@ -112,27 +112,7 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 +-------------------------------------------------------------+
 ```
 
-## 4. Multi-Provider AI Architecture
-
-```
-Browser
-  ↓
-WordPress Chat Layer
-  ↓
-ProviderRegistry
-  ↓
-ProviderInterface
-  ├── GeminiProvider
-  ├── OpenAIProvider
-  └── ClaudeProvider
-```
-
-The system employs a provider abstraction layer decoupling conversational controllers from concrete AI vendor SDKs. The `ProviderRegistry` resolves implementations of `ProviderInterface` (`GeminiProvider`, `OpenAIProvider`, `ClaudeProvider`) dynamically based on administrator configuration, ensuring normalized input formatting and response structures via `ProviderResponse`.
-
-> **V1 IMPLEMENTATION STATUS:**
-> In production v1 (N0 through N16), `ChatService` operates strictly and exclusively with Google Gemini through `GeminiClient`. Multi-provider routing, external OpenAI/Claude keys, and non-Gemini SDKs are not active in runtime.
-
-## 5. FAQ & WordPress-Native RAG Architecture (Node N16)
+## 4. FAQ & WordPress-Native RAG Architecture (Node N16)
 
 ```
 Visitor Question
