@@ -34,9 +34,11 @@
 .gca-launcher {
 	position: fixed;
 	bottom: 24px;
-	right: 24px;
+	inset-inline-end: 24px;
 	width: 56px;
 	height: 56px;
+	min-width: 44px;
+	min-height: 44px;
 	border-radius: var(--gca-radius-full);
 	background-color: var(--gca-primary);
 	color: #ffffff;
@@ -82,6 +84,38 @@
 	display: flex;
 }
 
+/* Unread Badge */
+.gca-launcher__badge {
+	position: absolute;
+	top: -4px;
+	inset-inline-end: -4px;
+	min-width: 20px;
+	height: 20px;
+	padding-inline: 5px;
+	border-radius: var(--gca-radius-full);
+	background-color: #ef4444;
+	color: #ffffff;
+	font-size: 11px;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	border: 2px solid #ffffff;
+	animation: gcaBadgePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes gcaBadgePop {
+	0% {
+		transform: scale(0);
+		opacity: 0;
+	}
+	100% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
 /* -------------------------------------------------------------------------
  * Widget Container
  * ------------------------------------------------------------------------- */
@@ -107,7 +141,7 @@
 .gca-widget--floating {
 	position: fixed;
 	bottom: 92px;
-	right: 24px;
+	inset-inline-end: 24px;
 	width: 380px;
 	height: min(600px, calc(100dvh - 120px));
 	border-radius: var(--gca-radius);
@@ -204,6 +238,8 @@
 	border-radius: var(--gca-radius-full);
 	width: 32px;
 	height: 32px;
+	min-width: 32px;
+	min-height: 32px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -347,7 +383,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	margin-left: 8px;
+	margin-inline-start: 8px;
 	transition: transform 0.2s ease, color 0.2s ease;
 }
 
@@ -370,6 +406,7 @@
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	position: relative;
 }
 
 .gca-messages {
@@ -388,6 +425,7 @@
 	gap: 8px;
 	max-width: 85%;
 	word-break: break-word;
+	overflow-wrap: anywhere;
 	align-items: flex-end;
 }
 
@@ -477,6 +515,39 @@
 	}
 }
 
+/* Floating Scroll-to-Bottom Button */
+.gca-scroll-bottom {
+	position: absolute;
+	bottom: 64px;
+	left: 50%;
+	transform: translateX(-50%);
+	background-color: var(--gca-surface);
+	color: var(--gca-primary);
+	border: 1px solid var(--gca-border);
+	border-radius: var(--gca-radius-full);
+	padding: 6px 14px;
+	font-size: 12px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	box-shadow: var(--gca-shadow-md);
+	cursor: pointer;
+	z-index: 10;
+	transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gca-scroll-bottom:hover {
+	background-color: #f8fafc;
+	transform: translateX(-50%) translateY(-2px);
+	box-shadow: var(--gca-shadow-lg);
+}
+
+.gca-scroll-bottom:focus-visible {
+	outline: 2px solid var(--gca-primary);
+	outline-offset: 2px;
+}
+
 /* Error Notice Banner */
 .gca-error-notice {
 	background-color: #fef2f2;
@@ -487,6 +558,38 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
+}
+
+.gca-error-notice__icon {
+	flex-shrink: 0;
+}
+
+.gca-error-notice__text {
+	flex: 1;
+	line-height: 1.4;
+}
+
+.gca-error-notice__retry {
+	margin-inline-start: auto;
+	background: transparent;
+	border: 1px solid #f87171;
+	color: #b91c1c;
+	border-radius: var(--gca-radius-sm);
+	padding: 4px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+	flex-shrink: 0;
+}
+
+.gca-error-notice__retry:hover {
+	background-color: #fee2e2;
+}
+
+.gca-error-notice__retry:focus-visible {
+	outline: 2px solid #b91c1c;
+	outline-offset: 1px;
 }
 
 /* Composer Form */
@@ -510,7 +613,7 @@
 	line-height: 1.4;
 	resize: none;
 	outline: none;
-	max-height: 100px;
+	max-height: 120px;
 	min-height: 38px;
 	color: var(--gca-text-primary);
 	background-color: #fafafa;
@@ -523,8 +626,10 @@
 }
 
 .gca-composer__send {
-	width: 36px;
-	height: 36px;
+	width: 38px;
+	height: 38px;
+	min-width: 38px;
+	min-height: 38px;
 	border-radius: var(--gca-radius-full);
 	background-color: var(--gca-primary);
 	color: #ffffff;
@@ -549,6 +654,106 @@
 }
 
 .gca-composer__send:focus-visible {
+	outline: 2px solid var(--gca-primary);
+	outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------
+ * Reset Confirmation Dialog
+ * ------------------------------------------------------------------------- */
+.gca-confirm-dialog {
+	position: absolute;
+	inset: 0;
+	z-index: 50;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+}
+
+.gca-confirm-dialog__backdrop {
+	position: absolute;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.45);
+	backdrop-filter: blur(2px);
+}
+
+.gca-confirm-dialog__card {
+	position: relative;
+	background-color: var(--gca-surface);
+	border: 1px solid var(--gca-border);
+	border-radius: var(--gca-radius);
+	padding: 22px;
+	width: 100%;
+	max-width: 290px;
+	box-shadow: var(--gca-shadow-lg);
+	text-align: center;
+	animation: gcaDialogIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes gcaDialogIn {
+	0% {
+		opacity: 0;
+		transform: scale(0.92);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+.gca-confirm-dialog__title {
+	margin: 0 0 8px;
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--gca-text-primary);
+}
+
+.gca-confirm-dialog__text {
+	margin: 0 0 18px;
+	font-size: 13px;
+	color: var(--gca-text-secondary);
+	line-height: 1.45;
+}
+
+.gca-confirm-dialog__actions {
+	display: flex;
+	gap: 10px;
+	justify-content: center;
+}
+
+.gca-confirm-dialog__btn {
+	flex: 1;
+	padding: 8px 14px;
+	border-radius: var(--gca-radius-sm);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	border: none;
+	transition: background-color 0.15s ease, transform 0.1s ease;
+	min-height: 38px;
+}
+
+.gca-confirm-dialog__btn--cancel {
+	background-color: var(--gca-border-subtle);
+	color: var(--gca-text-primary);
+	border: 1px solid var(--gca-border);
+}
+
+.gca-confirm-dialog__btn--cancel:hover {
+	background-color: #e5e7eb;
+}
+
+.gca-confirm-dialog__btn--confirm {
+	background-color: #ef4444;
+	color: #ffffff;
+}
+
+.gca-confirm-dialog__btn--confirm:hover {
+	background-color: #dc2626;
+}
+
+.gca-confirm-dialog__btn:focus-visible {
 	outline: 2px solid var(--gca-primary);
 	outline-offset: 2px;
 }
@@ -582,6 +787,7 @@
 	cursor: pointer;
 	transition: color 0.15s ease;
 	padding: 4px 0;
+	min-height: 44px;
 }
 
 .gca-nav__btn:hover {
@@ -599,7 +805,7 @@
 }
 
 /* -------------------------------------------------------------------------
- * Accessibility Helpers
+ * Accessibility Helpers & Reduced Motion
  * ------------------------------------------------------------------------- */
 .gca-sr-only {
 	position: absolute;
@@ -611,6 +817,25 @@
 	clip: rect(0, 0, 0, 0);
 	white-space: nowrap;
 	border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.gca-widget,
+	.gca-launcher,
+	.gca-screen,
+	.gca-start-card,
+	.gca-btn-action,
+	.gca-composer__send,
+	.gca-scroll-bottom,
+	.gca-confirm-dialog__card,
+	.gca-launcher__badge {
+		transition: none !important;
+		animation: none !important;
+	}
+
+	.gca-messages {
+		scroll-behavior: auto !important;
+	}
 }
 
 /* -------------------------------------------------------------------------
@@ -627,10 +852,12 @@
 		max-height: 100dvh !important;
 		border-radius: 0 !important;
 		border: none !important;
+		padding-top: env(safe-area-inset-top, 0);
+		padding-bottom: env(safe-area-inset-bottom, 0);
 	}
 
 	.gca-launcher {
 		bottom: 16px;
-		right: 16px;
+		inset-inline-end: 16px;
 	}
 }

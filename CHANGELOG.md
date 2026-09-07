@@ -5,6 +5,18 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N9] - 2026-09-07
+### Added
+- Production-grade frontend client (`public/js/chat.js`) with explicit UX State Model (`isOpen`, `activeScreen`, `isSending`, `unreadCount`, `lastFailedMessage`, `rateLimitRemaining`, `userScrolledUp`).
+- Unread message badge on floating launcher incrementing on background assistant responses and clearing on panel open.
+- Autoscroll engine with user scroll intent detection and smooth scroll-to-bottom floating action control.
+- Rate limit countdown timer handling HTTP 429 `Retry-After` windows with live seconds display.
+- One-click retry flow for network/upstream failures without message duplication.
+- Reset conversation confirmation modal preventing accidental session loss.
+- IME composition safety (`isComposing` and keyCode 229 checks) preventing premature submission during multilingual input.
+- Scoped CSS enhancements in `public/css/chat.css` supporting `100dvh` mobile viewports, mobile safe areas (`env(safe-area-inset)`), and `@media (prefers-reduced-motion: reduce)`.
+- Standalone test suite in `tests/test-chat-ux.php`.
+
 ## [1.0.0-N8] - 2026-09-07
 ### Added
 - Dual-tier transient rate limiter (`includes/class-rate-limiter.php`) enforcing 5-minute and 1-hour session limits with secondary privacy-safe hashed-IP abuse ceiling.

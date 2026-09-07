@@ -37,6 +37,7 @@ $max_length      = absint( $settings['max_message_length'] ?? 1000 );
 	aria-expanded="false"
 	aria-label="<?php esc_attr_e( 'Open chat assistant', 'gemini-chat-assistant' ); ?>"
 >
+	<span class="gca-launcher__badge" aria-hidden="true" style="display: none;">0</span>
 	<span class="gca-launcher__icon gca-launcher__icon--open" aria-hidden="true">
 		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -181,7 +182,19 @@ $max_length      = absint( $settings['max_message_length'] ?? 1000 );
 				<div class="gca-error-notice" role="alert" style="display: none;">
 					<span class="gca-error-notice__icon" aria-hidden="true">⚠️</span>
 					<span class="gca-error-notice__text"></span>
+					<button type="button" class="gca-error-notice__retry" style="display: none;">
+						<?php esc_html_e( 'Try Again', 'gemini-chat-assistant' ); ?>
+					</button>
 				</div>
+
+				<!-- Floating Scroll-to-Bottom Button -->
+				<button type="button" class="gca-scroll-bottom" aria-label="<?php esc_attr_e( 'Scroll to latest messages', 'gemini-chat-assistant' ); ?>" style="display: none;">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<line x1="12" y1="5" x2="12" y2="19"></line>
+						<polyline points="19 12 12 19 5 12"></polyline>
+					</svg>
+					<span><?php esc_html_e( 'New messages', 'gemini-chat-assistant' ); ?></span>
+				</button>
 
 				<!-- Composer -->
 				<form class="gca-composer" onsubmit="return false;">
@@ -205,6 +218,19 @@ $max_length      = absint( $settings['max_message_length'] ?? 1000 );
 				</form>
 			</div>
 		</section>
+
+		<!-- Reset Confirmation Dialog Overlay -->
+		<div class="gca-confirm-dialog" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Reset Conversation Confirmation', 'gemini-chat-assistant' ); ?>" style="display: none;">
+			<div class="gca-confirm-dialog__backdrop"></div>
+			<div class="gca-confirm-dialog__card">
+				<h4 class="gca-confirm-dialog__title"><?php esc_html_e( 'Start a new conversation?', 'gemini-chat-assistant' ); ?></h4>
+				<p class="gca-confirm-dialog__text"><?php esc_html_e( 'This will clear the current chat from this screen.', 'gemini-chat-assistant' ); ?></p>
+				<div class="gca-confirm-dialog__actions">
+					<button type="button" class="gca-confirm-dialog__btn gca-confirm-dialog__btn--cancel"><?php esc_html_e( 'Cancel', 'gemini-chat-assistant' ); ?></button>
+					<button type="button" class="gca-confirm-dialog__btn gca-confirm-dialog__btn--confirm"><?php esc_html_e( 'New Chat', 'gemini-chat-assistant' ); ?></button>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<!-- Bottom Navigation Bar -->
@@ -213,6 +239,7 @@ $max_length      = absint( $settings['max_message_length'] ?? 1000 );
 			type="button"
 			class="gca-nav__btn gca-nav__btn--home gca-nav__btn--active"
 			data-target="home"
+			aria-current="page"
 			aria-label="<?php esc_attr_e( 'Navigate to Home screen', 'gemini-chat-assistant' ); ?>"
 		>
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
