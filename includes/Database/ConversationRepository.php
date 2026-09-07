@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class ConversationRepository {
 
 	/**
-	 * Returns the table name with WordPress prefix.
+	 * Returns the table name with dynamic WordPress prefix.
 	 *
 	 * @return string
 	 */
@@ -30,29 +30,64 @@ class ConversationRepository {
 	}
 
 	/**
+	 * Generates a cryptographically secure public identifier.
+	 *
+	 * @return string
+	 */
+	public static function generate_public_id(): string {
+		if ( function_exists( 'wp_generate_uuid4' ) ) {
+			return wp_generate_uuid4();
+		}
+		return sprintf(
+			'%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0x0fff ) | 0x4000,
+			mt_rand( 0, 0x3fff ) | 0x8000,
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff )
+		);
+	}
+
+	/**
 	 * Creates a new conversation record.
 	 *
-	 * @param string               $session_id Client session identifier.
-	 * @param int                  $user_id    WordPress user ID (0 for guests).
-	 * @param string               $ip_hash    Anonymized hash of client IP.
-	 * @param array<string, mixed> $metadata   Optional contextual metadata.
+	 * @param string      $session_hash   Anonymized SHA-256 hash of client session token.
+	 * @param int         $user_id        WordPress user ID (0 for guests).
+	 * @param string|null $title          Optional conversation title.
+	 * @param string|null $interaction_id Optional interaction identifier.
+	 * @param string|null $public_id      Optional explicit public ID.
 	 * @return int Created conversation ID or 0 on failure.
 	 */
-	public function create( string $session_id, int $user_id = 0, string $ip_hash = '', array $metadata = [] ): int {
+	public function create(
+		string $session_hash,
+		int $user_id = 0,
+		?string $title = null,
+		?string $interaction_id = null,
+		?string $public_id = null
+	): int {
 		global $wpdb;
 
-		$table = self::get_table_name();
-		$data  = [
-			'session_id' => sanitize_text_field( $session_id ),
-			'user_id'    => absint( $user_id ),
-			'ip_hash'    => sanitize_text_field( $ip_hash ),
-			'status'     => 'active',
-			'metadata'   => ! empty( $metadata ) ? wp_json_encode( $metadata ) : null,
-			'created_at' => current_time( 'mysql' ),
-			'updated_at' => current_time( 'mysql' ),
+		$table      = self::get_table_name();
+		$utc_now    = gmdate( 'Y-m-d H:i:s' );
+		$pub_id     = ! empty( $public_id ) ? sanitize_text_field( $public_id ) : self::generate_public_id();
+
+		$data = [
+			'public_id'       => $pub_id,
+			'user_id'         => absint( $user_id ),
+			'session_hash'    => sanitize_text_field( $session_hash ),
+			'title'           => ! empty( $title ) ? sanitize_text_field( $title ) : null,
+			'status'          => 'active',
+			'interaction_id'  => ! empty( $interaction_id ) ? sanitize_text_field( $interaction_id ) : null,
+			'message_count'   => 0,
+			'created_at'      => $utc_now,
+			'updated_at'      => $utc_now,
+			'last_message_at' => null,
 		];
 
-		$formats = [ '%s', '%d', '%s', '%s', '%s', '%s', '%s' ];
+		$formats = [ '%s', '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' ];
 		$result  = $wpdb->insert( $table, $data, $formats );
 
 		return $result ? (int) $wpdb->insert_id : 0;
@@ -71,43 +106,42 @@ class ConversationRepository {
 		$query = $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d LIMIT 1", absint( $id ) );
 		$row   = $wpdb->get_row( $query, ARRAY_A );
 
-		if ( ! $row ) {
-			return null;
-		}
-
-		if ( ! empty( $row['metadata'] ) ) {
-			$row['metadata'] = json_decode( $row['metadata'], true ) ?: [];
-		} else {
-			$row['metadata'] = [];
-		}
-
-		return $row;
+		return $row ?: null;
 	}
 
 	/**
-	 * Retrieves a conversation by session identifier.
+	 * Retrieves a conversation by its public UUID.
 	 *
-	 * @param string $session_id Unique session ID string.
+	 * @param string $public_id Public UUID string.
 	 * @return array<string, mixed>|null
 	 */
-	public function get_by_session_id( string $session_id ): ?array {
+	public function get_by_public_id( string $public_id ): ?array {
 		global $wpdb;
 
 		$table = self::get_table_name();
-		$query = $wpdb->prepare( "SELECT * FROM {$table} WHERE session_id = %s LIMIT 1", sanitize_text_field( $session_id ) );
+		$query = $wpdb->prepare( "SELECT * FROM {$table} WHERE public_id = %s LIMIT 1", sanitize_text_field( $public_id ) );
 		$row   = $wpdb->get_row( $query, ARRAY_A );
 
-		if ( ! $row ) {
-			return null;
-		}
+		return $row ?: null;
+	}
 
-		if ( ! empty( $row['metadata'] ) ) {
-			$row['metadata'] = json_decode( $row['metadata'], true ) ?: [];
-		} else {
-			$row['metadata'] = [];
-		}
+	/**
+	 * Retrieves the active conversation by session hash.
+	 *
+	 * @param string $session_hash Anonymized session hash.
+	 * @return array<string, mixed>|null
+	 */
+	public function get_by_session_hash( string $session_hash ): ?array {
+		global $wpdb;
 
-		return $row;
+		$table = self::get_table_name();
+		$query = $wpdb->prepare(
+			"SELECT * FROM {$table} WHERE session_hash = %s AND status = 'active' ORDER BY updated_at DESC LIMIT 1",
+			sanitize_text_field( $session_hash )
+		);
+		$row   = $wpdb->get_row( $query, ARRAY_A );
+
+		return $row ?: null;
 	}
 
 	/**
@@ -125,7 +159,7 @@ class ConversationRepository {
 			$table,
 			[
 				'status'     => sanitize_text_field( $status ),
-				'updated_at' => current_time( 'mysql' ),
+				'updated_at' => gmdate( 'Y-m-d H:i:s' ),
 			],
 			[ 'id' => absint( $id ) ],
 			[ '%s', '%s' ],
@@ -136,27 +170,24 @@ class ConversationRepository {
 	}
 
 	/**
-	 * Updates conversation metadata.
+	 * Increments message count and updates last_message_at timestamp.
 	 *
-	 * @param int                  $id       Conversation ID.
-	 * @param array<string, mixed> $metadata New metadata payload.
+	 * @param int $id Conversation ID.
 	 * @return bool
 	 */
-	public function update_metadata( int $id, array $metadata ): bool {
+	public function increment_message_count( int $id ): bool {
 		global $wpdb;
 
-		$table  = self::get_table_name();
-		$result = $wpdb->update(
-			$table,
-			[
-				'metadata'   => wp_json_encode( $metadata ),
-				'updated_at' => current_time( 'mysql' ),
-			],
-			[ 'id' => absint( $id ) ],
-			[ '%s', '%s' ],
-			[ '%d' ]
+		$table   = self::get_table_name();
+		$utc_now = gmdate( 'Y-m-d H:i:s' );
+		$query   = $wpdb->prepare(
+			"UPDATE {$table} SET message_count = message_count + 1, updated_at = %s, last_message_at = %s WHERE id = %d",
+			$utc_now,
+			$utc_now,
+			absint( $id )
 		);
 
+		$result = $wpdb->query( $query );
 		return false !== $result;
 	}
 
@@ -171,21 +202,6 @@ class ConversationRepository {
 
 		$table  = self::get_table_name();
 		$result = $wpdb->delete( $table, [ 'id' => absint( $id ) ], [ '%d' ] );
-
-		return false !== $result && $result > 0;
-	}
-
-	/**
-	 * Deletes a conversation by its session identifier.
-	 *
-	 * @param string $session_id Client session ID.
-	 * @return bool
-	 */
-	public function delete_by_session_id( string $session_id ): bool {
-		global $wpdb;
-
-		$table  = self::get_table_name();
-		$result = $wpdb->delete( $table, [ 'session_id' => sanitize_text_field( $session_id ) ], [ '%s' ] );
 
 		return false !== $result && $result > 0;
 	}

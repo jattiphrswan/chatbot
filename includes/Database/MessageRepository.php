@@ -19,8 +19,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MessageRepository {
 
+	public const ALLOWED_ROLES = [ 'user', 'assistant', 'system' ];
+
 	/**
-	 * Returns the table name with WordPress prefix.
+	 * Returns the table name with dynamic WordPress prefix.
 	 *
 	 * @return string
 	 */
@@ -33,35 +35,56 @@ class MessageRepository {
 	 * Inserts a message into the database.
 	 *
 	 * @param int         $conversation_id Associated conversation ID.
-	 * @param string      $role            Message role ('user', 'model', 'system').
+	 * @param string      $role            Message role ('user', 'assistant', 'system').
 	 * @param string      $content         Message content text.
-	 * @param int         $tokens          Tokens consumed if known.
-	 * @param string|null $finish_reason   Finish reason code if known.
+	 * @param string|null $model           Model identifier.
+	 * @param int         $input_tokens    Input tokens count.
+	 * @param int         $output_tokens   Output tokens count.
+	 * @param int         $latency_ms      API latency in milliseconds.
 	 * @return int Created message ID or 0 on failure.
+	 * @throws \InvalidArgumentException If role is invalid.
 	 */
 	public function create(
 		int $conversation_id,
 		string $role,
 		string $content,
-		int $tokens = 0,
-		?string $finish_reason = null
+		?string $model = null,
+		int $input_tokens = 0,
+		int $output_tokens = 0,
+		int $latency_ms = 0
 	): int {
 		global $wpdb;
+
+		$role = strtolower( trim( $role ) );
+		if ( ! in_array( $role, self::ALLOWED_ROLES, true ) ) {
+			throw new \InvalidArgumentException(
+				sprintf( 'Invalid message role "%s". Allowed roles are: %s', esc_html( $role ), implode( ', ', self::ALLOWED_ROLES ) )
+			);
+		}
 
 		$table = self::get_table_name();
 		$data  = [
 			'conversation_id' => absint( $conversation_id ),
-			'role'            => sanitize_text_field( $role ),
+			'role'            => $role,
 			'content'         => $content,
-			'tokens'          => absint( $tokens ),
-			'finish_reason'   => ! empty( $finish_reason ) ? sanitize_text_field( $finish_reason ) : null,
-			'created_at'      => current_time( 'mysql' ),
+			'model'           => ! empty( $model ) ? sanitize_text_field( $model ) : null,
+			'input_tokens'    => absint( $input_tokens ),
+			'output_tokens'   => absint( $output_tokens ),
+			'latency_ms'      => absint( $latency_ms ),
+			'created_at'      => gmdate( 'Y-m-d H:i:s' ),
 		];
 
-		$formats = [ '%d', '%s', '%s', '%d', '%s', '%s' ];
+		$formats = [ '%d', '%s', '%s', '%s', '%d', '%d', '%d', '%s' ];
 		$result  = $wpdb->insert( $table, $data, $formats );
 
-		return $result ? (int) $wpdb->insert_id : 0;
+		if ( $result ) {
+			// Increment conversation message count.
+			$conv_repo = new ConversationRepository();
+			$conv_repo->increment_message_count( $conversation_id );
+			return (int) $wpdb->insert_id;
+		}
+
+		return 0;
 	}
 
 	/**
@@ -107,32 +130,24 @@ class MessageRepository {
 	}
 
 	/**
-	 * Retrieves recent messages by session identifier.
+	 * Retrieves messages for a conversation formatted for context window.
 	 *
-	 * @param string $session_id Client session ID.
-	 * @param int    $limit      Max messages.
-	 * @return array<int, array<string, mixed>>
+	 * @param int $conversation_id Conversation ID.
+	 * @param int $limit           Maximum message turns.
+	 * @return array<int, array{role: string, content: string}>
 	 */
-	public function get_recent_messages_for_session( string $session_id, int $limit = 20 ): array {
-		global $wpdb;
+	public function get_context_messages( int $conversation_id, int $limit = 20 ): array {
+		$raw_messages = $this->get_by_conversation_id( $conversation_id, $limit, 'ASC' );
+		$context      = [];
 
-		$conv_table = ConversationRepository::get_table_name();
-		$msg_table  = self::get_table_name();
-		$limit      = max( 1, min( 100, absint( $limit ) ) );
+		foreach ( $raw_messages as $msg ) {
+			$context[] = [
+				'role'    => (string) $msg['role'],
+				'content' => (string) $msg['content'],
+			];
+		}
 
-		$query = $wpdb->prepare(
-			"SELECT m.* FROM {$msg_table} m
-			INNER JOIN {$conv_table} c ON m.conversation_id = c.id
-			WHERE c.session_id = %s
-			ORDER BY m.created_at ASC, m.id ASC
-			LIMIT %d",
-			sanitize_text_field( $session_id ),
-			$limit
-		);
-
-		$rows = $wpdb->get_results( $query, ARRAY_A );
-
-		return is_array( $rows ) ? $rows : [];
+		return $context;
 	}
 
 	/**

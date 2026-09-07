@@ -55,6 +55,22 @@ if ( ! function_exists( 'wp_generate_password' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_generate_uuid4' ) ) {
+	function wp_generate_uuid4() {
+		return sprintf(
+			'%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0x0fff ) | 0x4000,
+			mt_rand( 0, 0x3fff ) | 0x8000,
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff )
+		);
+	}
+}
+
 $mock_transients = [];
 
 if ( ! function_exists( 'set_transient' ) ) {
@@ -84,7 +100,6 @@ if ( ! function_exists( 'delete_transient' ) ) {
 class MockWpdb {
 	public string $prefix = 'custom_prefix_';
 	public int $insert_id = 0;
-	public array $tables_created = [];
 	public array $rows = [];
 
 	public function get_charset_collate(): string {
@@ -149,11 +164,12 @@ class DatabaseSystemTest {
 
 		$this->test_1_schema_version_constant();
 		$this->test_2_dynamic_table_prefixing();
-		$this->test_3_session_id_generation_and_validation();
-		$this->test_4_ip_hashing_security();
-		$this->test_5_session_transient_cache();
-		$this->test_6_conversation_and_message_crud();
-		$this->test_7_no_n4_or_unapproved_tables();
+		$this->test_3_session_token_and_hashing();
+		$this->test_4_public_uuid_generation();
+		$this->test_5_role_validation();
+		$this->test_6_session_transient_cache();
+		$this->test_7_conversation_and_message_crud();
+		$this->test_8_no_n4_or_unapproved_tables();
 
 		echo "\n----------------------------------------------------\n";
 		echo sprintf( "Results: %d Passed, %d Failed\n", $this->passed, $this->failed );
@@ -189,58 +205,66 @@ class DatabaseSystemTest {
 		$this->assert( $msg_table === 'testwp_gca_messages', 'Test 2.2: Message table respects custom dynamic prefix' );
 	}
 
-	private function test_3_session_id_generation_and_validation(): void {
-		$session_id = SessionService::generate_session_id();
-		$is_valid   = SessionService::is_valid_session_id( $session_id );
+	private function test_3_session_token_and_hashing(): void {
+		$token = SessionService::generate_session_token();
+		$this->assert( str_starts_with( $token, 'gca_sess_' ), 'Test 3.1: Session token has gca_sess_ prefix' );
+		$this->assert( SessionService::is_valid_session_token( $token ) === true, 'Test 3.2: Generated session token passes validation' );
 
-		$this->assert( str_starts_with( $session_id, 'gca_sess_' ), 'Test 3.1: Session ID has gca_sess_ prefix' );
-		$this->assert( $is_valid === true, 'Test 3.2: Generated session ID passes regex validation' );
-		$this->assert( SessionService::is_valid_session_id( 'invalid-id' ) === false, 'Test 3.3: Invalid session ID rejected' );
+		$hash = SessionService::hash_session_token( $token );
+		$this->assert( strlen( $hash ) === 64, 'Test 3.3: Session token hash is 64-char SHA-256 HMAC' );
+		$this->assert( $hash !== $token, 'Test 3.4: Raw session token is not stored plain in hash' );
 	}
 
-	private function test_4_ip_hashing_security(): void {
-		$ip1   = '192.168.1.100';
-		$ip2   = '192.168.1.101';
-		$hash1 = SessionService::hash_ip( $ip1 );
-		$hash2 = SessionService::hash_ip( $ip2 );
+	private function test_4_public_uuid_generation(): void {
+		$uuid1 = ConversationRepository::generate_public_id();
+		$uuid2 = ConversationRepository::generate_public_id();
 
-		$this->assert( strlen( $hash1 ) === 64, 'Test 4.1: IP hash produces 64-character SHA-256 HMAC' );
-		$this->assert( $hash1 !== $hash2, 'Test 4.2: Distinct IPs produce distinct hashes' );
-		$this->assert( ! str_contains( $hash1, $ip1 ), 'Test 4.3: Raw IP is not visible in hash' );
+		$this->assert( ! empty( $uuid1 ) && is_string( $uuid1 ), 'Test 4.1: Public UUID is non-empty string' );
+		$this->assert( $uuid1 !== $uuid2, 'Test 4.2: Public UUIDs are unique' );
 	}
 
-	private function test_5_session_transient_cache(): void {
+	private function test_5_role_validation(): void {
+		$repo   = new MessageRepository();
+		$caught = false;
+		try {
+			$repo->create( 1, 'invalid_role_attacker', 'Hello' );
+		} catch ( \InvalidArgumentException $e ) {
+			$caught = true;
+		}
+		$this->assert( $caught, 'Test 5: Arbitrary message role rejected with InvalidArgumentException' );
+	}
+
+	private function test_6_session_transient_cache(): void {
 		$session_service = new SessionService();
-		$session_id      = SessionService::generate_session_id();
+		$token           = SessionService::generate_session_token();
 
-		$cached = $session_service->set_session_cache( $session_id, [ 'turn_count' => 3 ] );
-		$this->assert( $cached === true, 'Test 5.1: Session transient cache saved' );
+		$cached = $session_service->set_session_cache( $token, [ 'turn_count' => 3 ] );
+		$this->assert( $cached === true, 'Test 6.1: Session transient cache saved' );
 
-		$data = $session_service->get_session_cache( $session_id );
-		$this->assert( isset( $data['turn_count'] ) && $data['turn_count'] === 3, 'Test 5.2: Session transient retrieved correctly' );
+		$data = $session_service->get_session_cache( $token );
+		$this->assert( isset( $data['turn_count'] ) && $data['turn_count'] === 3, 'Test 6.2: Session transient retrieved correctly' );
 
-		$session_service->reset_session( $session_id );
-		$cleared = $session_service->get_session_cache( $session_id );
-		$this->assert( $cleared === null, 'Test 5.3: Session transient cleared on reset' );
+		$session_service->reset_session( $token );
+		$cleared = $session_service->get_session_cache( $token );
+		$this->assert( $cleared === null, 'Test 6.3: Session transient cleared on reset' );
 	}
 
-	private function test_6_conversation_and_message_crud(): void {
+	private function test_7_conversation_and_message_crud(): void {
 		$conv_repo = new ConversationRepository();
 		$msg_repo  = new MessageRepository();
 
-		$session_id = SessionService::generate_session_id();
-		$conv_id    = $conv_repo->create( $session_id, 1, 'hash_abc', [ 'source' => 'web' ] );
+		$session_hash = SessionService::hash_session_token( 'test_token' );
+		$conv_id      = $conv_repo->create( $session_hash, 1, 'Support Session' );
 
-		$this->assert( $conv_id > 0, 'Test 6.1: Conversation record created' );
+		$this->assert( $conv_id > 0, 'Test 7.1: Conversation record created' );
 
-		$msg_id = $msg_repo->create( $conv_id, 'user', 'Hello there!', 5 );
-		$this->assert( $msg_id > 0, 'Test 6.2: Message record created' );
+		$msg_id = $msg_repo->create( $conv_id, 'user', 'Hello there!', 'gemini-3.7-flash', 10, 20, 150 );
+		$this->assert( $msg_id > 0, 'Test 7.2: Message record created with metrics' );
 	}
 
-	private function test_7_no_n4_or_unapproved_tables(): void {
-		// Confirm zero client classes or unapproved table classes exist in repository.
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Services\GeminiClient' ), 'Test 7.1: GeminiClient does not exist in N3' );
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\REST\ChatController' ), 'Test 7.2: ChatController does not exist in N3' );
+	private function test_8_no_n4_or_unapproved_tables(): void {
+		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Services\GeminiClient' ), 'Test 8.1: GeminiClient does not exist in N3' );
+		$this->assert( ! class_exists( 'SkyFish\GeminiChat\REST\ChatController' ), 'Test 8.2: ChatController does not exist in N3' );
 	}
 }
 

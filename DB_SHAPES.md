@@ -8,44 +8,49 @@ Gemini Chat Assistant uses 3 dedicated tables prefixed with `{$wpdb->prefix}gca_
 ## 2. Table Schemas
 
 ### 2.1 Conversations Table: `{$wpdb->prefix}gca_conversations`
-Stores session metadata, user links (if logged in), IP hash, and conversation lifecycle info.
+Stores session metadata, public UUID, user links, title, status, and message metrics.
 
 ```sql
 CREATE TABLE `{$wpdb->prefix}gca_conversations` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `session_id` varchar(64) NOT NULL,
+  `public_id` varchar(64) NOT NULL,
   `user_id` bigint(20) unsigned DEFAULT 0,
-  `ip_hash` varchar(64) NOT NULL,
+  `session_hash` varchar(64) NOT NULL,
+  `title` varchar(255) DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'active',
-  `metadata` longtext DEFAULT NULL,
+  `interaction_id` varchar(64) DEFAULT NULL,
+  `message_count` int(10) unsigned DEFAULT 0,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_message_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_session_id` (`session_id`),
+  UNIQUE KEY `uk_public_id` (`public_id`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_created_at` (`created_at`)
+  KEY `idx_session_hash` (`session_hash`),
+  KEY `idx_status` (`status`),
+  KEY `idx_updated_at` (`updated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
 ```
 
 ---
 
 ### 2.2 Messages Table: `{$wpdb->prefix}gca_messages`
-Stores individual conversational messages (user prompts and AI responses).
+Stores individual conversation messages (user, assistant, system) with token and latency metrics.
 
 ```sql
 CREATE TABLE `{$wpdb->prefix}gca_messages` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `conversation_id` bigint(20) unsigned NOT NULL,
-  `role` enum('user','model','system') NOT NULL,
+  `role` varchar(20) NOT NULL,
   `content` longtext NOT NULL,
-  `tokens` int(10) unsigned DEFAULT 0,
-  `finish_reason` varchar(32) DEFAULT NULL,
+  `model` varchar(64) DEFAULT NULL,
+  `input_tokens` int(10) unsigned DEFAULT 0,
+  `output_tokens` int(10) unsigned DEFAULT 0,
+  `latency_ms` int(10) unsigned DEFAULT 0,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_conversation_id` (`conversation_id`),
-  KEY `idx_created_at` (`created_at`),
-  CONSTRAINT `fk_gca_messages_conversation` FOREIGN KEY (`conversation_id`) 
-    REFERENCES `{$wpdb->prefix}gca_conversations` (`id`) ON DELETE CASCADE
+  KEY `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
 ```
 
