@@ -183,7 +183,7 @@ class ProviderAbstractionTest {
 		$response = new ProviderResponse(
 			'Hello world',
 			'gemini',
-			'gemini-3.7-flash',
+			'gemini-3.8-flash',
 			10,
 			20,
 			30,
@@ -194,7 +194,7 @@ class ProviderAbstractionTest {
 
 		$this->assert( $response->get_text() === 'Hello world', 'Test 8.1: ProviderResponse text matches' );
 		$this->assert( $response->get_provider_id() === 'gemini', 'Test 8.2: ProviderResponse provider matches' );
-		$this->assert( $response->get_model_id() === 'gemini-3.7-flash', 'Test 8.3: ProviderResponse model matches' );
+		$this->assert( $response->get_model_id() === 'gemini-3.8-flash', 'Test 8.3: ProviderResponse model matches' );
 		$this->assert( $response->get_total_tokens() === 30, 'Test 8.4: ProviderResponse token count matches' );
 		$this->assert( $response->get_finish_reason() === 'stop', 'Test 8.5: ProviderResponse finish reason matches' );
 
