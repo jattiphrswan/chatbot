@@ -1,0 +1,215 @@
+/**
+ * Gemini Chat Assistant - Admin Settings Styles
+ *
+ * @package SkyFish\GeminiChat
+ */
+
+.gca-admin-wrap {
+	max-width: 1080px;
+	margin: 20px 20px 40px 0;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+.gca-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 24px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.gca-header-title {
+	font-size: 24px;
+	font-weight: 600;
+	color: #1d2327;
+	margin: 0;
+}
+
+.gca-header-badge {
+	font-size: 12px;
+	background: #2271b1;
+	color: #fff;
+	padding: 3px 8px;
+	border-radius: 4px;
+	font-weight: 500;
+	margin-left: 8px;
+}
+
+/* Status Card */
+.gca-card {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 24px;
+	box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.gca-status-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-left: 4px solid #dba617;
+}
+
+.gca-status-card.is-configured {
+	border-left-color: #008a20;
+}
+
+.gca-status-info h3 {
+	margin: 0 0 6px 0;
+	font-size: 16px;
+	color: #1d2327;
+}
+
+.gca-status-info p {
+	margin: 0;
+	color: #50575e;
+	font-size: 13px;
+}
+
+.gca-status-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 14px;
+	border-radius: 20px;
+	font-size: 13px;
+	font-weight: 600;
+	background: #fcf0db;
+	color: #8c5b00;
+}
+
+.gca-status-badge.is-configured {
+	background: #e7f5ea;
+	color: #006618;
+}
+
+.gca-status-badge .dashicons {
+	margin-right: 6px;
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+}
+
+/* Tabs */
+.gca-nav-tab-wrapper {
+	margin-bottom: 20px;
+	border-bottom: 1px solid #c3c4c7;
+	display: flex;
+	gap: 4px;
+}
+
+.gca-tab-btn {
+	padding: 10px 16px;
+	border: 1px solid transparent;
+	border-bottom: none;
+	background: none;
+	font-size: 14px;
+	font-weight: 500;
+	color: #50575e;
+	cursor: pointer;
+	border-radius: 6px 6px 0 0;
+	transition: all 0.15s ease-in-out;
+}
+
+.gca-tab-btn:hover {
+	color: #2271b1;
+	background: #f6f7f7;
+}
+
+.gca-tab-btn.active {
+	background: #fff;
+	color: #1d2327;
+	border-color: #c3c4c7;
+	border-bottom: 2px solid #fff;
+	margin-bottom: -1px;
+	font-weight: 600;
+}
+
+/* Tab Panels */
+.gca-tab-panel {
+	display: none;
+}
+
+.gca-tab-panel.active {
+	display: block;
+}
+
+.gca-section-card {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 8px;
+	padding: 24px;
+	margin-bottom: 24px;
+}
+
+.gca-section-card h3 {
+	margin-top: 0;
+	padding-bottom: 12px;
+	border-bottom: 1px solid #f0f0f1;
+	font-size: 16px;
+	color: #1d2327;
+}
+
+.gca-form-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 16px;
+	margin-top: 16px;
+}
+
+.gca-field-row {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.gca-field-row label {
+	font-weight: 600;
+	font-size: 13px;
+	color: #1d2327;
+}
+
+.gca-field-row .description {
+	color: #646970;
+	font-size: 12px;
+	margin-top: 4px;
+}
+
+.gca-field-row input[type="text"],
+.gca-field-row input[type="number"],
+.gca-field-row textarea,
+.gca-field-row select {
+	max-width: 520px;
+	width: 100%;
+	border-radius: 4px;
+	padding: 8px 12px;
+}
+
+.gca-toggle-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	font-weight: normal !important;
+	color: #1d2327;
+	font-size: 14px;
+}
+
+.gca-instructions-box {
+	background: #f0f6fc;
+	border: 1px solid #c8e1ff;
+	border-radius: 6px;
+	padding: 16px;
+	margin-top: 16px;
+	font-size: 13px;
+}
+
+.gca-instructions-box code {
+	background: #ffffff;
+	padding: 2px 6px;
+	border-radius: 4px;
+	border: 1px solid #d0d7de;
+	font-weight: 600;
+}

@@ -7,6 +7,8 @@
 
 namespace SkyFish\GeminiChat;
 
+use SkyFish\GeminiChat\Admin\AdminMenu;
+use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\Providers\ClaudeProvider;
 use SkyFish\GeminiChat\Providers\GeminiProvider;
 use SkyFish\GeminiChat\Providers\OpenAIProvider;
@@ -37,6 +39,13 @@ class Plugin {
 	private ?ProviderRegistry $provider_registry = null;
 
 	/**
+	 * The Admin Menu coordinator.
+	 *
+	 * @var AdminMenu|null
+	 */
+	private ?AdminMenu $admin_menu = null;
+
+	/**
 	 * Gets the singleton instance.
 	 *
 	 * @return Plugin
@@ -61,6 +70,10 @@ class Plugin {
 	 * Loads required dependencies.
 	 */
 	private function load_dependencies(): void {
+		// Admin & Settings Services.
+		require_once GCA_PLUGIN_DIR . 'includes/Admin/SettingsService.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Admin/AdminMenu.php';
+
 		// Load Provider Abstraction.
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderInterface.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderResponse.php';
@@ -119,6 +132,9 @@ class Plugin {
 	 * Runs the loader to execute all of the hooks with WordPress.
 	 */
 	public function run(): void {
-		// Hook registrations for upcoming nodes.
+		if ( is_admin() ) {
+			$this->admin_menu = new AdminMenu();
+			$this->admin_menu->init();
+		}
 	}
 }
