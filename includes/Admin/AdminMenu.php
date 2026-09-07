@@ -24,23 +24,28 @@ class AdminMenu {
 
 	public const MAIN_MENU_SLUG          = 'gemini-chat-assistant';
 	public const CONVERSATIONS_MENU_SLUG = 'gca-conversations';
+	public const ANALYTICS_MENU_SLUG     = 'gca-analytics';
 	public const SETTINGS_MENU_SLUG      = 'gca-settings';
 
 	private ConversationRepository $conversation_repo;
 	private MessageRepository $message_repo;
+	private AnalyticsService $analytics_service;
 
 	/**
 	 * AdminMenu constructor.
 	 *
 	 * @param ConversationRepository|null $conversation_repo Optional conversation repository.
 	 * @param MessageRepository|null      $message_repo      Optional message repository.
+	 * @param AnalyticsService|null       $analytics_service Optional analytics service.
 	 */
 	public function __construct(
 		?ConversationRepository $conversation_repo = null,
-		?MessageRepository $message_repo = null
+		?MessageRepository $message_repo = null,
+		?AnalyticsService $analytics_service = null
 	) {
 		$this->conversation_repo = $conversation_repo ?? new ConversationRepository();
 		$this->message_repo      = $message_repo ?? new MessageRepository();
+		$this->analytics_service = $analytics_service ?? new AnalyticsService();
 	}
 
 	/**
@@ -91,6 +96,15 @@ class AdminMenu {
 
 		add_submenu_page(
 			self::MAIN_MENU_SLUG,
+			__( 'Analytics', 'gemini-chat-assistant' ),
+			__( 'Analytics', 'gemini-chat-assistant' ),
+			'manage_options',
+			self::ANALYTICS_MENU_SLUG,
+			[ $this, 'render_analytics_page' ]
+		);
+
+		add_submenu_page(
+			self::MAIN_MENU_SLUG,
 			__( 'Settings', 'gemini-chat-assistant' ),
 			__( 'Settings', 'gemini-chat-assistant' ),
 			'manage_options',
@@ -124,6 +138,8 @@ class AdminMenu {
 			'toplevel_page_' . self::MAIN_MENU_SLUG,
 			'gemini-chat_page_' . self::CONVERSATIONS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::CONVERSATIONS_MENU_SLUG,
+			'gemini-chat_page_' . self::ANALYTICS_MENU_SLUG,
+			'gemini-chat-assistant_page_' . self::ANALYTICS_MENU_SLUG,
 			'gemini-chat_page_' . self::SETTINGS_MENU_SLUG,
 			'gemini-chat-assistant_page_' . self::SETTINGS_MENU_SLUG,
 		];
@@ -272,6 +288,26 @@ class AdminMenu {
 
 		wp_safe_redirect( add_query_arg( [ 'page' => self::CONVERSATIONS_MENU_SLUG, 'conversation_id' => $public_id, 'reopened' => 1 ], admin_url( 'admin.php' ) ) );
 		exit;
+	}
+
+	/**
+	 * Renders the analytics and insights dashboard page.
+	 */
+	public function render_analytics_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
+		}
+
+		$range_key   = ! empty( $_GET['range'] ) ? sanitize_text_field( (string) $_GET['range'] ) : AnalyticsService::DEFAULT_RANGE; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$custom_from = ! empty( $_GET['from'] ) ? sanitize_text_field( (string) $_GET['from'] ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$custom_to   = ! empty( $_GET['to'] ) ? sanitize_text_field( (string) $_GET['to'] ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		$analytics          = $this->analytics_service->get_analytics_data( $range_key, $custom_from, $custom_to );
+		$store_messages     = (bool) SettingsService::get( 'store_messages', true );
+		$base_url           = admin_url( 'admin.php?page=' . self::ANALYTICS_MENU_SLUG );
+		$conversations_url  = admin_url( 'admin.php?page=' . self::CONVERSATIONS_MENU_SLUG );
+
+		include GCA_PLUGIN_DIR . 'templates/admin/analytics.php';
 	}
 
 	/**

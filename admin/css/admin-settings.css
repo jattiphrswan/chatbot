@@ -846,3 +846,217 @@
 .gca-admin-msg__body p:last-child {
 	margin-bottom: 0;
 }
+
+/* -------------------------------------------------------------------------
+ * Analytics & Insights (N12)
+ * ------------------------------------------------------------------------- */
+.gca-admin-kpi-card {
+	padding: 20px;
+}
+
+.gca-admin-kpi-value {
+	font-size: 32px;
+	font-weight: 700;
+	color: #1d2327;
+	line-height: 1.1;
+	margin: 8px 0 6px 0;
+	display: block;
+}
+
+.gca-admin-chart-card {
+	padding: 24px;
+}
+
+.gca-admin-chart-card__header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-bottom: 24px;
+}
+
+.gca-admin-chart-legend {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	font-size: 12px;
+	color: #50575e;
+}
+
+.gca-admin-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.gca-admin-legend-bullet {
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+	display: inline-block;
+}
+
+.gca-admin-legend-bullet--conv {
+	background: #2271b1;
+}
+
+.gca-admin-legend-bullet--msg {
+	background: #008a20;
+}
+
+.gca-admin-svg-chart-wrap {
+	width: 100%;
+	overflow-x: auto;
+	padding-bottom: 12px;
+}
+
+.gca-admin-bars-container {
+	display: flex;
+	align-items: flex-end;
+	gap: 8px;
+	min-height: 220px;
+	padding: 0 8px 28px 8px;
+	border-bottom: 2px solid #dcdcde;
+	position: relative;
+}
+
+.gca-admin-bar-group {
+	flex: 1;
+	min-width: 24px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	position: relative;
+}
+
+.gca-admin-bars {
+	display: flex;
+	align-items: flex-end;
+	gap: 2px;
+	width: 100%;
+	justify-content: center;
+	height: 180px;
+}
+
+.gca-admin-bar {
+	width: 8px;
+	max-width: 14px;
+	border-radius: 3px 3px 0 0;
+	transition: height 0.2s ease, opacity 0.15s ease;
+	position: relative;
+	cursor: default;
+}
+
+.gca-admin-bar:hover {
+	opacity: 0.85;
+}
+
+.gca-admin-bar--conv {
+	background: #2271b1;
+}
+
+.gca-admin-bar--msg {
+	background: #008a20;
+}
+
+.gca-admin-bar__tooltip {
+	display: none;
+	position: absolute;
+	top: -24px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: #1d2327;
+	color: #ffffff;
+	font-size: 10px;
+	padding: 2px 6px;
+	border-radius: 3px;
+	white-space: nowrap;
+	pointer-events: none;
+	z-index: 10;
+}
+
+.gca-admin-bar:hover .gca-admin-bar__tooltip {
+	display: block;
+}
+
+.gca-admin-bar-label {
+	position: absolute;
+	bottom: -24px;
+	font-size: 10px;
+	color: #646970;
+	white-space: nowrap;
+	text-align: center;
+}
+
+.gca-admin-breakdown-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-top: 8px;
+}
+
+.gca-admin-breakdown-item {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.gca-admin-breakdown-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 13px;
+}
+
+.gca-admin-breakdown-meta strong {
+	color: #1d2327;
+}
+
+.gca-admin-breakdown-meta span {
+	color: #646970;
+	font-size: 12px;
+}
+
+.gca-admin-breakdown-meta code {
+	background: #f0f6fc;
+	padding: 2px 6px;
+	border-radius: 4px;
+	border: 1px solid #d0d7de;
+	color: #0969da;
+	font-size: 12px;
+}
+
+.gca-admin-progress-bar {
+	height: 8px;
+	border-radius: 4px;
+	background: #f0f0f1;
+	overflow: hidden;
+	width: 100%;
+}
+
+.gca-admin-progress-fill {
+	height: 100%;
+	border-radius: 4px;
+	transition: width 0.3s ease;
+}
+
+.gca-admin-progress-fill--primary {
+	background: #2271b1;
+}
+
+.gca-admin-progress-fill--success {
+	background: #008a20;
+}
+
+.gca-admin-progress-fill--info {
+	background: #1a73e8;
+}
+
+.gca-admin-progress-fill--purple {
+	background: #8250df;
+}
+
+.gca-admin-progress-fill--muted {
+	background: #8c8f94;
+}

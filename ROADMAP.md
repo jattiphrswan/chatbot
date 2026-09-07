@@ -22,6 +22,8 @@ flowchart TD
     N9 --> N10
     N3 --> N11[N11: Conversation Management]
     N10 --> N11
+    N3 --> N12[N12: Analytics & Insights]
+    N10 --> N12
 ```
 
 ## 2. Approved Node Breakdown
@@ -40,3 +42,4 @@ flowchart TD
 | **N9** | **Full Chat UX** | Production-quality frontend client (`chat.js`, `chat.css`), UX state model, unread badge, retry flow, autoscroll, rate limit countdown. | **COMPLETED** |
 | **N10** | **Admin Dashboard Shell** | Top-level Gemini Chat menu, Dashboard overview, system status cards, setup checklist, quick actions, scoped admin styles. | **COMPLETED** |
 | **N11** | **Conversation Management** | Secure WordPress Admin conversation module (Conversations submenu `gca-conversations`, server-side pagination, search/filtering, transcript thread view, close/reopen/delete actions with cascading message cleanup). | **COMPLETED** |
+| **N12** | **Analytics & Insights** | Native WordPress Analytics module (Analytics submenu `gca-analytics`, date range filtering, real KPI aggregates, daily activity charts, status & audience & model breakdowns). | **COMPLETED** |

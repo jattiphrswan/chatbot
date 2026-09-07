@@ -5,6 +5,17 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-N12] - 2026-09-07
+### Added
+- Native WordPress Admin Analytics & Insights module (`templates/admin/analytics.php`) accessible via submenu `Gemini Chat -> Analytics` (`gca-analytics`).
+- Predefined and custom date range filtering (Today, Last 7 Days, Last 30 Days, Last 90 Days, All Time, and custom start/end picker) with full UTC/local timezone translation.
+- Real aggregate SQL query layer (`includes/Database/AnalyticsRepository.php`) computing total conversations, distinct unique sessions, stored messages, average turns, token usage, and average assistant latency without loading full rows into PHP memory.
+- Business logic service (`includes/Admin/AnalyticsService.php`) handling date bounds, zero-division safety, continuous daily time series timeline generation, and audience/status/model distribution metrics.
+- Lightweight, responsive native SVG bar visualization for daily conversation and message trends with accessible HTML table fallback.
+- Status breakdown (Active vs Closed percentage bars), Audience breakdown (Guest vs Logged-in Users), and AI Model usage distribution list.
+- Dashboard integration with Quick Actions linking to Analytics and updated Roadmap status card.
+- Comprehensive unit and mock test suite in `tests/test-analytics.php`.
+
 ## [1.0.0-N11] - 2026-09-07
 ### Added
 - WordPress Admin Conversations Management module (`templates/admin/conversations.php`, `templates/admin/conversation-detail.php`) accessible via submenu `Gemini Chat -> Conversations` (`gca-conversations`).

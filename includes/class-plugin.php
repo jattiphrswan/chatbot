@@ -99,10 +99,12 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Database/Migrator.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/ConversationRepository.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/MessageRepository.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Database/AnalyticsRepository.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Database/SessionService.php';
 
 		// Admin & Settings Services.
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/SettingsService.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Admin/AnalyticsService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/AdminMenu.php';
 
 		// Load Gemini API Client.
