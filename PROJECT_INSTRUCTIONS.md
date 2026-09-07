@@ -18,18 +18,17 @@
    - All output must be escaped via `esc_html`, `esc_attr`, `wp_json_encode`, or `wp_kses_post`.
 
 ## 3. Node Execution Protocol
-The project progresses strictly through sequentially defined nodes (N0 through N10).
-- **Node N0:** Documentation Validation & Specification Alignment (Current Node). No application code may be written in N0.
-- **Node N1:** Plugin scaffold, directory layout, composer autoloading, and lifecycle hooks.
-- **Node N2:** Database schema definitions, activation routines, and migration engine.
-- **Node N3:** Gemini API client, HTTP service layer, payload builders, and token calculators.
-- **Node N4:** WordPress REST API route registration, schema validation, and request controllers.
-- **Node N5:** Admin management dashboard, settings panel, logs viewer, and health diagnostics.
-- **Node N6:** Frontend chat widget, asset enqueuing, and `[gemini_chat]` shortcode implementation.
-- **Node N7:** Session management, rolling context window, and chat reset handlers.
-- **Node N8:** Security hardening, encryption engine, rate limiter, and error shields.
-- **Node N9:** Comprehensive test suites (Unit, Integration, REST API, UI).
-- **Node N10:** Release packaging, production asset minification, and deployment readiness.
+- **Node N0:** Documentation Baseline (Specification & Architecture Alignment). Zero application code.
+- **Node N1:** WordPress Plugin Foundation (Scaffold, entrypoint, lifecycle hooks, directory structure).
+- **Node N2:** Admin Settings System (Admin menu, settings storage, configuration UI).
+- **Node N3:** Data & Session Foundation (Database schema, tables, migrations, repositories).
+- **Node N4:** Gemini Client (Gemini API service, HTTP transport, token estimation, payload builders).
+- **Node N5:** WordPress REST API (Route registration, request controllers, permission callbacks).
+- **Node N6:** Public Chat UI ([gemini_chat] shortcode, frontend HTML/CSS widget).
+- **Node N7:** Conversation Memory (Session management, multi-turn history, context window).
+- **Node N8:** Security & Rate Limiting (Encryption engine, rate limiters, nonces).
+- **Node N9:** Full Chat UX (Interactive frontend client, markdown parser, event handling).
+- **Node N10:** Admin Dashboard Shell (Unified admin dashboard, logs/analytics, health checks).
 
 ## 4. Documentation Maintenance Rule
 Whenever a schema, endpoint, database column, or component is updated, all corresponding documentation files (`ARCHITECTURE.md`, `API_CONTRACT.md`, `DB_SHAPES.md`, `SCHEMA_INVENTORY.md`, `COMPONENTS.md`, `COMPONENT_INVENTORY.md`, `SECURITY.md`, `TESTING.md`) must be synchronized immediately.
