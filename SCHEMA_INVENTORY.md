@@ -46,22 +46,18 @@
     "success": { "type": "boolean" },
     "data": {
       "type": "object",
-      "required": ["session_id", "message_id", "reply", "finish_reason", "tokens_used", "created_at"],
+      "required": ["message", "conversation_id", "request_id", "meta"],
       "properties": {
-        "session_id": { "type": "string" },
-        "message_id": { "type": "integer" },
-        "reply": { "type": "string" },
-        "finish_reason": { "type": "string" },
-        "tokens_used": {
+        "message": { "type": "string" },
+        "conversation_id": { "type": "string" },
+        "request_id": { "type": "string" },
+        "meta": {
           "type": "object",
-          "required": ["prompt_tokens", "completion_tokens", "total_tokens"],
+          "required": ["model"],
           "properties": {
-            "prompt_tokens": { "type": "integer" },
-            "completion_tokens": { "type": "integer" },
-            "total_tokens": { "type": "integer" }
+            "model": { "type": "string" }
           }
-        },
-        "created_at": { "type": "string", "format": "date-time" }
+        }
       }
     }
   }

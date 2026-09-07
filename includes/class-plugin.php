@@ -108,6 +108,11 @@ class Plugin {
 		// Load Gemini API Client.
 		require_once GCA_PLUGIN_DIR . 'includes/class-gemini-client.php';
 
+		// REST API & Application Services.
+		require_once GCA_PLUGIN_DIR . 'includes/class-validator.php';
+		require_once GCA_PLUGIN_DIR . 'includes/class-chat-service.php';
+		require_once GCA_PLUGIN_DIR . 'includes/class-rest-controller.php';
+
 		// Load Provider Abstraction.
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderInterface.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderResponse.php';
@@ -126,6 +131,20 @@ class Plugin {
 	private ?GeminiClient $gemini_client = null;
 
 	/**
+	 * Chat orchestration service instance.
+	 *
+	 * @var ChatService|null
+	 */
+	private ?ChatService $chat_service = null;
+
+	/**
+	 * REST API controller instance.
+	 *
+	 * @var RestController|null
+	 */
+	private ?RestController $rest_controller = null;
+
+	/**
 	 * Accessor to GeminiClient.
 	 *
 	 * @return GeminiClient
@@ -135,6 +154,40 @@ class Plugin {
 			$this->gemini_client = new GeminiClient();
 		}
 		return $this->gemini_client;
+	}
+
+	/**
+	 * Accessor to ChatService.
+	 *
+	 * @return ChatService
+	 */
+	public function get_chat_service(): ChatService {
+		if ( null === $this->chat_service ) {
+			$this->chat_service = new ChatService(
+				SettingsService::get_instance(),
+				$this->get_session_service(),
+				$this->get_conversation_repository(),
+				$this->get_message_repository(),
+				$this->get_gemini_client()
+			);
+		}
+		return $this->chat_service;
+	}
+
+	/**
+	 * Accessor to RestController.
+	 *
+	 * @return RestController
+	 */
+	public function get_rest_controller(): RestController {
+		if ( null === $this->rest_controller ) {
+			$this->rest_controller = new RestController(
+				SettingsService::get_instance(),
+				$this->get_chat_service(),
+				$this->get_gemini_client()
+			);
+		}
+		return $this->rest_controller;
 	}
 
 	/**
@@ -228,5 +281,7 @@ class Plugin {
 			$this->admin_menu = new AdminMenu();
 			$this->admin_menu->init();
 		}
+
+		$this->get_rest_controller()->init();
 	}
 }

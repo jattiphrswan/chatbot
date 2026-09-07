@@ -51,29 +51,24 @@ X-WP-Nonce: <wp_rest_nonce_string>
 {
   "success": true,
   "data": {
-    "session_id": "gca_sess_9a8b7c6d5e4f3g2h1",
-    "message_id": 105,
-    "reply": "Hello! This plugin connects your WordPress site with Google Gemini Large Language Models...",
-    "finish_reason": "STOP",
-    "tokens_used": {
-      "prompt_tokens": 120,
-      "completion_tokens": 45,
-      "total_tokens": 165
-    },
-    "created_at": "2026-09-07T11:30:00Z"
+    "message": "Hello! How can I help you today?",
+    "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
+    "request_id": "550e8400-e29b-41d4-a716-446655440000",
+    "meta": {
+      "model": "gemini-3.8-flash"
+    }
   }
 }
 ```
 
-#### Error Response (400 Bad Request / 429 Too Many Requests / 500 Internal Error)
+#### Error Response (400 Bad Request / 403 Forbidden / 429 Too Many Requests / 500-504 Upstream Errors)
 ```json
 {
   "success": false,
-  "code": "rate_limit_exceeded",
-  "message": "Too many requests. Please wait a moment before sending another message.",
-  "data": {
-    "status": 429,
-    "retry_after": 30
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "Please enter a valid message.",
+    "request_id": "550e8400-e29b-41d4-a716-446655440000"
   }
 }
 ```
@@ -119,26 +114,10 @@ Performs end-to-end self-tests including database integrity, option configuratio
   "success": true,
   "data": {
     "status": "healthy",
-    "checks": {
-      "database": {
-        "status": "ok",
-        "tables_exist": true,
-        "schema_version": "1.0.0"
-      },
-      "gemini_api": {
-        "status": "ok",
-        "api_key_configured": true,
-        "model": "gemini-3.8-flash",
-        "latency_ms": 342
-      },
-      "environment": {
-        "php_version": "8.2.14",
-        "wp_version": "6.6.1",
-        "openssl_enabled": true,
-        "curl_enabled": true
-      }
-    },
-    "timestamp": "2026-09-07T11:32:00Z"
+    "plugin_version": "1.0.0",
+    "configured": true,
+    "model": "gemini-3.8-flash",
+    "database_version": "1.0.0"
   }
 }
 ```
