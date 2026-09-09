@@ -442,6 +442,24 @@ $has_contact_channels = $contact_channels_enabled && ( $contact_phone_enabled ||
 		<!-- Screen 2: Chat Screen -->
 		<section class="gca-screen gca-screen--chat" aria-label="<?php esc_attr_e( 'Chat Screen', 'gemini-chat-assistant' ); ?>">
 			<div class="gca-chat">
+				<!-- AI Provider & Model Selector Bar (Node N21) -->
+				<div class="gca-ai-selector-bar" role="toolbar" aria-label="<?php esc_attr_e( 'AI Provider and Model selection', 'gemini-chat-assistant' ); ?>" style="display: none;">
+					<div class="gca-selector-group gca-selector-group--provider" style="display: none;">
+						<label for="<?php echo esc_attr( $instance_id ); ?>-provider-select" class="gca-selector-label">
+							<?php esc_html_e( 'AI:', 'gemini-chat-assistant' ); ?>
+						</label>
+						<select id="<?php echo esc_attr( $instance_id ); ?>-provider-select" class="gca-selector gca-selector--provider" aria-label="<?php esc_attr_e( 'Select AI Provider', 'gemini-chat-assistant' ); ?>">
+						</select>
+					</div>
+					<div class="gca-selector-group gca-selector-group--model" style="display: none;">
+						<label for="<?php echo esc_attr( $instance_id ); ?>-model-select" class="gca-selector-label">
+							<?php esc_html_e( 'Model:', 'gemini-chat-assistant' ); ?>
+						</label>
+						<select id="<?php echo esc_attr( $instance_id ); ?>-model-select" class="gca-selector gca-selector--model" aria-label="<?php esc_attr_e( 'Select AI Model', 'gemini-chat-assistant' ); ?>">
+						</select>
+					</div>
+				</div>
+
 				<!-- Messages Viewport -->
 				<div class="gca-messages" role="log" aria-live="polite" aria-label="<?php esc_attr_e( 'Conversation messages', 'gemini-chat-assistant' ); ?>">
 					<!-- Assistant Initial Welcome Bubble -->

@@ -190,6 +190,24 @@ class SettingsService {
 	}
 
 	/**
+	 * Checks whether visitors are permitted to select AI provider in the chat widget (N21).
+	 *
+	 * @return bool
+	 */
+	public static function allow_public_provider_selection(): bool {
+		return (bool) self::get( 'allow_public_provider_selection', false );
+	}
+
+	/**
+	 * Checks whether visitors are permitted to select AI model in the chat widget (N21).
+	 *
+	 * @return bool
+	 */
+	public static function allow_public_model_selection(): bool {
+		return (bool) self::get( 'allow_public_model_selection', false );
+	}
+
+	/**
 	 * Retrieves the API key for a specified provider securely server-side.
 	 *
 	 * Priority order:
@@ -485,19 +503,23 @@ class SettingsService {
 
 		// Provider: Gemini.
 		$sanitized['provider_gemini_enabled'] = ! empty( $input['provider_gemini_enabled'] );
-		$gemini_model = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-3.8-flash' );
-		$sanitized['provider_gemini_model']   = ! empty( $gemini_model ) ? $gemini_model : 'gemini-3.8-flash';
+		$raw_gemini_model                     = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-3.8-flash' );
+		$sanitized['provider_gemini_model']   = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', $raw_gemini_model ) ? $raw_gemini_model : 'gemini-3.8-flash';
 		$sanitized['model']                   = $sanitized['provider_gemini_model']; // Backward compatibility.
 
 		// Provider: OpenAI.
 		$sanitized['provider_openai_enabled'] = ! empty( $input['provider_openai_enabled'] );
-		$openai_model = isset( $input['provider_openai_model'] ) ? sanitize_text_field( trim( (string) $input['provider_openai_model'] ) ) : 'gpt-4o-mini';
-		$sanitized['provider_openai_model']   = ! empty( $openai_model ) ? $openai_model : 'gpt-4o-mini';
+		$raw_openai_model                     = isset( $input['provider_openai_model'] ) ? sanitize_text_field( trim( (string) $input['provider_openai_model'] ) ) : 'gpt-4o-mini';
+		$sanitized['provider_openai_model']   = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'openai', $raw_openai_model ) ? $raw_openai_model : 'gpt-4o-mini';
 
 		// Provider: Claude.
 		$sanitized['provider_claude_enabled'] = ! empty( $input['provider_claude_enabled'] );
-		$claude_model = isset( $input['provider_claude_model'] ) ? sanitize_text_field( trim( (string) $input['provider_claude_model'] ) ) : 'claude-3-5-haiku-20241022';
-		$sanitized['provider_claude_model']   = ! empty( $claude_model ) ? $claude_model : 'claude-3-5-haiku-20241022';
+		$raw_claude_model                     = isset( $input['provider_claude_model'] ) ? sanitize_text_field( trim( (string) $input['provider_claude_model'] ) ) : 'claude-3-5-haiku-20241022';
+		$sanitized['provider_claude_model']   = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'claude', $raw_claude_model ) ? $raw_claude_model : 'claude-3-5-haiku-20241022';
+
+		// Public Chat Controls (N21).
+		$sanitized['allow_public_provider_selection'] = ! empty( $input['allow_public_provider_selection'] );
+		$sanitized['allow_public_model_selection']    = ! empty( $input['allow_public_model_selection'] );
 
 		$sanitized['system_instruction'] = isset( $input['system_instruction'] ) ? sanitize_textarea_field( $input['system_instruction'] ) : $defaults['system_instruction'];
 

@@ -99,22 +99,25 @@ class Assets {
 	 * @return array<string, mixed>
 	 */
 	public static function get_localized_config(): array {
-		$settings   = SettingsService::get_all();
-		$avatar_id  = absint( $settings['avatar_id'] ?? 0 );
-		$avatar_url = AppearanceService::get_avatar_url( $avatar_id );
+		$settings          = SettingsService::get_all();
+		$avatar_id         = absint( $settings['avatar_id'] ?? 0 );
+		$avatar_url        = AppearanceService::get_avatar_url( $avatar_id );
+		$selection_service = Plugin::get_instance()->get_provider_selection_service();
+		$provider_meta     = $selection_service->get_safe_public_providers_metadata();
 
 		return [
-			'restUrl'          => esc_url_raw( rest_url( 'gca/v1' ) ),
-			'assistantName'    => esc_html( (string) ( $settings['assistant_name'] ?? 'AI Assistant' ) ),
-			'greeting'         => esc_html( (string) ( $settings['greeting'] ?? 'Welcome!' ) ),
-			'welcomeMessage'   => esc_html( (string) ( $settings['welcome_message'] ?? 'Hi! How can I help you today?' ) ),
-			'placeholder'      => esc_attr( (string) ( $settings['placeholder'] ?? 'Type your message...' ) ),
-			'avatarUrl'        => esc_url( $avatar_url ),
-			'maxMessageLength' => absint( $settings['max_message_length'] ?? 1000 ),
-			'widgetEnabled'    => (bool) ( $settings['widget_enabled'] ?? true ),
-			'enabled'          => (bool) ( $settings['enabled'] ?? true ),
-			'desktopEnabled'   => (bool) ( $settings['desktop_enabled'] ?? true ),
-			'mobileEnabled'    => (bool) ( $settings['mobile_enabled'] ?? true ),
+			'restUrl'           => esc_url_raw( rest_url( 'gca/v1' ) ),
+			'assistantName'     => esc_html( (string) ( $settings['assistant_name'] ?? 'AI Assistant' ) ),
+			'greeting'          => esc_html( (string) ( $settings['greeting'] ?? 'Welcome!' ) ),
+			'welcomeMessage'    => esc_html( (string) ( $settings['welcome_message'] ?? 'Hi! How can I help you today?' ) ),
+			'placeholder'       => esc_attr( (string) ( $settings['placeholder'] ?? 'Type your message...' ) ),
+			'avatarUrl'         => esc_url( $avatar_url ),
+			'maxMessageLength'  => absint( $settings['max_message_length'] ?? 1000 ),
+			'widgetEnabled'     => (bool) ( $settings['widget_enabled'] ?? true ),
+			'enabled'           => (bool) ( $settings['enabled'] ?? true ),
+			'desktopEnabled'    => (bool) ( $settings['desktop_enabled'] ?? true ),
+			'mobileEnabled'     => (bool) ( $settings['mobile_enabled'] ?? true ),
+			'providerSelection' => $provider_meta,
 			'prechat'          => [
 				'enabled'            => (bool) ( $settings['prechat_enabled'] ?? false ),
 				'collectName'        => (bool) ( $settings['collect_name'] ?? false ),

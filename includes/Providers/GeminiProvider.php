@@ -35,29 +35,7 @@ class GeminiProvider extends AbstractProvider {
 		$this->id            = self::PROVIDER_ID;
 		$this->name          = 'Google Gemini';
 		$this->gemini_client = $gemini_client ?? new GeminiClient();
-		$this->models        = [
-			[
-				'id'                => 'gemini-3.8-flash',
-				'name'              => 'Gemini 3.8 Flash',
-				'context_window'    => 1048576,
-				'max_output_tokens' => 8192,
-				'description'       => 'High-speed, cost-effective multimodal model for real-time chat interactions.',
-			],
-			[
-				'id'                => 'gemini-3.7-flash',
-				'name'              => 'Gemini 3.7 Flash',
-				'context_window'    => 1048576,
-				'max_output_tokens' => 8192,
-				'description'       => 'Previous generation versatile fast model.',
-			],
-			[
-				'id'                => 'gemini-2.5-flash',
-				'name'              => 'Gemini 2.5 Flash',
-				'context_window'    => 1048576,
-				'max_output_tokens' => 8192,
-				'description'       => 'Stable production model for conversational tasks.',
-			],
-		];
+		$this->models        = ModelRegistry::get_models_for_provider( self::PROVIDER_ID );
 	}
 
 	/**

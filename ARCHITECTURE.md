@@ -89,11 +89,13 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 > 2. `wp-config.php` constants (`GCA_GEMINI_API_KEY`, `GCA_OPENAI_API_KEY`, `GCA_CLAUDE_API_KEY`)
 > 3. Encrypted database credentials in `gca_provider_credentials` (AES-256-CBC with `AUTH_KEY` salt). Empty form submissions never overwrite stored keys.
 
-### 2.5 Multi-Provider Architecture (N18–N20)
+### 2.5 Multi-Provider Architecture (N18–N21)
 - **`ProviderInterface` (`SkyFish\GeminiChat\Providers\ProviderInterface`):** Strict contract standardizing multi-provider access across AI backends (`get_id()`, `get_name()`, `get_models()`, `chat()`, `test_connection()`).
 - **`AbstractProvider` (`SkyFish\GeminiChat\Providers\AbstractProvider`):** Base class encapsulating shared ID, name, model list, configuration checks, and API key lookup routines (N19.5 DRY refactor).
 - **`ProviderRegistry` (`SkyFish\GeminiChat\Providers\ProviderRegistry`):** Central container for registering and retrieving configured AI provider instances (`gemini`, `openai`, `claude`).
-- **`GeminiProvider`:** First-party provider wrapping `GeminiClient` with model metadata (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-1.5-flash`).
+- **`ModelRegistry` (`SkyFish\GeminiChat\Providers\ModelRegistry`):** Centralized single source of truth for supported model identifiers, human-readable labels, and defaults across all providers (`gemini`, `openai`, `claude`).
+- **`ProviderSelectionService` (`SkyFish\GeminiChat\Providers\ProviderSelectionService`):** Domain service decoupling selection resolution from controllers. Resolves effective provider and model based on admin defaults, public visitor toggles, and strict provider usability checks (`assert_provider_usable`). Generates safe public metadata without exposing secrets.
+- **`GeminiProvider`:** First-party provider wrapping `GeminiClient` with model metadata queried dynamically from `ModelRegistry`.
 - **`OpenAIClient` & `OpenAIProvider`:** Live operational OpenAI provider adapter communicating via POST `/v1/responses` with structured instruction, multi-turn history mapping, and safe credential isolation (Node N19).
 - **`ClaudeClient` & `ClaudeProvider`:** Live operational Anthropic Claude provider adapter communicating via POST `/v1/messages` with top-level `system` instruction, multi-turn history mapping, `max_tokens`, multiple content block concatenation, and safe credential isolation (Node N20).
 
@@ -438,3 +440,63 @@ HTTP Transport: wp_remote_post()
    - Google Gemini: **LIVE** / operational
    - OpenAI: **LIVE** / operational
    - Anthropic Claude: **LIVE-capable** when configured
+
+---
+
+## 13. Provider & Model Selection System (Node N21)
+
+### Architecture Overview:
+Node N21 introduces dynamic provider and model selection while decoupling selection logic, validation, and metadata generation from REST controllers and chat services.
+
+```
+Visitor Request / Chat Widget (Screen 2)
+       │
+       ├─► Provider selector (.gca-ai-selector-provider) [Optional: allow_public_provider_selection]
+       ├─► Model selector (.gca-ai-selector-model)       [Optional: allow_public_model_selection]
+       │
+       ▼
+REST Controller (POST /chat)
+       │
+       ├─► Receives: session_id, message, provider, model
+       │
+       ▼
+ChatService::handle_chat()
+       │
+       ▼
+ProviderSelectionService::resolve_effective_selection( $requested_provider, $requested_model )
+       │
+       ├─► 1. Evaluate Provider:
+       │      - If public provider selection allowed and provider requested -> validate & resolve
+       │      - Else -> fallback to admin default provider (SettingsService::get_default_provider())
+       │      - Enforce assert_provider_usable(): must be known, enabled, and have configured API key
+       │
+       ├─► 2. Evaluate Model:
+       │      - If public model selection allowed and model requested:
+       │          - Verify model belongs to the effective provider (reject cross-provider injection)
+       │          - Verify model is supported in ModelRegistry
+       │      - Else:
+       │          - Fallback to admin configured default model for that provider (or ModelRegistry default)
+       │
+       └─► Return [ $effective_provider, $effective_model ]
+       │
+       ▼
+Chat Execution Engine
+       │
+       ├─► Mid-Conversation Provider Switching:
+       │      - Message history across all providers preserved in DB
+       │      - If switching to Gemini from non-Gemini provider: clears stale interaction ID
+       │
+       ├─► Provider Dispatch:
+       │      - Gemini: dispatch_gemini_turn( ..., $model_id )
+       │      - Multi-turn (OpenAI/Claude): dispatch_multi_turn_provider( ..., $model_id )
+       │
+       └─► Message Persistence & Metadata:
+              - Stores message with provider and model metadata in wp_gca_messages
+              - Returns provider and model in REST response meta object
+```
+
+### Core Tenets of N21:
+1. **Single Source of Truth:** `ModelRegistry` centralizes supported models, names, and default models across all providers. Provider adapters query `ModelRegistry::get_models_for_provider()`.
+2. **Strict Server-Side Validation:** Requests specifying disabled, unconfigured, or mismatched provider-model pairs are rejected with `400 Bad Request` (`PROVIDER_NOT_AVAILABLE`, `INVALID_MODEL`).
+3. **Safe Metadata Exposure:** `GET /wp-json/gca/v1/providers` and script localization expose only enabled, configured providers and their supported models. Zero API keys, credentials, or header details are leaked.
+4. **Accessible Frontend Controls:** An accessible selector toolbar (`.gca-ai-selector-bar`) appears in Screen 2 when enabled. Changing provider dynamically cascades and updates the available model dropdown.

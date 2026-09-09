@@ -36,20 +36,22 @@ class ChatService {
 	private ?Knowledge\KnowledgeContextBuilder $context_builder;
 	private ?Handoff\HandoffService $handoff_service;
 	private ?Providers\ProviderRegistry $provider_registry;
+	private ?Providers\ProviderSelectionService $selection_service;
 
 	/**
 	 * ChatService constructor.
 	 *
-	 * @param SettingsService|null                   $settings_service    Optional settings service.
-	 * @param SessionService|null                    $session_service     Optional session service.
-	 * @param ConversationRepository|null            $conversation_repo   Optional conversation repository.
-	 * @param MessageRepository|null                 $message_repo        Optional message repository.
-	 * @param GeminiClient|null                      $gemini_client       Optional Gemini client.
-	 * @param ProfileService|null                    $profile_service     Optional profile service.
-	 * @param Knowledge\KnowledgeRetriever|null      $knowledge_retriever Optional knowledge retriever.
-	 * @param Knowledge\KnowledgeContextBuilder|null $context_builder     Optional knowledge context builder.
-	 * @param Handoff\HandoffService|null            $handoff_service     Optional handoff service.
-	 * @param Providers\ProviderRegistry|null        $provider_registry   Optional provider registry.
+	 * @param SettingsService|null                    $settings_service    Optional settings service.
+	 * @param SessionService|null                     $session_service     Optional session service.
+	 * @param ConversationRepository|null             $conversation_repo   Optional conversation repository.
+	 * @param MessageRepository|null                  $message_repo        Optional message repository.
+	 * @param GeminiClient|null                       $gemini_client       Optional Gemini client.
+	 * @param ProfileService|null                     $profile_service     Optional profile service.
+	 * @param Knowledge\KnowledgeRetriever|null       $knowledge_retriever Optional knowledge retriever.
+	 * @param Knowledge\KnowledgeContextBuilder|null  $context_builder     Optional knowledge context builder.
+	 * @param Handoff\HandoffService|null             $handoff_service     Optional handoff service.
+	 * @param Providers\ProviderRegistry|null         $provider_registry   Optional provider registry.
+	 * @param Providers\ProviderSelectionService|null $selection_service   Optional provider selection service.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
@@ -61,7 +63,8 @@ class ChatService {
 		?Knowledge\KnowledgeRetriever $knowledge_retriever = null,
 		?Knowledge\KnowledgeContextBuilder $context_builder = null,
 		?Handoff\HandoffService $handoff_service = null,
-		?Providers\ProviderRegistry $provider_registry = null
+		?Providers\ProviderRegistry $provider_registry = null,
+		?Providers\ProviderSelectionService $selection_service = null
 	) {
 		$this->settings_service    = $settings_service ?? SettingsService::get_instance();
 		$this->conversation_repo   = $conversation_repo ?? new ConversationRepository();
@@ -73,6 +76,7 @@ class ChatService {
 		$this->context_builder     = $context_builder ?? new Knowledge\KnowledgeContextBuilder();
 		$this->handoff_service     = $handoff_service ?? new Handoff\HandoffService( null, $this->conversation_repo );
 		$this->provider_registry   = $provider_registry;
+		$this->selection_service   = $selection_service;
 	}
 
 	/**
@@ -91,19 +95,38 @@ class ChatService {
 	}
 
 	/**
+	 * Accessor to ProviderSelectionService (N21).
+	 *
+	 * @return Providers\ProviderSelectionService
+	 */
+	public function get_provider_selection_service(): Providers\ProviderSelectionService {
+		if ( null === $this->selection_service ) {
+			$this->selection_service = new Providers\ProviderSelectionService(
+				$this->get_provider_registry(),
+				$this->settings_service
+			);
+		}
+		return $this->selection_service;
+	}
+
+	/**
 	 * Handles a validated user chat message turn.
 	 *
-	 * @param string      $message    Sanitized user message.
-	 * @param string      $session_id Validated client session token.
-	 * @param array       $context    Optional page context metadata.
-	 * @param string|null $request_id Diagnostic request UUID.
+	 * @param string      $message            Sanitized user message.
+	 * @param string      $session_id         Validated client session token.
+	 * @param array       $context            Optional page context metadata.
+	 * @param string|null $request_id         Diagnostic request UUID.
+	 * @param string|null $requested_provider Optional visitor-requested provider slug (N21).
+	 * @param string|null $requested_model    Optional visitor-requested model ID (N21).
 	 * @return array|WP_Error Normalized response array or WP_Error.
 	 */
 	public function handle_chat(
 		string $message,
 		string $session_id,
 		array $context = [],
-		?string $request_id = null
+		?string $request_id = null,
+		?string $requested_provider = null,
+		?string $requested_model = null
 	) {
 		// 1. Verify chatbot enabled setting.
 		if ( ! (bool) $this->settings_service->get( 'enabled', true ) ) {
@@ -137,18 +160,34 @@ class ChatService {
 		// 6. Check human handoff intent (Node N17.3).
 		$handoff_meta = $this->check_handoff_intent( $message, $conv_db_id );
 
-		// 7. Determine active AI provider (N18/N19).
-		$provider_id = SettingsService::get_default_provider();
-		if ( ! SettingsService::is_provider_enabled( $provider_id ) ) {
-			return new WP_Error(
-				'PROVIDER_DISABLED',
-				sprintf(
-					/* translators: %s: Provider brand name */
-					__( 'The configured AI provider (%s) is disabled.', 'gemini-chat-assistant' ),
-					esc_html( ucfirst( $provider_id ) )
-				),
-				[ 'status' => 503 ]
+		// 7. Resolve active AI provider and model (N18/N19/N20/N21).
+		try {
+			$selection   = $this->get_provider_selection_service()->resolve_effective_selection(
+				$requested_provider,
+				$requested_model
 			);
+			$provider_id = $selection['provider_id'];
+			$model_id    = $selection['model_id'];
+		} catch ( Providers\ProviderException $e ) {
+			return $this->map_provider_error( $e, $req_id );
+		}
+
+		// Mid-conversation provider switching (N21):
+		// When switching to Gemini, if the previous turn was from another provider,
+		// clear stale interaction ID so Gemini starts a clean interaction for this turn.
+		if ( 'gemini' === $provider_id && $conv_db_id > 0 ) {
+			$latest_messages = $this->message_repo->get_by_conversation_id( $conv_db_id, 2, 'DESC' );
+			if ( ! empty( $latest_messages ) ) {
+				foreach ( $latest_messages as $prev_msg ) {
+					if ( 'assistant' === ( $prev_msg['role'] ?? '' ) && ! empty( $prev_msg['model'] ) ) {
+						if ( ! \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', (string) $prev_msg['model'] ) ) {
+							$this->session_service->clear_interaction_id( $session_id, $conv_db_id );
+							$previous_interaction_id = null;
+						}
+						break;
+					}
+				}
+			}
 		}
 
 		// 8. Construct effective prompt grounded with retrieved knowledge (N16 RAG).
@@ -160,6 +199,7 @@ class ChatService {
 		// 9. Dispatch chat interaction to active provider.
 		$dispatch_result = $this->dispatch_provider_chat(
 			$provider_id,
+			$model_id,
 			$message,
 			$system_instruction,
 			$conv_db_id,
@@ -210,6 +250,7 @@ class ChatService {
 	 * Dispatches chat turn to the designated AI provider.
 	 *
 	 * @param string      $provider_id             Provider identifier ('gemini', 'openai', 'claude').
+	 * @param string      $model_id                Effective model identifier.
 	 * @param string      $message                 User message string.
 	 * @param string      $system_instruction      Grounded system prompt.
 	 * @param int         $conv_db_id              Conversation database ID.
@@ -220,6 +261,7 @@ class ChatService {
 	 */
 	private function dispatch_provider_chat(
 		string $provider_id,
+		string $model_id,
 		string $message,
 		string $system_instruction,
 		int $conv_db_id,
@@ -230,16 +272,17 @@ class ChatService {
 		$start_time = microtime( true );
 
 		if ( 'gemini' === $provider_id ) {
-			return $this->dispatch_gemini_turn( $message, $system_instruction, $previous_interaction_id, $session_id, $conv_db_id, $start_time, $req_id );
+			return $this->dispatch_gemini_turn( $model_id, $message, $system_instruction, $previous_interaction_id, $session_id, $conv_db_id, $start_time, $req_id );
 		}
 
-		return $this->dispatch_multi_turn_provider( $provider_id, $conv_db_id, $message, $system_instruction, $start_time, $req_id );
+		return $this->dispatch_multi_turn_provider( $provider_id, $model_id, $conv_db_id, $message, $system_instruction, $start_time, $req_id );
 	}
 
 	/**
 	 * Dispatches chat interaction via a multi-turn history-based AI provider (e.g. OpenAI, Claude).
 	 *
 	 * @param string $provider_id        Provider identifier slug ('openai', 'claude').
+	 * @param string $model_id           Selected model identifier.
 	 * @param int    $conv_db_id         Conversation database ID.
 	 * @param string $message             User message string.
 	 * @param string $system_instruction Grounded system instruction prompt.
@@ -249,13 +292,13 @@ class ChatService {
 	 */
 	private function dispatch_multi_turn_provider(
 		string $provider_id,
+		string $model_id,
 		int $conv_db_id,
 		string $message,
 		string $system_instruction,
 		float $start_time,
 		string $req_id
 	) {
-		$model            = SettingsService::get_provider_model( $provider_id );
 		$context_messages = $this->build_context_messages( $conv_db_id, $message );
 
 		try {
@@ -275,7 +318,7 @@ class ChatService {
 			$response = $provider->chat(
 				$context_messages,
 				[
-					'model'              => $model,
+					'model'              => $model_id,
 					'system_instruction' => $system_instruction,
 				]
 			);
@@ -284,7 +327,7 @@ class ChatService {
 				'assistant_text' => $response->get_content(),
 				'input_tokens'   => $response->get_input_tokens(),
 				'output_tokens'  => $response->get_output_tokens(),
-				'model'          => $response->get_model(),
+				'model'          => $response->get_model() ?: $model_id,
 				'latency_ms'     => (int) round( ( microtime( true ) - $start_time ) * 1000 ),
 			];
 		} catch ( Providers\ProviderException $e ) {
@@ -294,8 +337,19 @@ class ChatService {
 
 	/**
 	 * Dispatches chat interaction via Google Gemini Interactions API with stale interaction retry.
+	 *
+	 * @param string      $model_id                Selected Gemini model identifier.
+	 * @param string      $message                 User message string.
+	 * @param string      $system_instruction      Grounded system prompt.
+	 * @param string|null $previous_interaction_id Previous interaction ID.
+	 * @param string      $session_id              Client session identifier.
+	 * @param int         $conv_db_id              Conversation database ID.
+	 * @param float       $start_time              Turn start timestamp.
+	 * @param string      $req_id                  Request UUID for diagnostics.
+	 * @return array{assistant_text: string, model: string, input_tokens: int, output_tokens: int, latency_ms: int}|WP_Error
 	 */
 	private function dispatch_gemini_turn(
+		string $model_id,
 		string $message,
 		string $system_instruction,
 		?string $previous_interaction_id,
@@ -304,12 +358,11 @@ class ChatService {
 		float $start_time,
 		string $req_id
 	) {
-		$model       = SettingsService::get_provider_model( 'gemini' );
 		$ai_response = $this->gemini_client->create_interaction(
 			$message,
 			$previous_interaction_id,
 			[
-				'model'              => $model,
+				'model'              => $model_id,
 				'system_instruction' => $system_instruction,
 			]
 		);
@@ -323,7 +376,7 @@ class ChatService {
 					$message,
 					null,
 					[
-						'model'              => $model,
+						'model'              => $model_id,
 						'system_instruction' => $system_instruction,
 					]
 				);
@@ -348,7 +401,7 @@ class ChatService {
 			'assistant_text' => $ai_response['text'] ?? '',
 			'input_tokens'   => $input_tokens,
 			'output_tokens'  => $output_tokens,
-			'model'          => $model,
+			'model'          => $model_id,
 			'latency_ms'     => $latency_ms,
 		];
 	}

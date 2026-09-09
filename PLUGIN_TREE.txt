@@ -66,12 +66,14 @@ gemini-chat-assistant/
 │   │   ├── ClaudeClient.php
 │   │   ├── ClaudeProvider.php
 │   │   ├── GeminiProvider.php
+│   │   ├── ModelRegistry.php
 │   │   ├── OpenAIClient.php
 │   │   ├── OpenAIProvider.php
 │   │   ├── ProviderException.php
 │   │   ├── ProviderInterface.php
 │   │   ├── ProviderRegistry.php
-│   │   └── ProviderResponse.php
+│   │   ├── ProviderResponse.php
+│   │   └── ProviderSelectionService.php
 │   ├── REST/
 │   │   ├── RestServer.php
 │   │   ├── ChatController.php
@@ -131,6 +133,7 @@ gemini-chat-assistant/
 │   ├── test-direct-contact-channels.php
 │   ├── test-openai-integration.php
 │   ├── test-claude-integration.php
+│   ├── test-provider-model-selection.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig

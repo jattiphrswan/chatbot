@@ -163,6 +163,119 @@
 		const confirmCancelBtn = confirmDialog ? confirmDialog.querySelector('.gca-confirm-dialog__btn--cancel') : null;
 		const confirmAcceptBtn = confirmDialog ? confirmDialog.querySelector('.gca-confirm-dialog__btn--confirm') : null;
 
+		// AI Selector Elements (Node N21)
+		const aiSelectorBar = widgetElem.querySelector('.gca-ai-selector-bar');
+		const providerGroup = widgetElem.querySelector('.gca-selector-group--provider');
+		const providerSelect = widgetElem.querySelector('.gca-selector--provider');
+		const modelGroup = widgetElem.querySelector('.gca-selector-group--model');
+		const modelSelect = widgetElem.querySelector('.gca-selector--model');
+
+		const providerConfig = config.providerSelection || {};
+		const allowProviderSelect = !!providerConfig.allow_provider_selection;
+		const allowModelSelect = !!providerConfig.allow_model_selection;
+		const usableProviders = Array.isArray(providerConfig.providers) ? providerConfig.providers : [];
+		const defaultProviderId = providerConfig.default_provider || 'gemini';
+
+		let currentProviderId = defaultProviderId;
+		let currentModelId = '';
+
+		function getProviderObj(providerId) {
+			for (let i = 0; i < usableProviders.length; i++) {
+				if (usableProviders[i].id === providerId) {
+					return usableProviders[i];
+				}
+			}
+			return null;
+		}
+
+		function populateModelSelect(providerId, selectedModel) {
+			if (!modelSelect) return;
+			modelSelect.innerHTML = '';
+			const providerObj = getProviderObj(providerId);
+			if (!providerObj || !Array.isArray(providerObj.models)) return;
+
+			let matched = false;
+			providerObj.models.forEach(function (m) {
+				const opt = document.createElement('option');
+				opt.value = m.id;
+				opt.textContent = m.name + (m.recommended ? ' (' + (i18n.recommended || 'Recommended') + ')' : '');
+				if (m.id === selectedModel) {
+					opt.selected = true;
+					matched = true;
+				}
+				modelSelect.appendChild(opt);
+			});
+
+			if (!matched && providerObj.models.length > 0) {
+				modelSelect.selectedIndex = 0;
+				currentModelId = providerObj.models[0].id;
+			} else {
+				currentModelId = selectedModel;
+			}
+		}
+
+		function initAiSelectors() {
+			if (!aiSelectorBar || usableProviders.length === 0) {
+				if (aiSelectorBar) aiSelectorBar.style.display = 'none';
+				return;
+			}
+
+			if (!allowProviderSelect && !allowModelSelect) {
+				aiSelectorBar.style.display = 'none';
+				return;
+			}
+
+			const hasDefault = usableProviders.some(function (p) { return p.id === currentProviderId; });
+			if (!hasDefault && usableProviders.length > 0) {
+				currentProviderId = usableProviders[0].id;
+			}
+
+			const activeProviderObj = getProviderObj(currentProviderId);
+			currentModelId = activeProviderObj ? activeProviderObj.default_model : '';
+
+			if (allowProviderSelect && providerSelect && providerGroup) {
+				providerSelect.innerHTML = '';
+				usableProviders.forEach(function (p) {
+					const opt = document.createElement('option');
+					opt.value = p.id;
+					opt.textContent = p.name;
+					if (p.id === currentProviderId) {
+						opt.selected = true;
+					}
+					providerSelect.appendChild(opt);
+				});
+				providerGroup.style.display = 'flex';
+			} else if (providerGroup) {
+				providerGroup.style.display = 'none';
+			}
+
+			if (allowModelSelect && modelSelect && modelGroup) {
+				populateModelSelect(currentProviderId, currentModelId);
+				modelGroup.style.display = 'flex';
+			} else if (modelGroup) {
+				modelGroup.style.display = 'none';
+			}
+
+			aiSelectorBar.style.display = 'flex';
+		}
+
+		if (providerSelect) {
+			providerSelect.addEventListener('change', function () {
+				currentProviderId = providerSelect.value;
+				const providerObj = getProviderObj(currentProviderId);
+				currentModelId = providerObj ? providerObj.default_model : '';
+				if (allowModelSelect) {
+					populateModelSelect(currentProviderId, currentModelId);
+				}
+			});
+		}
+
+		if (modelSelect) {
+			modelSelect.addEventListener('change', function () {
+				currentModelId = modelSelect.value;
+			});
+		}
+
 		/**
 		 * Switches active screen view.
 		 *
@@ -520,22 +633,31 @@
 			state.isSending = true;
 			if (composerInput) composerInput.disabled = true;
 			if (sendButton) sendButton.disabled = true;
+			if (providerSelect) providerSelect.disabled = true;
+			if (modelSelect) modelSelect.disabled = true;
 			if (loadingElem) {
 				loadingElem.style.display = 'flex';
 				scrollToBottom(true);
 			}
 
 			const restUrl = (config.restUrl || '/wp-json/gca/v1').replace(/\/$/, '') + '/chat';
+			const payload = {
+				message: textToSend,
+				session_id: sessionToken,
+			};
+			if (allowProviderSelect && currentProviderId) {
+				payload.provider = currentProviderId;
+			}
+			if (allowModelSelect && currentModelId) {
+				payload.model = currentModelId;
+			}
 
 			fetch(restUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({
-					message: textToSend,
-					session_id: sessionToken,
-				}),
+				body: JSON.stringify(payload),
 			})
 				.then(function (response) {
 					const is429 = response.status === 429;
@@ -548,6 +670,8 @@
 					if (loadingElem) loadingElem.style.display = 'none';
 
 					if (res.is429) {
+						if (providerSelect) providerSelect.disabled = false;
+						if (modelSelect) modelSelect.disabled = false;
 						const retryAfter = (res.data && res.data.error && res.data.error.retry_after) || 30;
 						startRateLimitCountdown(retryAfter);
 						return;
@@ -555,6 +679,8 @@
 
 					if (composerInput) composerInput.disabled = false;
 					if (sendButton) sendButton.disabled = false;
+					if (providerSelect) providerSelect.disabled = false;
+					if (modelSelect) modelSelect.disabled = false;
 					if (composerInput) composerInput.focus();
 
 					if (res.ok && res.data && res.data.success && res.data.data && typeof res.data.data.message === 'string') {
@@ -570,6 +696,8 @@
 					if (loadingElem) loadingElem.style.display = 'none';
 					if (composerInput) composerInput.disabled = false;
 					if (sendButton) sendButton.disabled = false;
+					if (providerSelect) providerSelect.disabled = false;
+					if (modelSelect) modelSelect.disabled = false;
 
 					const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 					const netMsg = isOffline ? (i18n.offlineNotice || 'You appear to be offline.') : (i18n.networkError || 'Network connection failed.');
@@ -664,6 +792,10 @@
 					}
 				});
 			}
+
+			// Reset AI provider and model selectors to defaults (N21)
+			currentProviderId = defaultProviderId;
+			initAiSelectors();
 
 			switchScreen('chat');
 		}
@@ -1010,6 +1142,9 @@
 				}
 			}
 		});
+
+		// Initialize AI Provider & Model selectors (Node N21)
+		initAiSelectors();
 	}
 
 	// Auto-initialize all widgets when DOM is loaded

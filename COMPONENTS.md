@@ -48,6 +48,8 @@ SkyFish\GeminiChat
 │   ├── ProviderInterface: Standard interface for multi-provider AI adapters.
 │   ├── AbstractProvider: Base abstract class providing common identifier, model list, configuration, and validation routines.
 │   ├── ProviderRegistry: Central registry container for AI model providers.
+│   ├── ModelRegistry: Centralized source of truth for supported models, human-friendly labels, and default models.
+│   ├── ProviderSelectionService: Domain service resolving effective provider/model and generating safe public metadata.
 │   ├── ProviderException: Domain exception with automatic credential masking.
 │   ├── ProviderResponse: Normalized provider response value object.
 │   ├── GeminiProvider: Google Gemini adapter wrapping GeminiClient.

@@ -42,6 +42,8 @@ class Activator {
 			'provider_openai_model'         => 'gpt-4o-mini',
 			'provider_claude_enabled'       => false,
 			'provider_claude_model'         => 'claude-3-5-haiku-20241022',
+			'allow_public_provider_selection' => false,
+			'allow_public_model_selection'    => false,
 			'system_instruction'    => 'You are a helpful customer support assistant for this website.',
 
 			// Widget.

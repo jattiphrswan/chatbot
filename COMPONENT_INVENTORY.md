@@ -37,6 +37,8 @@
 | `ProviderInterface` | `SkyFish\GeminiChat\Providers` | Contract for unified AI provider adapters. | None |
 | `AbstractProvider` | `SkyFish\GeminiChat\Providers` | Base class for AI providers implementing common getters, configuration checks, and validation. | `ProviderInterface`, `SettingsService`, `ProviderException` |
 | `ProviderRegistry` | `SkyFish\GeminiChat\Providers` | Container registry for AI providers with enabled/configured queries. | `ProviderInterface` |
+| `ModelRegistry` | `SkyFish\GeminiChat\Providers` | Centralized registry and metadata provider for all supported AI models. | None |
+| `ProviderSelectionService` | `SkyFish\GeminiChat\Providers` | Selection resolution, usability assertions, and safe public metadata generation. | `ProviderRegistry`, `SettingsService`, `ModelRegistry` |
 | `ProviderResponse` | `SkyFish\GeminiChat\Providers` | Normalized value object for multi-provider AI responses. | None |
 | `ProviderException` | `SkyFish\GeminiChat\Providers` | Normalized domain exception with automated credential masking. | None |
 | `GeminiProvider` | `SkyFish\GeminiChat\Providers` | Google Gemini AI provider implementation extending AbstractProvider and wrapping `GeminiClient`. | `GeminiClient`, `AbstractProvider` |

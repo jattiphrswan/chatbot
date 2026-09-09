@@ -97,6 +97,16 @@ class RestController extends WP_REST_Controller {
 							'type'        => 'object',
 							'required'    => false,
 						],
+						'provider'   => [
+							'description' => __( 'Optional requested AI provider slug.', 'gemini-chat-assistant' ),
+							'type'        => 'string',
+							'required'    => false,
+						],
+						'model'      => [
+							'description' => __( 'Optional requested AI model identifier.', 'gemini-chat-assistant' ),
+							'type'        => 'string',
+							'required'    => false,
+						],
 					],
 				],
 			]
@@ -176,6 +186,19 @@ class RestController extends WP_REST_Controller {
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => [ $this, 'handle_health' ],
 					'permission_callback' => [ $this, 'check_admin_permissions' ],
+				],
+			]
+		);
+
+		// 5. GET /wp-json/gca/v1/providers (Public metadata, N21)
+		register_rest_route(
+			$this->namespace,
+			'/providers',
+			[
+				[
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => [ $this, 'handle_providers' ],
+					'permission_callback' => [ $this, 'check_chat_permissions' ],
 				],
 			]
 		);
@@ -259,8 +282,15 @@ class RestController extends WP_REST_Controller {
 			return $this->format_error_response( $rate_check, $request_id );
 		}
 
-		// 5. Orchestrate chat interaction through ChatService.
-		$result = $this->chat_service->handle_chat( $message, $session_id, $context, $request_id );
+		// 5. Extract optional provider and model overrides (N21).
+		$raw_provider = $request->get_param( 'provider' );
+		$provider     = ! empty( $raw_provider ) && is_string( $raw_provider ) ? sanitize_key( $raw_provider ) : null;
+
+		$raw_model    = $request->get_param( 'model' );
+		$model        = ! empty( $raw_model ) && is_string( $raw_model ) ? sanitize_text_field( trim( $raw_model ) ) : null;
+
+		// 6. Orchestrate chat interaction through ChatService.
+		$result = $this->chat_service->handle_chat( $message, $session_id, $context, $request_id, $provider, $model );
 
 		if ( is_wp_error( $result ) ) {
 			return $this->format_error_response( $result, $request_id );
@@ -270,6 +300,27 @@ class RestController extends WP_REST_Controller {
 			[
 				'success' => true,
 				'data'    => $result,
+			],
+			200
+		);
+	}
+
+	/**
+	 * Handles GET /wp-json/gca/v1/providers request (N21).
+	 *
+	 * Returns safe public metadata for configured AI providers and models.
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 * @return WP_REST_Response
+	 */
+	public function handle_providers( WP_REST_Request $request ): WP_REST_Response {
+		$selection_service = Plugin::get_instance()->get_provider_selection_service();
+		$metadata          = $selection_service->get_safe_public_providers_metadata();
+
+		return new WP_REST_Response(
+			[
+				'success' => true,
+				'data'    => $metadata,
 			],
 			200
 		);

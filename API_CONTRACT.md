@@ -30,6 +30,8 @@ X-WP-Nonce: <wp_rest_nonce_string>
 {
   "session_id": "gca_sess_9a8b7c6d5e4f3g2h1",
   "message": "Hello! How does this plugin work?",
+  "provider": "openai",
+  "model": "gpt-4o-mini",
   "context": {
     "page_id": 42,
     "page_title": "Contact Us",
@@ -41,6 +43,8 @@ X-WP-Nonce: <wp_rest_nonce_string>
 #### Payload Schema Validation
 - `session_id` (string, required): Format `^[a-zA-Z0-9_-]{16,64}$`.
 - `message` (string, required): 1 to 4000 characters. Trimmed and sanitized.
+- `provider` (string, optional): Target AI provider identifier (`gemini`, `openai`, `claude`). Honored when `allow_public_provider_selection` is enabled.
+- `model` (string, optional): Target AI model identifier valid for the resolved provider. Honored when `allow_public_model_selection` is enabled.
 - `context` (object, optional):
   - `page_id` (integer, optional)
   - `page_title` (string, optional, max 255 chars)
@@ -55,7 +59,8 @@ X-WP-Nonce: <wp_rest_nonce_string>
     "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
     "request_id": "550e8400-e29b-41d4-a716-446655440000",
     "meta": {
-      "model": "gemini-3.8-flash"
+      "provider": "openai",
+      "model": "gpt-4o-mini"
     }
   }
 }
@@ -118,6 +123,48 @@ Performs end-to-end self-tests including database integrity, option configuratio
     "configured": true,
     "model": "gemini-3.8-flash",
     "database_version": "1.0.0"
+  }
+}
+```
+
+---
+
+### 2.4 Public AI Providers & Models Metadata
+Returns public configuration and supported models for enabled and configured AI providers.
+
+- **Route:** `GET /wp-json/gca/v1/providers`
+- **Permission Callback:** Public / Nonce-verified (`X-WP-Nonce`)
+
+#### Response Payload (200 OK)
+```json
+{
+  "success": true,
+  "data": {
+    "default_provider": "gemini",
+    "allow_public_provider_selection": true,
+    "allow_public_model_selection": true,
+    "providers": [
+      {
+        "id": "gemini",
+        "name": "Google Gemini",
+        "default_model": "gemini-2.5-flash",
+        "models": [
+          { "id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash" },
+          { "id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro" },
+          { "id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash" }
+        ]
+      },
+      {
+        "id": "openai",
+        "name": "OpenAI",
+        "default_model": "gpt-4o-mini",
+        "models": [
+          { "id": "gpt-4o-mini", "name": "GPT-4o Mini" },
+          { "id": "gpt-4o", "name": "GPT-4o" },
+          { "id": "gpt-4.1-mini", "name": "GPT-4.1 Mini" }
+        ]
+      }
+    ]
   }
 }
 ```

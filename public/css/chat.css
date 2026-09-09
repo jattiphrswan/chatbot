@@ -1321,3 +1321,88 @@
 		inset-inline-end: 16px;
 	}
 }
+
+/* -------------------------------------------------------------------------
+ * AI Provider & Model Selector Bar (Node N21)
+ * ------------------------------------------------------------------------- */
+.gca-ai-selector-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 14px;
+	background-color: var(--gca-surface);
+	border-bottom: 1px solid var(--gca-border);
+	flex-wrap: wrap;
+	font-size: 12px;
+	line-height: 1.4;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+	flex-shrink: 0;
+}
+
+.gca-selector-group {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: 1 1 auto;
+	min-width: 120px;
+}
+
+.gca-selector-label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--gca-text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	white-space: nowrap;
+}
+
+.gca-selector {
+	flex: 1 1 auto;
+	min-width: 0;
+	height: 30px;
+	padding: 0 24px 0 8px;
+	font-size: 12px;
+	color: var(--gca-text-primary);
+	background-color: var(--gca-ai-bubble-bg);
+	border: 1px solid var(--gca-border);
+	border-radius: var(--gca-radius-sm);
+	outline: none;
+	cursor: pointer;
+	appearance: none;
+	-webkit-appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 8px center;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+[dir="rtl"] .gca-selector {
+	padding: 0 8px 0 24px;
+	background-position: left 8px center;
+}
+
+.gca-selector:focus {
+	border-color: var(--gca-primary);
+	box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+}
+
+.gca-selector:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Dark Theme Support */
+.gca-widget--dark .gca-ai-selector-bar {
+	background-color: var(--gca-surface);
+	border-bottom-color: var(--gca-border);
+}
+
+.gca-widget--dark .gca-selector {
+	color: var(--gca-text-primary);
+	background-color: var(--gca-ai-bubble-bg);
+	border-color: var(--gca-border);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}

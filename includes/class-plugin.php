@@ -166,12 +166,14 @@ class Plugin {
 		// Email Notifications (N17.4).
 		require_once GCA_PLUGIN_DIR . 'includes/notifications/class-notification-service.php';
 
-		// AI Providers (N16 / N18).
+		// AI Providers (N16 / N18 / N21).
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderInterface.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/AbstractProvider.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ModelRegistry.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderResponse.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderException.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderRegistry.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderSelectionService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/GeminiProvider.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIClient.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIProvider.php';
@@ -305,7 +307,8 @@ class Plugin {
 				$this->get_knowledge_retriever(),
 				$this->get_knowledge_context_builder(),
 				$this->get_handoff_service(),
-				$this->get_provider_registry()
+				$this->get_provider_registry(),
+				$this->get_provider_selection_service()
 			);
 		}
 		return $this->chat_service;
@@ -545,6 +548,22 @@ class Plugin {
 			$this->provider_registry->register( new \SkyFish\GeminiChat\Providers\ClaudeProvider() );
 		}
 		return $this->provider_registry;
+	}
+
+	/**
+	 * Accessor to ProviderSelectionService (N21).
+	 *
+	 * @return \SkyFish\GeminiChat\Providers\ProviderSelectionService
+	 */
+	public function get_provider_selection_service(): \SkyFish\GeminiChat\Providers\ProviderSelectionService {
+		static $selection_service = null;
+		if ( null === $selection_service ) {
+			$selection_service = new \SkyFish\GeminiChat\Providers\ProviderSelectionService(
+				$this->get_provider_registry(),
+				SettingsService::get_instance()
+			);
+		}
+		return $selection_service;
 	}
 
 	/**

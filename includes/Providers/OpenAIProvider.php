@@ -32,29 +32,7 @@ class OpenAIProvider extends AbstractProvider {
 		$this->id     = self::PROVIDER_ID;
 		$this->name   = 'OpenAI';
 		$this->client = $client ?? new OpenAIClient();
-		$this->models = [
-			[
-				'id'                => 'gpt-4o',
-				'name'              => 'GPT-4o',
-				'context_window'    => 128000,
-				'max_output_tokens' => 4096,
-				'description'       => 'Flagship omni-model for complex tasks and fast general intelligence.',
-			],
-			[
-				'id'                => 'gpt-4o-mini',
-				'name'              => 'GPT-4o mini',
-				'context_window'    => 128000,
-				'max_output_tokens' => 4096,
-				'description'       => 'Cost-effective small model for lightweight conversational workflows.',
-			],
-			[
-				'id'                => 'gpt-4-turbo',
-				'name'              => 'GPT-4 Turbo',
-				'context_window'    => 128000,
-				'max_output_tokens' => 4096,
-				'description'       => 'High-intelligence model for broad reasoning tasks.',
-			],
-		];
+		$this->models = ModelRegistry::get_models_for_provider( self::PROVIDER_ID );
 	}
 
 	/**

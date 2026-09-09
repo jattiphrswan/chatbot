@@ -48,6 +48,7 @@ flowchart TD
     N10 --> N18
     N18 --> N19[N19: Live OpenAI Integration]
     N19 --> N20[N20: Live Anthropic Claude Integration]
+    N20 --> N21[N21: Provider & Model Selection]
 ```
 
 ## 2. Approved Node Breakdown
@@ -75,4 +76,5 @@ flowchart TD
 | **N18** | **Secure Multi-Provider Credentials & Admin Settings** | Secure WordPress admin configuration for AI providers (Google Gemini, OpenAI, Anthropic Claude). `ProviderInterface`, `ProviderRegistry`, `GeminiProvider`, `OpenAIProvider`, `ClaudeProvider`, server-side credential management (`gca_provider_credentials` with OpenSSL AES-256-CBC encryption or env/constant overrides), default provider selection, per-provider toggles/models, explicit key removal, zero live OpenAI/Claude HTTP calls in N18, zero client-side credential exposure. | **COMPLETED** |
 | **N19** | **Live OpenAI Integration** | Direct live OpenAI Responses API integration (`OpenAIClient`, `POST https://api.openai.com/v1/responses`, server-side Bearer auth, `store: false`, multi-turn history normalization, `instructions` prompt + RAG grounding, `ProviderResponse` token usage normalization, HTTP 400/401/404/408/429/500/WP_Error mapping to `ProviderException`, secret scrubbing, admin 1-token Test Connection, dynamic routing in `ChatService`, zero Gemini regressions, Claude preserved as placeholder). | **COMPLETED** |
 | **N20** | **Live Anthropic Claude Integration** | Direct live Anthropic Claude Messages API integration (`ClaudeClient`, `POST https://api.anthropic.com/v1/messages`, `x-api-key` + `anthropic-version: 2023-06-01` headers, `system` top-level prompt mapping + RAG grounding, multi-turn history normalization, `max_tokens` handling, multiple content block parsing, token usage extraction, stop reason mapping, HTTP 400/401/403/404/413/429/500/529/WP_Error mapping to `ProviderException`, secret scrubbing, admin 1-token Test Connection, unified multi-turn routing in `ChatService`, zero Gemini/OpenAI regressions). | **COMPLETED** |
-| **N21** | **Provider & Model Selection** | Public UI and admin provider/model switching and selection controls. | **PLANNED** |
+| **N21** | **Provider & Model Selection** | Centralized AI provider and model selection architecture (`ModelRegistry`, `ProviderSelectionService`). Admin default provider and per-provider model selectors; public selection toggles (`allow_public_provider_selection`, `allow_public_model_selection`); safe public REST `/providers` metadata endpoint; accessible frontend toolbar (`.gca-ai-selector-bar`) with dynamic client-side model updates; strict server-side validation; seamless mid-conversation switching with history & analytics preservation. | **COMPLETED** |
+| **N22** | **Multi-AI End-to-End Validation & Production Readiness** | End-to-end integration testing, full automated test verification, release preparation. | **PLANNED** |

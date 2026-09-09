@@ -201,11 +201,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<div class="gca-field-row">
 						<label for="gca_default_provider"><?php esc_html_e( 'Default Provider', 'gemini-chat-assistant' ); ?></label>
 						<select id="gca_default_provider" name="gca_settings[default_provider]">
-							<option value="gemini" <?php selected( $default_provider, 'gemini' ); ?>><?php esc_html_e( 'Google Gemini (Native)', 'gemini-chat-assistant' ); ?></option>
-							<option value="openai" <?php selected( $default_provider, 'openai' ); ?>><?php esc_html_e( 'OpenAI (Prepared)', 'gemini-chat-assistant' ); ?></option>
-							<option value="claude" <?php selected( $default_provider, 'claude' ); ?>><?php esc_html_e( 'Anthropic Claude (Prepared)', 'gemini-chat-assistant' ); ?></option>
+							<option value="gemini" <?php selected( $default_provider, 'gemini' ); ?>><?php esc_html_e( 'Google Gemini', 'gemini-chat-assistant' ); ?></option>
+							<option value="openai" <?php selected( $default_provider, 'openai' ); ?>><?php esc_html_e( 'OpenAI', 'gemini-chat-assistant' ); ?></option>
+							<option value="claude" <?php selected( $default_provider, 'claude' ); ?>><?php esc_html_e( 'Anthropic Claude', 'gemini-chat-assistant' ); ?></option>
 						</select>
 						<span class="description"><?php esc_html_e( 'Currently active provider for visitor chat responses.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Public Chat Controls (N21) -->
+			<div class="gca-section-card" style="margin-top: 16px;">
+				<h3><?php esc_html_e( 'Public Chat Controls', 'gemini-chat-assistant' ); ?></h3>
+				<p class="description" style="margin-bottom: 12px;">
+					<?php esc_html_e( 'Configure whether website visitors can select AI providers and models directly within the chat widget.', 'gemini-chat-assistant' ); ?>
+				</p>
+				<div class="gca-form-grid">
+					<div class="gca-field-row">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[allow_public_provider_selection]" value="1" <?php checked( ! empty( $settings['allow_public_provider_selection'] ) ); ?> />
+							<strong><?php esc_html_e( 'Allow visitors to choose AI provider', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+						<span class="description"><?php esc_html_e( 'When enabled, a provider dropdown appears in the chat widget containing active and configured providers.', 'gemini-chat-assistant' ); ?></span>
+					</div>
+					<div class="gca-field-row">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[allow_public_model_selection]" value="1" <?php checked( ! empty( $settings['allow_public_model_selection'] ) ); ?> />
+							<strong><?php esc_html_e( 'Allow visitors to choose AI model', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+						<span class="description"><?php esc_html_e( 'When enabled, a model dropdown appears in the chat widget displaying supported models for the active provider.', 'gemini-chat-assistant' ); ?></span>
 					</div>
 				</div>
 			</div>
@@ -228,9 +252,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<div class="gca-field-row">
 						<label for="gca_provider_gemini_model"><?php esc_html_e( 'Model', 'gemini-chat-assistant' ); ?></label>
 						<select id="gca_provider_gemini_model" name="gca_settings[provider_gemini_model]">
-							<option value="gemini-3.8-flash" <?php selected( $gemini_model, 'gemini-3.8-flash' ); ?>><?php esc_html_e( 'gemini-3.8-flash (Recommended Default)', 'gemini-chat-assistant' ); ?></option>
-							<option value="gemini-3.7-flash" <?php selected( $gemini_model, 'gemini-3.7-flash' ); ?>><?php esc_html_e( 'gemini-3.7-flash', 'gemini-chat-assistant' ); ?></option>
-							<option value="gemini-2.5-flash" <?php selected( $gemini_model, 'gemini-2.5-flash' ); ?>><?php esc_html_e( 'gemini-2.5-flash', 'gemini-chat-assistant' ); ?></option>
+							<?php foreach ( \SkyFish\GeminiChat\Providers\ModelRegistry::get_models_for_provider( 'gemini' ) as $m ) : ?>
+								<option value="<?php echo esc_attr( $m['id'] ); ?>" <?php selected( $gemini_model, $m['id'] ); ?>>
+									<?php echo esc_html( $m['name'] . ( ! empty( $m['recommended'] ) ? ' (' . __( 'Recommended', 'gemini-chat-assistant' ) . ')' : '' ) ); ?>
+								</option>
+							<?php endforeach; ?>
 						</select>
 					</div>
 					<div class="gca-field-row">
@@ -279,9 +305,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<div class="gca-field-row">
 						<label for="gca_provider_openai_model"><?php esc_html_e( 'Model', 'gemini-chat-assistant' ); ?></label>
 						<select id="gca_provider_openai_model" name="gca_settings[provider_openai_model]">
-							<option value="gpt-4o-mini" <?php selected( $openai_model, 'gpt-4o-mini' ); ?>><?php esc_html_e( 'gpt-4o-mini (Recommended)', 'gemini-chat-assistant' ); ?></option>
-							<option value="gpt-4o" <?php selected( $openai_model, 'gpt-4o' ); ?>><?php esc_html_e( 'gpt-4o', 'gemini-chat-assistant' ); ?></option>
-							<option value="gpt-4-turbo" <?php selected( $openai_model, 'gpt-4-turbo' ); ?>><?php esc_html_e( 'gpt-4-turbo', 'gemini-chat-assistant' ); ?></option>
+							<?php foreach ( \SkyFish\GeminiChat\Providers\ModelRegistry::get_models_for_provider( 'openai' ) as $m ) : ?>
+								<option value="<?php echo esc_attr( $m['id'] ); ?>" <?php selected( $openai_model, $m['id'] ); ?>>
+									<?php echo esc_html( $m['name'] . ( ! empty( $m['recommended'] ) ? ' (' . __( 'Recommended', 'gemini-chat-assistant' ) . ')' : '' ) ); ?>
+								</option>
+							<?php endforeach; ?>
 						</select>
 					</div>
 					<div class="gca-field-row">
@@ -339,12 +367,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<div class="gca-field-row">
 						<label for="gca_provider_claude_model"><?php esc_html_e( 'Model', 'gemini-chat-assistant' ); ?></label>
 						<select id="gca_provider_claude_model" name="gca_settings[provider_claude_model]">
-							<option value="claude-3-5-haiku-20241022" <?php selected( $claude_model, 'claude-3-5-haiku-20241022' ); ?>><?php esc_html_e( 'claude-3-5-haiku-20241022 (Recommended)', 'gemini-chat-assistant' ); ?></option>
-							<option value="claude-3-5-sonnet-20241022" <?php selected( $claude_model, 'claude-3-5-sonnet-20241022' ); ?>><?php esc_html_e( 'claude-3-5-sonnet-20241022', 'gemini-chat-assistant' ); ?></option>
-							<option value="claude-3-opus-20240229" <?php selected( $claude_model, 'claude-3-opus-20240229' ); ?>><?php esc_html_e( 'claude-3-opus-20240229', 'gemini-chat-assistant' ); ?></option>
-							<option value="claude-sonnet-4-6" <?php selected( $claude_model, 'claude-sonnet-4-6' ); ?>><?php esc_html_e( 'claude-sonnet-4-6', 'gemini-chat-assistant' ); ?></option>
-							<option value="claude-opus-4-8" <?php selected( $claude_model, 'claude-opus-4-8' ); ?>><?php esc_html_e( 'claude-opus-4-8', 'gemini-chat-assistant' ); ?></option>
-							<option value="claude-haiku-4-5-20251001" <?php selected( $claude_model, 'claude-haiku-4-5-20251001' ); ?>><?php esc_html_e( 'claude-haiku-4-5-20251001', 'gemini-chat-assistant' ); ?></option>
+							<?php foreach ( \SkyFish\GeminiChat\Providers\ModelRegistry::get_models_for_provider( 'claude' ) as $m ) : ?>
+								<option value="<?php echo esc_attr( $m['id'] ); ?>" <?php selected( $claude_model, $m['id'] ); ?>>
+									<?php echo esc_html( $m['name'] . ( ! empty( $m['recommended'] ) ? ' (' . __( 'Recommended', 'gemini-chat-assistant' ) . ')' : '' ) ); ?>
+								</option>
+							<?php endforeach; ?>
 						</select>
 					</div>
 					<div class="gca-field-row">
