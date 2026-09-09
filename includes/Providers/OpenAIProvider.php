@@ -24,6 +24,17 @@ class OpenAIProvider implements ProviderInterface {
 
 	public const PROVIDER_ID = 'openai';
 
+	private OpenAIClient $client;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param OpenAIClient|null $client Optional OpenAIClient instance.
+	 */
+	public function __construct( ?OpenAIClient $client = null ) {
+		$this->client = $client ?? new OpenAIClient();
+	}
+
 	public function get_id(): string {
 		return self::PROVIDER_ID;
 	}
@@ -64,28 +75,66 @@ class OpenAIProvider implements ProviderInterface {
 	}
 
 	/**
-	 * Processes a chat interaction.
+	 * Processes a chat interaction via OpenAI Responses API.
 	 *
-	 * In N18, live outbound calls are strictly disabled.
-	 *
+	 * @param array<int, array{role: string, content: string}> $messages Normalized message array.
+	 * @param array<string, mixed>                            $options  Runtime options.
+	 * @return ProviderResponse
 	 * @throws ProviderException
 	 */
 	public function chat( array $messages, array $options = [] ): ProviderResponse {
-		throw ProviderException::not_configured(
-			$this->get_id(),
-			__( 'OpenAI live chat integration is scheduled for Node N19. Outbound calls are disabled in N18.', 'gemini-chat-assistant' )
-		);
+		$this->validate_configuration();
+
+		return $this->client->create_response( $messages, $options );
 	}
 
 	/**
-	 * Connection test placeholder.
+	 * Executes a connection test to OpenAI.
 	 *
+	 * @return bool
 	 * @throws ProviderException
 	 */
 	public function test_connection(): bool {
-		throw ProviderException::not_configured(
-			$this->get_id(),
-			__( 'OpenAI live connection testing is scheduled for Node N19.', 'gemini-chat-assistant' )
-		);
+		$this->validate_configuration();
+
+		return $this->client->test_connection();
+	}
+
+	/**
+	 * Returns the underlying HTTP client.
+	 *
+	 * @return OpenAIClient
+	 */
+	public function get_client(): OpenAIClient {
+		return $this->client;
+	}
+
+	/**
+	 * Validates that the provider is enabled, configured with an API key, and has a valid model.
+	 *
+	 * @throws ProviderException
+	 */
+	private function validate_configuration(): void {
+		if ( ! SettingsService::is_provider_enabled( self::PROVIDER_ID ) ) {
+			throw ProviderException::not_configured(
+				self::PROVIDER_ID,
+				__( 'OpenAI provider is disabled in settings.', 'gemini-chat-assistant' )
+			);
+		}
+
+		if ( ! SettingsService::is_provider_configured( self::PROVIDER_ID ) ) {
+			throw ProviderException::not_configured(
+				self::PROVIDER_ID,
+				__( 'OpenAI API key is not configured on the server.', 'gemini-chat-assistant' )
+			);
+		}
+
+		$model = SettingsService::get_provider_model( self::PROVIDER_ID );
+		if ( empty( $model ) ) {
+			throw ProviderException::configuration_error(
+				self::PROVIDER_ID,
+				__( 'OpenAI model is not configured.', 'gemini-chat-assistant' )
+			);
+		}
 	}
 }

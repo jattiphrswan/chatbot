@@ -195,6 +195,54 @@ class ProviderException extends \Exception {
 	}
 
 	/**
+	 * Returns machine-readable error type/code.
+	 *
+	 * @return string
+	 */
+	public function get_error_code(): string {
+		return $this->error_type;
+	}
+
+	/**
+	 * Factory helper: Invalid request.
+	 */
+	public static function invalid_request( string $provider_id, string $details = '' ): self {
+		return new self(
+			$provider_id,
+			self::TYPE_INVALID_REQUEST,
+			__( 'Invalid request sent to AI provider.', 'gemini-chat-assistant' ),
+			400,
+			$details
+		);
+	}
+
+	/**
+	 * Factory helper: Model unavailable.
+	 */
+	public static function model_unavailable( string $provider_id, string $details = '' ): self {
+		return new self(
+			$provider_id,
+			self::TYPE_MODEL_UNAVAILABLE,
+			__( 'The requested AI model is unavailable or not found.', 'gemini-chat-assistant' ),
+			404,
+			$details
+		);
+	}
+
+	/**
+	 * Factory helper: Invalid response.
+	 */
+	public static function invalid_response( string $provider_id, string $details = '' ): self {
+		return new self(
+			$provider_id,
+			self::TYPE_INVALID_RESPONSE,
+			__( 'Received an unexpected or invalid response from the AI provider.', 'gemini-chat-assistant' ),
+			502,
+			$details
+		);
+	}
+
+	/**
 	 * Factory helper: Malformed response.
 	 */
 	public static function malformed_response( string $provider_id, string $details = '' ): self {
@@ -236,13 +284,21 @@ class ProviderException extends \Exception {
 	/**
 	 * Aggressively strips credentials from exception messages.
 	 */
-	private function strip_secrets( string $text ): string {
+	public static function strip_credentials( string $text ): string {
 		$patterns = [
-			'/AIzaSy[a-zA-Z0-9_\-]{33}/' => '[REDACTED_GEMINI_KEY]',
-			'/sk-[a-zA-Z0-9_\-]{20,}/'    => '[REDACTED_API_KEY]',
-			'/Bearer\s+[^\s,]+/i'        => 'Bearer [REDACTED]',
+			'/AIza[a-zA-Z0-9_\-]{20,}/'    => '[REDACTED_API_KEY]',
+			'/sk-ant-[a-zA-Z0-9_\-]{10,}/' => '[REDACTED_API_KEY]',
+			'/sk-[a-zA-Z0-9_\-]{10,}/'     => '[REDACTED_API_KEY]',
+			'/Bearer\s+[^\s,]+/i'          => 'Bearer [REDACTED]',
 		];
 
 		return (string) preg_replace( array_keys( $patterns ), array_values( $patterns ), $text );
+	}
+
+	/**
+	 * Strips secrets helper for instance usage.
+	 */
+	private function strip_secrets( string $text ): string {
+		return self::strip_credentials( $text );
 	}
 }

@@ -64,6 +64,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 	<?php endif; ?>
 
+	<?php if ( ! empty( $_GET['openai_test_status'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+		<?php if ( 'connected' === $_GET['openai_test_status'] ) : ?>
+			<div class="notice notice-success is-dismissible gca-admin-notice">
+				<p><strong><?php esc_html_e( 'OpenAI Connection Test:', 'gemini-chat-assistant' ); ?></strong> <?php esc_html_e( 'Connected successfully to OpenAI Responses API. Model and credentials verified.', 'gemini-chat-assistant' ); ?></p>
+			</div>
+		<?php else : ?>
+			<?php
+			$err_type = ! empty( $_GET['openai_test_error'] ) ? sanitize_key( (string) $_GET['openai_test_error'] ) : '';
+			$err_msg  = __( 'Unable to connect to OpenAI API. Please check your credentials and configuration.', 'gemini-chat-assistant' );
+			if ( 'auth_failed' === $err_type || 'authentication_error' === $err_type ) {
+				$err_msg = __( 'Authentication failed. Please verify your OpenAI API key.', 'gemini-chat-assistant' );
+			} elseif ( 'model_unavailable' === $err_type ) {
+				$err_msg = __( 'Configured model is unavailable for your account or does not exist.', 'gemini-chat-assistant' );
+			} elseif ( 'rate_limited' === $err_type || 'rate_limit' === $err_type ) {
+				$err_msg = __( 'OpenAI rate limit or quota reached. Please check your OpenAI account billing.', 'gemini-chat-assistant' );
+			} elseif ( 'timeout' === $err_type ) {
+				$err_msg = __( 'Connection to OpenAI timed out.', 'gemini-chat-assistant' );
+			} elseif ( 'not_configured' === $err_type ) {
+				$err_msg = __( 'OpenAI provider is disabled or no API key is configured.', 'gemini-chat-assistant' );
+			}
+			?>
+			<div class="notice notice-error is-dismissible gca-admin-notice">
+				<p><strong><?php esc_html_e( 'OpenAI Connection Test Failed:', 'gemini-chat-assistant' ); ?></strong> <?php echo esc_html( $err_msg ); ?></p>
+			</div>
+		<?php endif; ?>
+	<?php endif; ?>
+
 	<form method="post" action="options.php">
 		<?php
 		settings_fields( 'gca_settings_group' );
@@ -247,16 +274,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 							?>
 						</span>
 						<p class="description" style="margin-top: 4px; color: #646970;">
-							<em><?php esc_html_e( 'Note: Live OpenAI chat requests are inactive in N18 and will throw ProviderException::not_configured until full chat engine support is activated.', 'gemini-chat-assistant' ); ?></em>
+							<em><?php esc_html_e( 'OpenAI Responses API integration active (Node N19). Uses POST https://api.openai.com/v1/responses with server-side credentials.', 'gemini-chat-assistant' ); ?></em>
 						</p>
-						<?php if ( 'database' === $openai_source ) : ?>
-							<div style="margin-top: 8px;">
+						<div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+							<?php if ( $openai_configured ) : ?>
+								<button type="submit" form="gca-test-openai-form" class="button button-secondary">
+									<span class="dashicons dashicons-update" style="vertical-align: middle; margin-right: 2px;"></span>
+									<?php esc_html_e( 'Test OpenAI Connection', 'gemini-chat-assistant' ); ?>
+								</button>
+							<?php endif; ?>
+							<?php if ( 'database' === $openai_source ) : ?>
 								<button type="submit" form="gca-remove-key-form-openai" class="button button-secondary button-small" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to remove the stored OpenAI API key from database?', 'gemini-chat-assistant' ) ); ?>');">
 									<span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 2px;"></span>
 									<?php esc_html_e( 'Remove Stored API Key', 'gemini-chat-assistant' ); ?>
 								</button>
-							</div>
-						<?php endif; ?>
+							<?php endif; ?>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -657,4 +690,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</form>
 		<?php endif; ?>
 	<?php endforeach; ?>
+
+	<form id="gca-test-openai-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display: none;">
+		<input type="hidden" name="action" value="gca_test_openai_connection" />
+		<?php wp_nonce_field( 'gca_test_openai_connection' ); ?>
+	</form>
 </div>

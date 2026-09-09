@@ -145,6 +145,9 @@ class AdminMenu {
 
 		// Admin post action hooks for Provider Credentials (N18)
 		add_action( 'admin_post_gca_remove_provider_key', [ $this, 'handle_remove_provider_key' ] );
+
+		// Admin post action hooks for OpenAI Connection Test (N19)
+		add_action( 'admin_post_gca_test_openai_connection', [ $this, 'handle_test_openai_connection' ] );
 	}
 
 	/**
@@ -1192,6 +1195,42 @@ class AdminMenu {
 			'page'        => self::SETTINGS_MENU_SLUG,
 			'key_removed' => $provider,
 		], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to test connection to OpenAI API (Node N19).
+	 */
+	public function handle_test_openai_connection(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		check_admin_referer( 'gca_test_openai_connection' );
+
+		$status_param = 'connected';
+		$error_param  = '';
+
+		try {
+			$provider = new \SkyFish\GeminiChat\Providers\OpenAIProvider();
+			$provider->test_connection();
+		} catch ( \SkyFish\GeminiChat\Providers\ProviderException $e ) {
+			$status_param = 'failed';
+			$error_param  = $e->get_error_type();
+		} catch ( \Throwable $t ) {
+			$status_param = 'failed';
+			$error_param  = 'generic_error';
+		}
+
+		$redirect_args = [
+			'page'               => self::SETTINGS_MENU_SLUG,
+			'openai_test_status' => $status_param,
+		];
+		if ( ! empty( $error_param ) ) {
+			$redirect_args['openai_test_error'] = $error_param;
+		}
+
+		wp_safe_redirect( add_query_arg( $redirect_args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }

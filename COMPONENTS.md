@@ -50,8 +50,9 @@ SkyFish\GeminiChat
 │   ├── ProviderException: Domain exception with automatic credential masking.
 │   ├── ProviderResponse: Normalized provider response value object.
 │   ├── GeminiProvider: Google Gemini adapter wrapping GeminiClient.
-│   ├── OpenAIProvider: OpenAI adapter placeholder throwing ProviderException::not_configured in N18.
-│   └── ClaudeProvider: Anthropic Claude adapter placeholder throwing ProviderException::not_configured in N18.
+│   ├── OpenAIClient: WordPress HTTP API client for OpenAI Responses API (POST /v1/responses).
+│   ├── OpenAIProvider: Live OpenAI provider adapter handling authentication, message normalization, instructions, token extraction, and error mapping.
+│   └── ClaudeProvider: Anthropic Claude adapter placeholder throwing ProviderException::not_configured.
 ├── Services/
 │   ├── GeminiClient: HTTP transport wrapper for Google Gemini REST API.
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.

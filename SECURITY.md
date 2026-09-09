@@ -98,3 +98,17 @@
   - External links (`https://wa.me/`) explicitly include `target="_blank"` with `rel="noopener noreferrer"` to prevent reverse tab-nabbing vulnerabilities.
 - **Zero Automated Outbound Calling or Messaging:** The server never makes calls, sends SMS, or sends WhatsApp messages on behalf of the visitor or administrator.
 - **Gemini Execution Independence:** Contact channel buttons are client-side navigation elements that execute without invoking Gemini API prompts, preventing unauthorized prompt injection or token depletion.
+
+## 12. Live OpenAI Integration Security Policy (Node N19)
+- **Server-Side Bearer Authentication:** OpenAI credentials (`sk-...`) are stored securely and transmitted strictly via HTTP `Authorization: Bearer <API_KEY>` headers to `https://api.openai.com/v1/responses`. Credentials are NEVER included in URL query strings or JSON request bodies.
+- **Client-Side Secret Isolation:** Public chat visitors and client JavaScript never receive or observe OpenAI credentials. Neither REST `/chat` responses, widget markup, nor localized scripts contain OpenAI API keys.
+- **Strict Exception & Log Redaction:** `ProviderException::strip_credentials()` automatically sanitizes exception messages using regex before errors can surface in administration UI, server logs, or debug traces. Patterns masked include:
+  - OpenAI keys: `/sk-[a-zA-Z0-9_\-]{20,}/`
+  - Anthropic keys: `/sk-ant-[a-zA-Z0-9_\-]{20,}/`
+  - Google Gemini keys: `/AIza[0-9A-Za-z\-_]{35}/`
+  - Authorization headers: `/Bearer\s+[a-zA-Z0-9_\-\.]{20,}/`
+- **Zero State Accumulation (`store: false`):** All chat requests dispatched via `OpenAIClient` specify `"store": false` by default, ensuring visitor prompts and messages are not stored in OpenAI-hosted conversation threads.
+- **CSRF & Capability Protection for Admin Test Connection:** The administrative "Test OpenAI Connection" action (`gca_test_openai_connection`) strictly requires `current_user_can('manage_options')` and validates a WordPress security nonce (`gca_test_openai_connection`).
+- **Minimal 1-Token Test Query:** Admin connection testing enforces `max_output_tokens: 1` with a minimal prompt ("Ping"), preventing unnecessary token consumption or quota drain during verification.
+- **Rate Limit Enforcement:** Dual-tier rate limiting (transient IP & session ceilings) applies uniformly before any OpenAI or Gemini API dispatch occurs.
+- **Provider Boundary Isolation:** Live network communication in N19 is strictly constrained to `OpenAIProvider`. Anthropic Claude remains safely inert as a placeholder adapter throwing `ProviderException::not_configured` with zero outbound network activity.

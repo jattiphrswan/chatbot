@@ -172,6 +172,7 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderException.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderRegistry.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/GeminiProvider.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIClient.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIProvider.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ClaudeProvider.php';
 	}
@@ -301,7 +302,8 @@ class Plugin {
 				$this->get_profile_service(),
 				$this->get_knowledge_retriever(),
 				$this->get_knowledge_context_builder(),
-				$this->get_handoff_service()
+				$this->get_handoff_service(),
+				$this->get_provider_registry()
 			);
 		}
 		return $this->chat_service;

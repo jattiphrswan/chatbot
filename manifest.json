@@ -46,7 +46,7 @@
       "gca_db_version"
     ]
   },
-  "architecture": "Browser -> WordPress REST API -> PHP Service Layer (ChatService + ProfileService + RAG KnowledgeRetriever + Business Integrations + HandoffService + NotificationService + ProviderRegistry) -> Gemini API / Multi-Provider (N18)",
+  "architecture": "Browser -> WordPress REST API -> PHP Service Layer (ChatService + ProfileService + RAG KnowledgeRetriever + Business Integrations + HandoffService + NotificationService + ProviderRegistry) -> Gemini API / OpenAI Responses API (N19)",
   "security": {
     "api_key_storage": "Server-side only (environment variables, wp-config constants, or gca_provider_credentials AES-256 encrypted options). Never exposed to client, REST responses, or serialized settings arrays.",
     "api_key_exposed_to_client": false,
@@ -57,5 +57,5 @@
     "prompt_injection_defense": true,
     "action_execution_containment": true
   },
-  "roadmap_current_node": "N18 (Secure Multi-Provider Credentials & Admin Settings)"
+  "roadmap_current_node": "N19 (Live OpenAI Integration)"
 }

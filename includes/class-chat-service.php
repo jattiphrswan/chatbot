@@ -35,6 +35,7 @@ class ChatService {
 	private ?Knowledge\KnowledgeRetriever $knowledge_retriever;
 	private ?Knowledge\KnowledgeContextBuilder $context_builder;
 	private ?Handoff\HandoffService $handoff_service;
+	private ?Providers\ProviderRegistry $provider_registry;
 
 	/**
 	 * ChatService constructor.
@@ -48,6 +49,7 @@ class ChatService {
 	 * @param Knowledge\KnowledgeRetriever|null       $knowledge_retriever Optional knowledge retriever.
 	 * @param Knowledge\KnowledgeContextBuilder|null  $context_builder     Optional knowledge context builder.
 	 * @param Handoff\HandoffService|null             $handoff_service     Optional handoff service.
+	 * @param Providers\ProviderRegistry|null         $provider_registry   Optional provider registry.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
@@ -58,7 +60,8 @@ class ChatService {
 		?ProfileService $profile_service = null,
 		?Knowledge\KnowledgeRetriever $knowledge_retriever = null,
 		?Knowledge\KnowledgeContextBuilder $context_builder = null,
-		?Handoff\HandoffService $handoff_service = null
+		?Handoff\HandoffService $handoff_service = null,
+		?Providers\ProviderRegistry $provider_registry = null
 	) {
 		$this->settings_service    = $settings_service ?? SettingsService::get_instance();
 		$this->conversation_repo   = $conversation_repo ?? new ConversationRepository();
@@ -69,6 +72,22 @@ class ChatService {
 		$this->knowledge_retriever = $knowledge_retriever ?? new Knowledge\KnowledgeRetriever();
 		$this->context_builder     = $context_builder ?? new Knowledge\KnowledgeContextBuilder();
 		$this->handoff_service     = $handoff_service ?? new Handoff\HandoffService( null, $this->conversation_repo );
+		$this->provider_registry   = $provider_registry;
+	}
+
+	/**
+	 * Accessor to ProviderRegistry.
+	 *
+	 * @return Providers\ProviderRegistry
+	 */
+	public function get_provider_registry(): Providers\ProviderRegistry {
+		if ( null === $this->provider_registry ) {
+			$this->provider_registry = new Providers\ProviderRegistry();
+			$this->provider_registry->register( new Providers\GeminiProvider( $this->gemini_client ) );
+			$this->provider_registry->register( new Providers\OpenAIProvider() );
+			$this->provider_registry->register( new Providers\ClaudeProvider() );
+		}
+		return $this->provider_registry;
 	}
 
 	/**
@@ -133,8 +152,18 @@ class ChatService {
 			}
 		}
 
-		// 7. Prepare Gemini client request.
-		$model              = SettingsService::get_model();
+		// 7. Determine active AI provider (N18/N19).
+		$provider_id = SettingsService::get_default_provider();
+
+		// Check if provider is enabled.
+		if ( ! SettingsService::is_provider_enabled( $provider_id ) ) {
+			return new WP_Error(
+				'PROVIDER_DISABLED',
+				sprintf( __( 'The configured AI provider (%s) is disabled.', 'gemini-chat-assistant' ), esc_html( ucfirst( $provider_id ) ) ),
+				[ 'status' => 503 ]
+			);
+		}
+
 		$system_instruction = $this->profile_service->get_effective_system_instruction();
 
 		// Ground system instruction with retrieved website knowledge context (N16 RAG).
@@ -148,55 +177,109 @@ class ChatService {
 			}
 		}
 
-		$start_time  = microtime( true );
-		$ai_response = $this->gemini_client->create_interaction(
-			$message,
-			$previous_interaction_id,
-			[
-				'model'              => $model,
-				'system_instruction' => $system_instruction,
-			]
-		);
-		$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
+		$start_time = microtime( true );
 
-		// 7. Handle AI transport or API error with stale interaction recovery.
-		if ( is_wp_error( $ai_response ) ) {
-			// Check if error is due to an invalid/stale previous interaction ID.
-			if ( ! empty( $previous_interaction_id ) && $this->is_stale_interaction_error( $ai_response ) ) {
-				// Clear stale interaction context.
-				$this->session_service->clear_interaction_id( $session_id, $conv_db_id );
+		if ( 'openai' === $provider_id ) {
+			$model = SettingsService::get_provider_model( 'openai' );
 
-				// Retry message ONCE as a fresh interaction without previous_interaction_id.
-				$start_time  = microtime( true );
-				$ai_response = $this->gemini_client->create_interaction(
-					$message,
-					null,
+			$context_messages = [];
+			if ( $conv_db_id > 0 ) {
+				$context_messages = $this->message_repo->get_context_messages( $conv_db_id, 20 );
+			}
+			$has_current = false;
+			if ( ! empty( $context_messages ) ) {
+				$last_msg = end( $context_messages );
+				if ( 'user' === ( $last_msg['role'] ?? '' ) && ( $last_msg['content'] ?? '' ) === $message ) {
+					$has_current = true;
+				}
+			}
+			if ( ! $has_current ) {
+				$context_messages[] = [
+					'role'    => 'user',
+					'content' => $message,
+				];
+			}
+
+			try {
+				$provider = $this->get_provider_registry()->get( 'openai' );
+				if ( null === $provider ) {
+					return new WP_Error( 'PROVIDER_NOT_FOUND', __( 'OpenAI provider is not registered.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
+				}
+
+				$provider_response = $provider->chat(
+					$context_messages,
 					[
 						'model'              => $model,
 						'system_instruction' => $system_instruction,
 					]
 				);
-				$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
-			}
 
-			// If still failing after recovery attempt or for ordinary network/auth/quota errors.
+				$assistant_text = $provider_response->get_content();
+				$input_tokens   = $provider_response->get_input_tokens();
+				$output_tokens  = $provider_response->get_output_tokens();
+				$model          = $provider_response->get_model();
+				$latency_ms     = (int) round( ( microtime( true ) - $start_time ) * 1000 );
+			} catch ( Providers\ProviderException $e ) {
+				return $this->map_provider_error( $e, $req_id );
+			}
+		} elseif ( 'claude' === $provider_id ) {
+			try {
+				$provider = $this->get_provider_registry()->get( 'claude' );
+				if ( null === $provider ) {
+					return new WP_Error( 'PROVIDER_NOT_FOUND', __( 'Claude provider is not registered.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
+				}
+				$provider->chat( [ [ 'role' => 'user', 'content' => $message ] ] );
+				return new WP_Error( 'PROVIDER_ERROR', __( 'Claude chat is not available.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
+			} catch ( Providers\ProviderException $e ) {
+				return $this->map_provider_error( $e, $req_id );
+			}
+		} else {
+			// Google Gemini (Default / Native).
+			$model       = SettingsService::get_provider_model( 'gemini' );
+			$ai_response = $this->gemini_client->create_interaction(
+				$message,
+				$previous_interaction_id,
+				[
+					'model'              => $model,
+					'system_instruction' => $system_instruction,
+				]
+			);
+			$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
+
+			// Handle AI transport or API error with stale interaction recovery.
 			if ( is_wp_error( $ai_response ) ) {
-				return $this->map_gemini_error( $ai_response, $req_id );
+				if ( ! empty( $previous_interaction_id ) && $this->is_stale_interaction_error( $ai_response ) ) {
+					$this->session_service->clear_interaction_id( $session_id, $conv_db_id );
+					$start_time  = microtime( true );
+					$ai_response = $this->gemini_client->create_interaction(
+						$message,
+						null,
+						[
+							'model'              => $model,
+							'system_instruction' => $system_instruction,
+						]
+					);
+					$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
+				}
+
+				if ( is_wp_error( $ai_response ) ) {
+					return $this->map_gemini_error( $ai_response, $req_id );
+				}
+			}
+
+			$assistant_text = $ai_response['text'] ?? '';
+			$usage          = $ai_response['usage'] ?? [];
+			$input_tokens   = absint( $usage['input_tokens'] ?? 0 );
+			$output_tokens  = absint( $usage['output_tokens'] ?? 0 );
+
+			// Synchronize new interaction ID into session transient and database.
+			$new_interaction_id = $ai_response['interaction_id'] ?? '';
+			if ( ! empty( $new_interaction_id ) ) {
+				$this->session_service->set_interaction_id( $session_id, $conv_db_id, (string) $new_interaction_id );
 			}
 		}
 
-		$assistant_text = $ai_response['text'] ?? '';
-		$usage          = $ai_response['usage'] ?? [];
-		$input_tokens   = absint( $usage['input_tokens'] ?? 0 );
-		$output_tokens  = absint( $usage['output_tokens'] ?? 0 );
-
-		// 8. Synchronize new interaction ID into session transient and database.
-		$new_interaction_id = $ai_response['interaction_id'] ?? '';
-		if ( ! empty( $new_interaction_id ) ) {
-			$this->session_service->set_interaction_id( $session_id, $conv_db_id, (string) $new_interaction_id );
-		}
-
-		// 9. Persist assistant message if enabled.
+		// 8. Persist assistant message if enabled.
 		if ( $store_messages && $conv_db_id > 0 ) {
 			$this->message_repo->create(
 				$conv_db_id,
@@ -212,13 +295,14 @@ class ChatService {
 			$this->conversation_repo->increment_message_count( $conv_db_id, 2 );
 		}
 
-		// 10. Return normalized public response shape (zero database IDs, hashes, or interaction IDs).
+		// 9. Return normalized public response shape (zero database IDs, hashes, or interaction IDs).
 		$response_payload = [
 			'message'         => $assistant_text,
 			'conversation_id' => $public_id,
 			'request_id'      => $req_id,
 			'meta'            => [
-				'model' => $model,
+				'model'    => $model,
+				'provider' => $provider_id,
 			],
 		];
 
@@ -316,6 +400,73 @@ class ChatService {
 			$public_message,
 			[
 				'status'     => $status,
+				'request_id' => $request_id,
+			]
+		);
+	}
+
+	/**
+	 * Maps a ProviderException to a user-facing WP_Error.
+	 *
+	 * @param Providers\ProviderException $e          Provider exception.
+	 * @param string                      $request_id Request identifier.
+	 * @return WP_Error
+	 */
+	private function map_provider_error( Providers\ProviderException $e, string $request_id ): WP_Error {
+		$error_type = $e->get_error_type();
+		$status     = $e->get_http_status();
+		$message    = $e->get_safe_message();
+
+		switch ( $error_type ) {
+			case Providers\ProviderException::TYPE_AUTH_FAILED:
+			case Providers\ProviderException::TYPE_AUTHENTICATION_ERROR:
+			case Providers\ProviderException::TYPE_NOT_CONFIGURED:
+			case Providers\ProviderException::TYPE_CONFIGURATION_ERROR:
+				$public_code    = 'AI_AUTH_ERROR';
+				$public_message = __( 'AI service authentication failed or is unconfigured.', 'gemini-chat-assistant' );
+				$status         = 500;
+				break;
+
+			case Providers\ProviderException::TYPE_RATE_LIMITED:
+			case Providers\ProviderException::TYPE_RATE_LIMIT:
+				$public_code    = 'AI_RATE_LIMITED';
+				$public_message = __( 'Too many requests. Please wait a moment before sending another message.', 'gemini-chat-assistant' );
+				$status         = 429;
+				break;
+
+			case Providers\ProviderException::TYPE_TIMEOUT:
+				$public_code    = 'AI_TIMEOUT';
+				$public_message = __( 'The AI service timed out responding to your request.', 'gemini-chat-assistant' );
+				$status         = 504;
+				break;
+
+			case Providers\ProviderException::TYPE_MODEL_UNAVAILABLE:
+			case Providers\ProviderException::TYPE_PROVIDER_UNAVAILABLE:
+				$public_code    = 'AI_UNAVAILABLE';
+				$public_message = __( 'The AI service is temporarily unavailable. Please try again shortly.', 'gemini-chat-assistant' );
+				$status         = 503;
+				break;
+
+			case Providers\ProviderException::TYPE_MALFORMED_RESPONSE:
+			case Providers\ProviderException::TYPE_INVALID_RESPONSE:
+				$public_code    = 'AI_INVALID_RESPONSE';
+				$public_message = __( 'Received an invalid or empty response from the AI service.', 'gemini-chat-assistant' );
+				$status         = 502;
+				break;
+
+			default:
+				$public_code    = 'INTERNAL_ERROR';
+				$public_message = ! empty( $message ) ? $message : __( 'An internal error occurred while processing your request.', 'gemini-chat-assistant' );
+				break;
+		}
+
+		return new WP_Error(
+			$public_code,
+			$public_message,
+			[
+				'status'     => $status,
+				'provider'   => $e->get_provider_id(),
+				'error_type' => $error_type,
 				'request_id' => $request_id,
 			]
 		);

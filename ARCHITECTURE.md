@@ -289,3 +289,85 @@ Visitor Client (Direct OS/Browser Deep Links)
 2. **Zero Third-Party APIs:** No Meta Graph API, WhatsApp Cloud API, Twilio, SendGrid, or external CRM webhooks are used.
 3. **No Gemini Intermediation Required:** Visitors can access contact channels directly from the chat widget home screen without prompting or executing AI model calls.
 4. **Sanitization & Boundary Safety:** Phone numbers maintain valid dial characters, WhatsApp numbers are strictly stripped to digits and country code, emails are validated via `sanitize_email()`, and labels/messages have bounded length limits (50 chars for labels, 300 chars for WhatsApp prefilled messages).
+
+## 9. Multi-Provider Foundation Architecture (Node N18)
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   ProviderRegistry                     │
+│  - gemini: GeminiProvider (Default)                    │
+│  - openai: OpenAIProvider                              │
+│  - claude: ClaudeProvider                              │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+       ┌───────────────────┴───────────────────┐
+       ▼                                       ▼
+┌──────────────────────────────┐ ┌──────────────────────────────┐
+│       ProviderInterface      │ │   Credential Resolution      │
+│ - get_id(): string           │ │ 1. Environment Variable      │
+│ - get_name(): string         │ │ 2. wp-config.php Constant    │
+│ - get_models(): array        │ │ 3. Database (AES-256 Encrypted)
+│ - chat(messages, options)    │ └──────────────────────────────┘
+│ - test_connection(): bool    │
+└──────────────────────────────┘
+```
+
+- **Credential Precedence:** Environment variable (`OPENAI_API_KEY`, etc.) > wp-config Constant (`GCA_OPENAI_API_KEY`, etc.) > Database option (`gca_provider_credentials`, AES-256-CBC encrypted).
+- **Client-Side Isolation:** API keys are never echoed back in HTML form inputs, REST responses, or public widgets.
+
+## 10. Live OpenAI Responses API Integration (Node N19)
+
+```
+ChatService (handle_chat)
+       │
+       ├─► Check SettingsService::get_default_provider() === 'openai'
+       │
+       ▼
+OpenAIProvider::chat( $messages, $options )
+       │
+       ├─► Validate enabled & API key configured
+       ├─► Extract instructions (ProfileService system prompt + RAG website chunks)
+       ├─► Normalize user & assistant turns to chronological input array
+       │
+       ▼
+OpenAIClient::create_response( $model, $input, $options )
+       │
+       ├─► Endpoint: POST https://api.openai.com/v1/responses
+       ├─► Headers:
+       │     - Authorization: Bearer <API_KEY> (Server-Side Only)
+       │     - Content-Type: application/json
+       ├─► Payload:
+       │     - model: "gpt-4o-mini" / "gpt-4o" / "gpt-4-turbo"
+       │     - instructions: "<system prompt + RAG knowledge>"
+       │     - input: [ { role: "user"|"assistant", content: "..." } ]
+       │     - store: false (Explicitly disabled)
+       │
+       ▼
+HTTP Transport: wp_remote_post()
+       │
+       ├─► Success (HTTP 200):
+       │     - Locate output item where type == "message" && role == "assistant"
+       │     - Aggregate all content items with type == "output_text"
+       │     - Parse token usage: input_tokens, output_tokens, total_tokens
+       │     - Capture request_id from x-request-id header or response id
+       │     - Return ProviderResponse
+       │
+       └─► Error Handling:
+             - 400 -> ProviderException::invalid_request
+             - 401 -> ProviderException::authentication_error
+             - 404 -> ProviderException::model_unavailable
+             - 408 -> ProviderException::timeout
+             - 429 -> ProviderException::rate_limited
+             - 5xx -> ProviderException::server_error
+             - WP_Error -> ProviderException::connection_failed
+             - Malformed / missing output -> ProviderException::invalid_response
+             - All exception messages sanitized via ProviderException::strip_credentials()
+```
+
+### Core Tenets of N19:
+1. **Modern Responses API:** Employs OpenAI's `/v1/responses` API with `store: false` to avoid external chat state accumulation.
+2. **Deterministic History & Prompt Layering:** Context memory messages are strictly formatted as alternating `user` and `assistant` items; system persona instructions and RAG retrieval snippets are isolated within `instructions`.
+3. **Multi-Chunk Assembly:** Handles multi-part `output_text` chunks across the message content array.
+4. **Minimal Token Test Connection:** Admin connection testing executes a 1-token query (`max_output_tokens: 1`) without running open-ended requests.
+5. **Secret Redaction:** Strict regex scrubbing prevents API keys (`sk-*`, `AIza*`, `Bearer *`) from appearing in error traces or logs.
+6. **Zero Claude Leaks & Zero Gemini Regressions:** Gemini chat remains completely operational and unaffected; Claude remains safely inert as a placeholder.

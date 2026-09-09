@@ -39,8 +39,9 @@
 | `ProviderResponse` | `SkyFish\GeminiChat\Providers` | Normalized value object for multi-provider AI responses. | None |
 | `ProviderException` | `SkyFish\GeminiChat\Providers` | Normalized domain exception with automated credential masking. | None |
 | `GeminiProvider` | `SkyFish\GeminiChat\Providers` | Google Gemini AI provider implementation wrapping `GeminiClient`. | `GeminiClient`, `ProviderInterface` |
-| `OpenAIProvider` | `SkyFish\GeminiChat\Providers` | OpenAI provider placeholder adapter (throws `not_configured` in N18; zero HTTP calls). | `ProviderInterface`, `ProviderException` |
-| `ClaudeProvider` | `SkyFish\GeminiChat\Providers` | Anthropic Claude provider placeholder adapter (throws `not_configured` in N18; zero HTTP calls). | `ProviderInterface`, `ProviderException` |
+| `OpenAIClient` | `SkyFish\GeminiChat\Providers` | Dedicated HTTP client executing requests against OpenAI Responses API (`/v1/responses`). | `wp_remote_post`, `ProviderException`, `ProviderResponse` |
+| `OpenAIProvider` | `SkyFish\GeminiChat\Providers` | Live OpenAI AI provider adapter (validates credentials, builds instructions & input turns, delegates to OpenAIClient). | `OpenAIClient`, `SettingsService`, `ProviderInterface`, `ProviderResponse` |
+| `ClaudeProvider` | `SkyFish\GeminiChat\Providers` | Anthropic Claude provider placeholder adapter (throws `not_configured`; zero HTTP calls). | `ProviderInterface`, `ProviderException` |
 | `LogRepository` | `SkyFish\GeminiChat\Database` | Writes logs to `wp_gca_logs`. | `$wpdb` |
 | `GeminiClient` | `SkyFish\GeminiChat\Services` | Makes HTTP calls to Google Gemini API endpoints. | `wp_remote_post`, `Encryption` |
 | `ContextManager` | `SkyFish\GeminiChat\Services` | Compiles conversation history into Gemini format. | `MessageRepository`, `TokenCounter` |
