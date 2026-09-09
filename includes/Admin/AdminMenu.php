@@ -8,6 +8,7 @@
 namespace SkyFish\GeminiChat\Admin;
 
 use SkyFish\GeminiChat\Database\ConversationRepository;
+use SkyFish\GeminiChat\Database\LeadRepository;
 use SkyFish\GeminiChat\Database\MessageRepository;
 use SkyFish\GeminiChat\Database\FaqRepository;
 use SkyFish\GeminiChat\Database\KnowledgeRepository;

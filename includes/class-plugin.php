@@ -11,6 +11,7 @@ use SkyFish\GeminiChat\Admin\AdminMenu;
 use SkyFish\GeminiChat\Admin\ProfileService;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\Database\ConversationRepository;
+use SkyFish\GeminiChat\Database\LeadRepository;
 use SkyFish\GeminiChat\Database\MessageRepository;
 use SkyFish\GeminiChat\Database\Migrator;
 use SkyFish\GeminiChat\Database\SessionService;

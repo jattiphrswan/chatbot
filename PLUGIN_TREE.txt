@@ -134,6 +134,7 @@ gemini-chat-assistant/
 │   ├── test-openai-integration.php
 │   ├── test-claude-integration.php
 │   ├── test-provider-model-selection.php
+│   ├── test-runtime-bootstrap.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig

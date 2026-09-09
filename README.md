@@ -32,7 +32,7 @@
 ## Installation & Setup Guide
 
 ### 1. Upload & Activate Plugin
-1. Download the release package (`gemini-chat-assistant-1.0.0.zip`).
+1. Download the release package (`gemini-chat-assistant-1.0.1.zip`).
 2. In your WordPress Admin, navigate to **Plugins &rarr; Add New &rarr; Upload Plugin**.
 3. Choose the ZIP file and click **Install Now**.
 4. Click **Activate Plugin**.

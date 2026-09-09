@@ -5,6 +5,11 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-09-09
+### Fixed
+- **Activation Fatal Error Fix:** Resolved critical `Class "SkyFish\GeminiChat\LeadRepository" not found` error during WordPress plugin activation by adding missing `use SkyFish\GeminiChat\Database\LeadRepository;` namespace import in `includes/class-plugin.php` and `includes/Admin/AdminMenu.php`.
+- **Runtime Startup & Bootstrap Suite:** Added end-to-end WordPress bootstrap verification test (`tests/test-runtime-bootstrap.php`) executing real WordPress startup paths, singleton initialization, accessor resolution, and schema activation.
+
 ## [1.0.0] - 2026-09-09
 ### Added
 - **Multi-AI Provider Foundation:** Native multi-provider support across Google Gemini, OpenAI Responses API (`/v1/responses`), and Anthropic Claude Messages API (`/v1/messages`).
