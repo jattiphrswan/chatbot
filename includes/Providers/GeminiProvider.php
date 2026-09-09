@@ -8,7 +8,6 @@
 namespace SkyFish\GeminiChat\Providers;
 
 use SkyFish\GeminiChat\GeminiClient;
-use SkyFish\GeminiChat\Admin\SettingsService;
 use WP_Error;
 
 // Prevent direct access.
@@ -21,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Adapter for Google Gemini models via GeminiClient.
  */
-class GeminiProvider implements ProviderInterface {
+class GeminiProvider extends AbstractProvider {
 
 	public const PROVIDER_ID = 'gemini';
 
@@ -33,24 +32,10 @@ class GeminiProvider implements ProviderInterface {
 	 * @param GeminiClient|null $gemini_client Optional GeminiClient instance.
 	 */
 	public function __construct( ?GeminiClient $gemini_client = null ) {
+		$this->id            = self::PROVIDER_ID;
+		$this->name          = 'Google Gemini';
 		$this->gemini_client = $gemini_client ?? new GeminiClient();
-	}
-
-	public function get_id(): string {
-		return self::PROVIDER_ID;
-	}
-
-	public function get_name(): string {
-		return 'Google Gemini';
-	}
-
-	/**
-	 * Returns supported Gemini models.
-	 *
-	 * @return array<int, array{id: string, name: string, context_window: int, max_output_tokens: int, description: string}>
-	 */
-	public function get_models(): array {
-		return [
+		$this->models        = [
 			[
 				'id'                => 'gemini-3.8-flash',
 				'name'              => 'Gemini 3.8 Flash',
@@ -84,27 +69,10 @@ class GeminiProvider implements ProviderInterface {
 	 * @throws ProviderException On error.
 	 */
 	public function chat( array $messages, array $options = [] ): ProviderResponse {
-		if ( ! SettingsService::is_provider_configured( self::PROVIDER_ID ) ) {
-			throw ProviderException::not_configured(
-				self::PROVIDER_ID,
-				__( 'Gemini API key is not configured on the server.', 'gemini-chat-assistant' )
-			);
-		}
+		$this->validate_configuration();
 
-		$user_message = '';
-		foreach ( array_reverse( $messages ) as $msg ) {
-			if ( isset( $msg['role'] ) && 'user' === $msg['role'] ) {
-				$user_message = $msg['content'] ?? '';
-				break;
-			}
-		}
-
-		if ( empty( $user_message ) && ! empty( $messages ) ) {
-			$last_msg     = end( $messages );
-			$user_message = $last_msg['content'] ?? '';
-		}
-
-		$model_id           = ! empty( $options['model'] ) ? sanitize_text_field( $options['model'] ) : SettingsService::get_provider_model( self::PROVIDER_ID );
+		$user_message       = $this->extract_latest_user_message( $messages );
+		$model_id           = $this->get_model( $options['model'] ?? null );
 		$system_instruction = ! empty( $options['system_instruction'] ) ? (string) $options['system_instruction'] : '';
 		$previous_id        = ! empty( $options['previous_interaction_id'] ) ? (string) $options['previous_interaction_id'] : null;
 
@@ -151,17 +119,33 @@ class GeminiProvider implements ProviderInterface {
 	 * @throws ProviderException If API key is unconfigured.
 	 */
 	public function test_connection(): bool {
-		if ( ! SettingsService::is_provider_configured( self::PROVIDER_ID ) ) {
-			throw ProviderException::not_configured(
-				self::PROVIDER_ID,
-				__( 'Gemini API key is not configured on the server.', 'gemini-chat-assistant' )
-			);
-		}
+		$this->validate_configuration();
 		return true;
 	}
 
 	public function get_client(): GeminiClient {
 		return $this->gemini_client;
+	}
+
+	/**
+	 * Extracts the most recent user message from normalized message history.
+	 *
+	 * @param array<int, array{role?: string, content?: string}> $messages Message array.
+	 * @return string
+	 */
+	private function extract_latest_user_message( array $messages ): string {
+		foreach ( array_reverse( $messages ) as $msg ) {
+			if ( isset( $msg['role'] ) && 'user' === $msg['role'] ) {
+				return $msg['content'] ?? '';
+			}
+		}
+
+		if ( ! empty( $messages ) ) {
+			$last_msg = end( $messages );
+			return $last_msg['content'] ?? '';
+		}
+
+		return '';
 	}
 
 	/**

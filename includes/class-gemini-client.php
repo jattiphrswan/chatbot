@@ -71,7 +71,13 @@ class GeminiClient {
 	 * @return string
 	 */
 	private function get_api_key(): string {
-		// Priority 1: Environment variable.
+		// Priority 1: SettingsService resolution (covers env, constant, and encrypted db fallback).
+		$resolved = SettingsService::get_provider_api_key( 'gemini' );
+		if ( ! empty( $resolved ) ) {
+			return $resolved;
+		}
+
+		// Direct environment variable fallback.
 		$env_key = getenv( 'GEMINI_API_KEY' );
 		if ( false !== $env_key && '' !== trim( (string) $env_key ) ) {
 			return trim( (string) $env_key );
@@ -85,7 +91,7 @@ class GeminiClient {
 			return trim( (string) $_SERVER['GEMINI_API_KEY'] );
 		}
 
-		// Priority 2: Server-side constant (e.g. wp-config.php).
+		// Direct Server-side constant fallback.
 		if ( defined( 'GCA_GEMINI_API_KEY' ) && '' !== trim( (string) GCA_GEMINI_API_KEY ) ) {
 			return trim( (string) GCA_GEMINI_API_KEY );
 		}

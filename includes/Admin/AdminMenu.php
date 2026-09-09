@@ -344,9 +344,7 @@ class AdminMenu {
 	 * Renders the admin dashboard page view.
 	 */
 	public function render_dashboard_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$settings           = SettingsService::get_all();
 		$is_configured      = SettingsService::is_api_key_configured();
@@ -363,9 +361,7 @@ class AdminMenu {
 	 * Renders the conversations management list or detail view.
 	 */
 	public function render_conversations_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$conversation_id = ! empty( $_GET['conversation_id'] ) ? sanitize_text_field( (string) $_GET['conversation_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
@@ -411,57 +407,42 @@ class AdminMenu {
 	 * Handles POST action to delete a conversation.
 	 */
 	public function handle_delete_conversation(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$public_id = ! empty( $_POST['conversation_id'] ) ? sanitize_text_field( (string) $_POST['conversation_id'] ) : '';
-		check_admin_referer( 'gca_delete_conversation_' . $public_id );
+		$this->verify_admin_action( 'gca_delete_conversation_' . $public_id );
 
 		if ( ! empty( $public_id ) ) {
 			$this->conversation_repo->delete_by_public_id( $public_id );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::CONVERSATIONS_MENU_SLUG, 'deleted' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::CONVERSATIONS_MENU_SLUG, [ 'deleted' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to close an active conversation.
 	 */
 	public function handle_close_conversation(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$public_id = ! empty( $_POST['conversation_id'] ) ? sanitize_text_field( (string) $_POST['conversation_id'] ) : '';
-		check_admin_referer( 'gca_close_conversation_' . $public_id );
+		$this->verify_admin_action( 'gca_close_conversation_' . $public_id );
 
 		if ( ! empty( $public_id ) ) {
 			$this->conversation_repo->update_status_by_public_id( $public_id, 'closed' );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::CONVERSATIONS_MENU_SLUG, 'conversation_id' => $public_id, 'closed' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::CONVERSATIONS_MENU_SLUG, [ 'conversation_id' => $public_id, 'closed' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to reopen a closed conversation.
 	 */
 	public function handle_reopen_conversation(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$public_id = ! empty( $_POST['conversation_id'] ) ? sanitize_text_field( (string) $_POST['conversation_id'] ) : '';
-		check_admin_referer( 'gca_reopen_conversation_' . $public_id );
+		$this->verify_admin_action( 'gca_reopen_conversation_' . $public_id );
 
 		if ( ! empty( $public_id ) ) {
 			$this->conversation_repo->update_status_by_public_id( $public_id, 'active' );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::CONVERSATIONS_MENU_SLUG, 'conversation_id' => $public_id, 'reopened' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::CONVERSATIONS_MENU_SLUG, [ 'conversation_id' => $public_id, 'reopened' => 1 ] );
 	}
 
 	/**
@@ -520,48 +501,36 @@ class AdminMenu {
 	 * Handles POST action to delete a lead inquiry.
 	 */
 	public function handle_delete_lead(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$lead_id = ! empty( $_POST['lead_id'] ) ? sanitize_text_field( (string) $_POST['lead_id'] ) : '';
-		check_admin_referer( 'gca_delete_lead_' . $lead_id );
+		$this->verify_admin_action( 'gca_delete_lead_' . $lead_id );
 
 		if ( ! empty( $lead_id ) ) {
 			$this->lead_repo->delete_by_public_id( $lead_id );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::LEADS_MENU_SLUG, 'deleted' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::LEADS_MENU_SLUG, [ 'deleted' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to update lead inquiry status.
 	 */
 	public function handle_update_lead_status(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$lead_id = ! empty( $_POST['lead_id'] ) ? sanitize_text_field( (string) $_POST['lead_id'] ) : '';
 		$status  = ! empty( $_POST['status'] ) ? sanitize_text_field( (string) $_POST['status'] ) : '';
-		check_admin_referer( 'gca_update_lead_status_' . $lead_id );
+		$this->verify_admin_action( 'gca_update_lead_status_' . $lead_id );
 
 		if ( ! empty( $lead_id ) && in_array( $status, [ 'new', 'contacted', 'closed' ], true ) ) {
 			$this->lead_repo->update_status_by_public_id( $lead_id, $status );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::LEADS_MENU_SLUG, 'lead_id' => $lead_id, 'updated' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::LEADS_MENU_SLUG, [ 'lead_id' => $lead_id, 'updated' => 1 ] );
 	}
 
 	/**
 	 * Renders the analytics and insights dashboard page.
 	 */
 	public function render_analytics_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$range_key   = ! empty( $_GET['range'] ) ? sanitize_text_field( (string) $_GET['range'] ) : AnalyticsService::DEFAULT_RANGE; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$custom_from = ! empty( $_GET['from'] ) ? sanitize_text_field( (string) $_GET['from'] ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -579,9 +548,7 @@ class AdminMenu {
 	 * Renders the appearance builder page view.
 	 */
 	public function render_appearance_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$settings = SettingsService::get_all();
 
@@ -592,25 +559,18 @@ class AdminMenu {
 	 * Handles POST action to reset appearance settings to default values.
 	 */
 	public function handle_reset_appearance(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
-		check_admin_referer( 'gca_reset_appearance' );
+		$this->verify_admin_action( 'gca_reset_appearance' );
 
 		AppearanceService::reset_to_defaults();
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::APPEARANCE_MENU_SLUG, 'reset' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::APPEARANCE_MENU_SLUG, [ 'reset' => 1 ] );
 	}
 
 	/**
 	 * Renders the admin settings page view.
 	 */
 	public function render_settings_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$settings      = SettingsService::get_all();
 		$is_configured = SettingsService::is_api_key_configured();
@@ -622,9 +582,7 @@ class AdminMenu {
 	 * Renders the AI Assistant management page (list or edit view).
 	 */
 	public function render_ai_assistant_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$this->profile_service->migrate_legacy_prompt();
 
@@ -680,11 +638,7 @@ class AdminMenu {
 	 * Handles POST action to create an AI profile.
 	 */
 	public function handle_create_profile(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
-		check_admin_referer( 'gca_create_profile' );
+		$this->verify_admin_action( 'gca_create_profile' );
 
 		$profile_data = isset( $_POST['profile'] ) && is_array( $_POST['profile'] ) ? $_POST['profile'] : [];
 		$result       = $this->profile_service->create_profile( $profile_data );
@@ -693,20 +647,15 @@ class AdminMenu {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'created' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::AI_ASSISTANT_MENU_SLUG, [ 'created' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to update an AI profile.
 	 */
 	public function handle_update_profile(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$profile_id = ! empty( $_POST['profile_id'] ) ? sanitize_text_field( (string) $_POST['profile_id'] ) : '';
-		check_admin_referer( 'gca_update_profile_' . $profile_id );
+		$this->verify_admin_action( 'gca_update_profile_' . $profile_id );
 
 		$profile_data = isset( $_POST['profile'] ) && is_array( $_POST['profile'] ) ? $_POST['profile'] : [];
 		$result       = $this->profile_service->update_profile( $profile_id, $profile_data );
@@ -715,20 +664,15 @@ class AdminMenu {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'profile_id' => $profile_id, 'action' => 'edit', 'updated' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::AI_ASSISTANT_MENU_SLUG, [ 'profile_id' => $profile_id, 'action' => 'edit', 'updated' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to duplicate an AI profile.
 	 */
 	public function handle_duplicate_profile(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$profile_id = ! empty( $_POST['profile_id'] ) ? sanitize_text_field( (string) $_POST['profile_id'] ) : '';
-		check_admin_referer( 'gca_duplicate_profile_' . $profile_id );
+		$this->verify_admin_action( 'gca_duplicate_profile_' . $profile_id );
 
 		$result = $this->profile_service->duplicate_profile( $profile_id );
 
@@ -736,20 +680,15 @@ class AdminMenu {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'duplicated' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::AI_ASSISTANT_MENU_SLUG, [ 'duplicated' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to delete an AI profile.
 	 */
 	public function handle_delete_profile(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$profile_id = ! empty( $_POST['profile_id'] ) ? sanitize_text_field( (string) $_POST['profile_id'] ) : '';
-		check_admin_referer( 'gca_delete_profile_' . $profile_id );
+		$this->verify_admin_action( 'gca_delete_profile_' . $profile_id );
 
 		$result = $this->profile_service->delete_profile( $profile_id );
 
@@ -757,20 +696,15 @@ class AdminMenu {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'deleted' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::AI_ASSISTANT_MENU_SLUG, [ 'deleted' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to activate an AI profile.
 	 */
 	public function handle_activate_profile(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$profile_id = ! empty( $_POST['profile_id'] ) ? sanitize_text_field( (string) $_POST['profile_id'] ) : '';
-		check_admin_referer( 'gca_activate_profile_' . $profile_id );
+		$this->verify_admin_action( 'gca_activate_profile_' . $profile_id );
 
 		$result = $this->profile_service->activate_profile( $profile_id );
 
@@ -778,17 +712,14 @@ class AdminMenu {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::AI_ASSISTANT_MENU_SLUG, 'activated' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::AI_ASSISTANT_MENU_SLUG, [ 'activated' => 1 ] );
 	}
 
 	/**
 	 * Renders the FAQs management page.
 	 */
 	public function render_faqs_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$action    = isset( $_GET['action'] ) ? sanitize_text_field( (string) $_GET['action'] ) : 'list'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$edit_id   = isset( $_GET['faq_id'] ) ? sanitize_text_field( (string) $_GET['faq_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -818,11 +749,7 @@ class AdminMenu {
 	 * Handles POST action to create a new FAQ.
 	 */
 	public function handle_create_faq(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
-		check_admin_referer( 'gca_create_faq' );
+		$this->verify_admin_action( 'gca_create_faq' );
 
 		$question     = isset( $_POST['question'] ) ? mb_substr( sanitize_text_field( (string) $_POST['question'] ), 0, 500, 'UTF-8' ) : '';
 		$answer       = isset( $_POST['answer'] ) ? mb_substr( sanitize_textarea_field( (string) $_POST['answer'] ), 0, 10000, 'UTF-8' ) : '';
@@ -848,20 +775,15 @@ class AdminMenu {
 			$this->knowledge_indexer->index_faq( $faq );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::FAQS_MENU_SLUG, 'created' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::FAQS_MENU_SLUG, [ 'created' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to update an existing FAQ.
 	 */
 	public function handle_update_faq(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$public_id = isset( $_POST['faq_id'] ) ? sanitize_text_field( (string) $_POST['faq_id'] ) : '';
-		check_admin_referer( 'gca_update_faq_' . $public_id );
+		$this->verify_admin_action( 'gca_update_faq_' . $public_id );
 
 		$existing = $this->faq_repo->get_by_public_id( $public_id );
 		if ( ! $existing ) {
@@ -889,20 +811,15 @@ class AdminMenu {
 			$this->knowledge_indexer->index_faq( $updated_faq );
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::FAQS_MENU_SLUG, 'updated' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::FAQS_MENU_SLUG, [ 'updated' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to delete an FAQ.
 	 */
 	public function handle_delete_faq(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$public_id = isset( $_POST['faq_id'] ) ? sanitize_text_field( (string) $_POST['faq_id'] ) : '';
-		check_admin_referer( 'gca_delete_faq_' . $public_id );
+		$this->verify_admin_action( 'gca_delete_faq_' . $public_id );
 
 		if ( ! empty( $public_id ) ) {
 			$this->faq_repo->delete_by_public_id( $public_id );
@@ -911,20 +828,15 @@ class AdminMenu {
 			}
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::FAQS_MENU_SLUG, 'deleted' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::FAQS_MENU_SLUG, [ 'deleted' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to toggle active status of an FAQ.
 	 */
 	public function handle_toggle_faq_active(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$public_id = isset( $_POST['faq_id'] ) ? sanitize_text_field( (string) $_POST['faq_id'] ) : '';
-		check_admin_referer( 'gca_toggle_faq_' . $public_id );
+		$this->verify_admin_action( 'gca_toggle_faq_' . $public_id );
 
 		$existing = $this->faq_repo->get_by_public_id( $public_id );
 		if ( $existing ) {
@@ -937,17 +849,14 @@ class AdminMenu {
 			}
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::FAQS_MENU_SLUG, 'toggled' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::FAQS_MENU_SLUG, [ 'toggled' => 1 ] );
 	}
 
 	/**
 	 * Renders the Knowledge Management and Indexing page.
 	 */
 	public function render_knowledge_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$counts      = $this->knowledge_repo->get_counts();
 		$settings    = SettingsService::get_all();
@@ -966,53 +875,38 @@ class AdminMenu {
 	 * Handles POST action to synchronize knowledge index.
 	 */
 	public function handle_sync_knowledge(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
-		check_admin_referer( 'gca_sync_knowledge' );
+		$this->verify_admin_action( 'gca_sync_knowledge' );
 
 		$result = [ 'indexed' => 0, 'total_chunks' => 0 ];
 		if ( $this->knowledge_indexer ) {
 			$result = $this->knowledge_indexer->sync_all();
 		}
 
-		wp_safe_redirect( add_query_arg( [
-			'page'    => self::KNOWLEDGE_MENU_SLUG,
+		$this->redirect_to_page( self::KNOWLEDGE_MENU_SLUG, [
 			'synced'  => 1,
 			'indexed' => $result['indexed'] ?? 0,
 			'chunks'  => $result['total_chunks'] ?? 0,
-		], admin_url( 'admin.php' ) ) );
-		exit;
+		] );
 	}
 
 	/**
 	 * Handles POST action to clear the knowledge index.
 	 */
 	public function handle_clear_knowledge(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
-		check_admin_referer( 'gca_clear_knowledge' );
+		$this->verify_admin_action( 'gca_clear_knowledge' );
 
 		if ( $this->knowledge_repo ) {
 			$this->knowledge_repo->clear_index();
 		}
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::KNOWLEDGE_MENU_SLUG, 'cleared' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::KNOWLEDGE_MENU_SLUG, [ 'cleared' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to save knowledge configuration settings.
 	 */
 	public function handle_save_knowledge_settings(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
-		check_admin_referer( 'gca_save_knowledge_settings' );
+		$this->verify_admin_action( 'gca_save_knowledge_settings' );
 
 		$current = SettingsService::get_all();
 
@@ -1030,17 +924,14 @@ class AdminMenu {
 
 		update_option( SettingsService::OPTION_KEY, $current );
 
-		wp_safe_redirect( add_query_arg( [ 'page' => self::KNOWLEDGE_MENU_SLUG, 'saved' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::KNOWLEDGE_MENU_SLUG, [ 'saved' => 1 ] );
 	}
 
 	/**
 	 * Renders the business integrations management overview page.
 	 */
 	public function render_integrations_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$integration_registry = $this->integration_registry;
 
@@ -1051,9 +942,7 @@ class AdminMenu {
 	 * Renders the Human Handoffs management list or detail view.
 	 */
 	public function render_handoffs_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ) );
-		}
+		$this->check_manage_options();
 
 		$handoff_id = ! empty( $_GET['handoff_id'] ) ? sanitize_text_field( (string) $_GET['handoff_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
@@ -1110,12 +999,8 @@ class AdminMenu {
 	 * Handles POST action to update handoff status.
 	 */
 	public function handle_update_handoff_status(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$handoff_id = ! empty( $_POST['handoff_id'] ) ? sanitize_text_field( (string) $_POST['handoff_id'] ) : '';
-		check_admin_referer( 'gca_update_handoff_' . $handoff_id );
+		$this->verify_admin_action( 'gca_update_handoff_' . $handoff_id );
 
 		$status = ! empty( $_POST['status'] ) ? sanitize_text_field( (string) $_POST['status'] ) : '';
 
@@ -1123,45 +1008,31 @@ class AdminMenu {
 			$this->handoff_service->update_status( $handoff_id, $status );
 		}
 
-		wp_safe_redirect( add_query_arg( [
-			'page'       => self::HANDOFFS_MENU_SLUG,
+		$this->redirect_to_page( self::HANDOFFS_MENU_SLUG, [
 			'handoff_id' => $handoff_id,
 			'updated'    => 1,
-		], admin_url( 'admin.php' ) ) );
-		exit;
+		] );
 	}
 
 	/**
 	 * Handles POST action to delete a handoff record.
 	 */
 	public function handle_delete_handoff(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$handoff_id = ! empty( $_POST['handoff_id'] ) ? sanitize_text_field( (string) $_POST['handoff_id'] ) : '';
-		check_admin_referer( 'gca_delete_handoff_' . $handoff_id );
+		$this->verify_admin_action( 'gca_delete_handoff_' . $handoff_id );
 
 		if ( $this->handoff_repo && ! empty( $handoff_id ) ) {
 			$this->handoff_repo->delete_by_public_id( $handoff_id );
 		}
 
-		wp_safe_redirect( add_query_arg( [
-			'page'    => self::HANDOFFS_MENU_SLUG,
-			'deleted' => 1,
-		], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::HANDOFFS_MENU_SLUG, [ 'deleted' => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to send a test email notification.
 	 */
 	public function handle_send_test_email(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
-		check_admin_referer( 'gca_send_test_email' );
+		$this->verify_admin_action( 'gca_send_test_email' );
 
 		$result = [ 'success' => false, 'code' => 'NOT_AVAILABLE' ];
 		if ( $this->notification_service ) {
@@ -1169,44 +1040,28 @@ class AdminMenu {
 		}
 
 		$param = $result['success'] ? 'test_sent' : 'test_failed';
-		wp_safe_redirect( add_query_arg( [
-			'page' => self::SETTINGS_MENU_SLUG,
-			$param => 1,
-		], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, [ $param => 1 ] );
 	}
 
 	/**
 	 * Handles POST action to remove a stored provider API key (N18).
 	 */
 	public function handle_remove_provider_key(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
 		$provider = isset( $_POST['provider'] ) ? sanitize_key( (string) $_POST['provider'] ) : '';
-		check_admin_referer( 'gca_remove_provider_key_' . $provider );
+		$this->verify_admin_action( 'gca_remove_provider_key_' . $provider );
 
 		if ( in_array( $provider, SettingsService::ALLOWED_PROVIDERS, true ) ) {
 			SettingsService::remove_provider_api_key( $provider );
 		}
 
-		wp_safe_redirect( add_query_arg( [
-			'page'        => self::SETTINGS_MENU_SLUG,
-			'key_removed' => $provider,
-		], admin_url( 'admin.php' ) ) );
-		exit;
+		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, [ 'key_removed' => $provider ] );
 	}
 
 	/**
 	 * Handles POST action to test connection to OpenAI API (Node N19).
 	 */
 	public function handle_test_openai_connection(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
-		}
-
-		check_admin_referer( 'gca_test_openai_connection' );
+		$this->verify_admin_action( 'gca_test_openai_connection' );
 
 		$status_param = 'connected';
 		$error_param  = '';
@@ -1223,14 +1078,43 @@ class AdminMenu {
 		}
 
 		$redirect_args = [
-			'page'               => self::SETTINGS_MENU_SLUG,
 			'openai_test_status' => $status_param,
 		];
 		if ( ! empty( $error_param ) ) {
 			$redirect_args['openai_test_error'] = $error_param;
 		}
 
-		wp_safe_redirect( add_query_arg( $redirect_args, admin_url( 'admin.php' ) ) );
+		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, $redirect_args );
+	}
+
+	/**
+	 * Asserts administrator capability and verifies action security nonce.
+	 *
+	 * @param string $action Nonce action name.
+	 */
+	private function verify_admin_action( string $action ): void {
+		$this->check_manage_options();
+		check_admin_referer( $action );
+	}
+
+	/**
+	 * Enforces manage_options capability.
+	 */
+	private function check_manage_options(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'gemini-chat-assistant' ), '', [ 'response' => 403 ] );
+		}
+	}
+
+	/**
+	 * Safe redirect to a plugin admin page.
+	 *
+	 * @param string               $menu_slug  Plugin menu slug.
+	 * @param array<string, mixed> $query_args Optional query parameters.
+	 */
+	private function redirect_to_page( string $menu_slug, array $query_args = [] ): void {
+		$args = array_merge( [ 'page' => $menu_slug ], $query_args );
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }

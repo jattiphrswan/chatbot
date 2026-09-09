@@ -168,6 +168,7 @@ class Plugin {
 
 		// AI Providers (N16 / N18).
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderInterface.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/AbstractProvider.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderResponse.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderException.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderRegistry.php';

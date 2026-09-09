@@ -1,13 +1,11 @@
 <?php
 /**
- * OpenAI Provider Adapter (N18 Placeholder).
+ * OpenAI Provider Adapter.
  *
  * @package SkyFish\GeminiChat\Providers
  */
 
 namespace SkyFish\GeminiChat\Providers;
-
-use SkyFish\GeminiChat\Admin\SettingsService;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -17,10 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class OpenAIProvider
  *
- * Adapter placeholder for OpenAI models (GPT-4o, GPT-4o-mini).
- * In N18, live outbound HTTP calls are strictly prohibited; configuration only.
+ * Live adapter for OpenAI models via OpenAIClient and the Responses API.
  */
-class OpenAIProvider implements ProviderInterface {
+class OpenAIProvider extends AbstractProvider {
 
 	public const PROVIDER_ID = 'openai';
 
@@ -32,24 +29,10 @@ class OpenAIProvider implements ProviderInterface {
 	 * @param OpenAIClient|null $client Optional OpenAIClient instance.
 	 */
 	public function __construct( ?OpenAIClient $client = null ) {
+		$this->id     = self::PROVIDER_ID;
+		$this->name   = 'OpenAI';
 		$this->client = $client ?? new OpenAIClient();
-	}
-
-	public function get_id(): string {
-		return self::PROVIDER_ID;
-	}
-
-	public function get_name(): string {
-		return 'OpenAI';
-	}
-
-	/**
-	 * Returns supported OpenAI models.
-	 *
-	 * @return array<int, array{id: string, name: string, context_window: int, max_output_tokens: int, description: string}>
-	 */
-	public function get_models(): array {
-		return [
+		$this->models = [
 			[
 				'id'                => 'gpt-4o',
 				'name'              => 'GPT-4o',
@@ -107,34 +90,5 @@ class OpenAIProvider implements ProviderInterface {
 	 */
 	public function get_client(): OpenAIClient {
 		return $this->client;
-	}
-
-	/**
-	 * Validates that the provider is enabled, configured with an API key, and has a valid model.
-	 *
-	 * @throws ProviderException
-	 */
-	private function validate_configuration(): void {
-		if ( ! SettingsService::is_provider_enabled( self::PROVIDER_ID ) ) {
-			throw ProviderException::not_configured(
-				self::PROVIDER_ID,
-				__( 'OpenAI provider is disabled in settings.', 'gemini-chat-assistant' )
-			);
-		}
-
-		if ( ! SettingsService::is_provider_configured( self::PROVIDER_ID ) ) {
-			throw ProviderException::not_configured(
-				self::PROVIDER_ID,
-				__( 'OpenAI API key is not configured on the server.', 'gemini-chat-assistant' )
-			);
-		}
-
-		$model = SettingsService::get_provider_model( self::PROVIDER_ID );
-		if ( empty( $model ) ) {
-			throw ProviderException::configuration_error(
-				self::PROVIDER_ID,
-				__( 'OpenAI model is not configured.', 'gemini-chat-assistant' )
-			);
-		}
 	}
 }

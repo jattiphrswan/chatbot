@@ -46,6 +46,7 @@ SkyFish\GeminiChat
 │   └── NotificationService: Internal operational email dispatcher via wp_mail() with header injection defense and idempotency.
 ├── Providers/
 │   ├── ProviderInterface: Standard interface for multi-provider AI adapters.
+│   ├── AbstractProvider: Base abstract class providing common identifier, model list, configuration, and validation routines.
 │   ├── ProviderRegistry: Central registry container for AI model providers.
 │   ├── ProviderException: Domain exception with automatic credential masking.
 │   ├── ProviderResponse: Normalized provider response value object.

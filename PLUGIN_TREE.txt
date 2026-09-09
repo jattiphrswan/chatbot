@@ -61,6 +61,16 @@ gemini-chat-assistant/
 │   │   └── class-handoff-service.php
 │   ├── notifications/
 │   │   └── class-notification-service.php
+│   ├── Providers/
+│   │   ├── AbstractProvider.php
+│   │   ├── ClaudeProvider.php
+│   │   ├── GeminiProvider.php
+│   │   ├── OpenAIClient.php
+│   │   ├── OpenAIProvider.php
+│   │   ├── ProviderException.php
+│   │   ├── ProviderInterface.php
+│   │   ├── ProviderRegistry.php
+│   │   └── ProviderResponse.php
 │   ├── REST/
 │   │   ├── RestServer.php
 │   │   ├── ChatController.php

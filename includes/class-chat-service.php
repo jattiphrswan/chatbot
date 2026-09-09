@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class ChatService
  *
- * Orchestrates chat interaction flow between REST controller, session state, persistence repositories, and Gemini API client.
+ * Orchestrates chat interaction flow between REST controller, session state, persistence repositories, and AI providers.
  */
 class ChatService {
 
@@ -40,16 +40,16 @@ class ChatService {
 	/**
 	 * ChatService constructor.
 	 *
-	 * @param SettingsService|null                    $settings_service    Optional settings service.
-	 * @param SessionService|null                     $session_service     Optional session service.
-	 * @param ConversationRepository|null             $conversation_repo   Optional conversation repository.
-	 * @param MessageRepository|null                  $message_repo        Optional message repository.
-	 * @param GeminiClient|null                       $gemini_client       Optional Gemini client.
-	 * @param ProfileService|null                     $profile_service     Optional profile service.
-	 * @param Knowledge\KnowledgeRetriever|null       $knowledge_retriever Optional knowledge retriever.
-	 * @param Knowledge\KnowledgeContextBuilder|null  $context_builder     Optional knowledge context builder.
-	 * @param Handoff\HandoffService|null             $handoff_service     Optional handoff service.
-	 * @param Providers\ProviderRegistry|null         $provider_registry   Optional provider registry.
+	 * @param SettingsService|null                   $settings_service    Optional settings service.
+	 * @param SessionService|null                    $session_service     Optional session service.
+	 * @param ConversationRepository|null            $conversation_repo   Optional conversation repository.
+	 * @param MessageRepository|null                 $message_repo        Optional message repository.
+	 * @param GeminiClient|null                      $gemini_client       Optional Gemini client.
+	 * @param ProfileService|null                    $profile_service     Optional profile service.
+	 * @param Knowledge\KnowledgeRetriever|null      $knowledge_retriever Optional knowledge retriever.
+	 * @param Knowledge\KnowledgeContextBuilder|null $context_builder     Optional knowledge context builder.
+	 * @param Handoff\HandoffService|null            $handoff_service     Optional handoff service.
+	 * @param Providers\ProviderRegistry|null        $provider_registry   Optional provider registry.
 	 */
 	public function __construct(
 		?SettingsService $settings_service = null,
@@ -106,8 +106,7 @@ class ChatService {
 		?string $request_id = null
 	) {
 		// 1. Verify chatbot enabled setting.
-		$is_enabled = (bool) $this->settings_service->get( 'enabled', true );
-		if ( ! $is_enabled ) {
+		if ( ! (bool) $this->settings_service->get( 'enabled', true ) ) {
 			return new WP_Error(
 				'CHAT_DISABLED',
 				__( 'The chat assistant is currently disabled.', 'gemini-chat-assistant' ),
@@ -121,15 +120,13 @@ class ChatService {
 			: ( function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : uniqid( 'req_', true ) );
 
 		// 3. Resolve user ID and session conversation state.
-		$user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
-		$session = $this->session_service->get_or_create_session( $session_id, $user_id );
-
+		$user_id    = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$session    = $this->session_service->get_or_create_session( $session_id, $user_id );
 		$conv_db_id = (int) $session['conversation_id'];
 		$public_id  = (string) $session['public_id'];
 
 		// 4. Check message persistence preference.
 		$store_messages = (bool) $this->settings_service->get( 'store_messages', true );
-
 		if ( $store_messages && $conv_db_id > 0 ) {
 			$this->message_repo->create( $conv_db_id, 'user', $message );
 		}
@@ -138,170 +135,66 @@ class ChatService {
 		$previous_interaction_id = $this->session_service->get_interaction_id( $session_id, $conv_db_id );
 
 		// 6. Check human handoff intent (Node N17.3).
-		$handoff_meta = null;
-		if ( null !== $this->handoff_service && $conv_db_id > 0 ) {
-			$detected_reason = $this->handoff_service->detect_handoff_intent( $message );
-			if ( null !== $detected_reason ) {
-				$handoff_result = $this->handoff_service->create_handoff( $conv_db_id, $detected_reason );
-				if ( is_array( $handoff_result ) && ! empty( $handoff_result['public_id'] ) ) {
-					$handoff_meta = [
-						'status'    => 'requested',
-						'public_id' => (string) $handoff_result['public_id'],
-					];
-				}
-			}
-		}
+		$handoff_meta = $this->check_handoff_intent( $message, $conv_db_id );
 
 		// 7. Determine active AI provider (N18/N19).
 		$provider_id = SettingsService::get_default_provider();
-
-		// Check if provider is enabled.
 		if ( ! SettingsService::is_provider_enabled( $provider_id ) ) {
 			return new WP_Error(
 				'PROVIDER_DISABLED',
-				sprintf( __( 'The configured AI provider (%s) is disabled.', 'gemini-chat-assistant' ), esc_html( ucfirst( $provider_id ) ) ),
+				sprintf(
+					/* translators: %s: Provider brand name */
+					__( 'The configured AI provider (%s) is disabled.', 'gemini-chat-assistant' ),
+					esc_html( ucfirst( $provider_id ) )
+				),
 				[ 'status' => 503 ]
 			);
 		}
 
-		$system_instruction = $this->profile_service->get_effective_system_instruction();
+		// 8. Construct effective prompt grounded with retrieved knowledge (N16 RAG).
+		$system_instruction = $this->get_grounded_instruction(
+			$message,
+			$this->profile_service->get_effective_system_instruction()
+		);
 
-		// Ground system instruction with retrieved website knowledge context (N16 RAG).
-		if ( (bool) $this->settings_service->get( 'knowledge_enabled', false ) && null !== $this->knowledge_retriever && null !== $this->context_builder ) {
-			$chunks = $this->knowledge_retriever->retrieve( $message );
-			if ( ! empty( $chunks ) ) {
-				$rag_context = $this->context_builder->build( $chunks );
-				if ( ! empty( $rag_context ) ) {
-					$system_instruction .= "\n\n" . $rag_context;
-				}
-			}
+		// 9. Dispatch chat interaction to active provider.
+		$dispatch_result = $this->dispatch_provider_chat(
+			$provider_id,
+			$message,
+			$system_instruction,
+			$conv_db_id,
+			$previous_interaction_id,
+			$session_id,
+			$req_id
+		);
+
+		if ( is_wp_error( $dispatch_result ) ) {
+			return $dispatch_result;
 		}
 
-		$start_time = microtime( true );
-
-		if ( 'openai' === $provider_id ) {
-			$model = SettingsService::get_provider_model( 'openai' );
-
-			$context_messages = [];
-			if ( $conv_db_id > 0 ) {
-				$context_messages = $this->message_repo->get_context_messages( $conv_db_id, 20 );
-			}
-			$has_current = false;
-			if ( ! empty( $context_messages ) ) {
-				$last_msg = end( $context_messages );
-				if ( 'user' === ( $last_msg['role'] ?? '' ) && ( $last_msg['content'] ?? '' ) === $message ) {
-					$has_current = true;
-				}
-			}
-			if ( ! $has_current ) {
-				$context_messages[] = [
-					'role'    => 'user',
-					'content' => $message,
-				];
-			}
-
-			try {
-				$provider = $this->get_provider_registry()->get( 'openai' );
-				if ( null === $provider ) {
-					return new WP_Error( 'PROVIDER_NOT_FOUND', __( 'OpenAI provider is not registered.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
-				}
-
-				$provider_response = $provider->chat(
-					$context_messages,
-					[
-						'model'              => $model,
-						'system_instruction' => $system_instruction,
-					]
-				);
-
-				$assistant_text = $provider_response->get_content();
-				$input_tokens   = $provider_response->get_input_tokens();
-				$output_tokens  = $provider_response->get_output_tokens();
-				$model          = $provider_response->get_model();
-				$latency_ms     = (int) round( ( microtime( true ) - $start_time ) * 1000 );
-			} catch ( Providers\ProviderException $e ) {
-				return $this->map_provider_error( $e, $req_id );
-			}
-		} elseif ( 'claude' === $provider_id ) {
-			try {
-				$provider = $this->get_provider_registry()->get( 'claude' );
-				if ( null === $provider ) {
-					return new WP_Error( 'PROVIDER_NOT_FOUND', __( 'Claude provider is not registered.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
-				}
-				$provider->chat( [ [ 'role' => 'user', 'content' => $message ] ] );
-				return new WP_Error( 'PROVIDER_ERROR', __( 'Claude chat is not available.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
-			} catch ( Providers\ProviderException $e ) {
-				return $this->map_provider_error( $e, $req_id );
-			}
-		} else {
-			// Google Gemini (Default / Native).
-			$model       = SettingsService::get_provider_model( 'gemini' );
-			$ai_response = $this->gemini_client->create_interaction(
-				$message,
-				$previous_interaction_id,
-				[
-					'model'              => $model,
-					'system_instruction' => $system_instruction,
-				]
-			);
-			$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
-
-			// Handle AI transport or API error with stale interaction recovery.
-			if ( is_wp_error( $ai_response ) ) {
-				if ( ! empty( $previous_interaction_id ) && $this->is_stale_interaction_error( $ai_response ) ) {
-					$this->session_service->clear_interaction_id( $session_id, $conv_db_id );
-					$start_time  = microtime( true );
-					$ai_response = $this->gemini_client->create_interaction(
-						$message,
-						null,
-						[
-							'model'              => $model,
-							'system_instruction' => $system_instruction,
-						]
-					);
-					$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
-				}
-
-				if ( is_wp_error( $ai_response ) ) {
-					return $this->map_gemini_error( $ai_response, $req_id );
-				}
-			}
-
-			$assistant_text = $ai_response['text'] ?? '';
-			$usage          = $ai_response['usage'] ?? [];
-			$input_tokens   = absint( $usage['input_tokens'] ?? 0 );
-			$output_tokens  = absint( $usage['output_tokens'] ?? 0 );
-
-			// Synchronize new interaction ID into session transient and database.
-			$new_interaction_id = $ai_response['interaction_id'] ?? '';
-			if ( ! empty( $new_interaction_id ) ) {
-				$this->session_service->set_interaction_id( $session_id, $conv_db_id, (string) $new_interaction_id );
-			}
-		}
-
-		// 8. Persist assistant message if enabled.
+		// 10. Persist assistant message if enabled.
 		if ( $store_messages && $conv_db_id > 0 ) {
 			$this->message_repo->create(
 				$conv_db_id,
 				'assistant',
-				$assistant_text,
-				$model,
-				$input_tokens,
-				$output_tokens,
-				$latency_ms
+				$dispatch_result['assistant_text'],
+				$dispatch_result['model'],
+				$dispatch_result['input_tokens'],
+				$dispatch_result['output_tokens'],
+				$dispatch_result['latency_ms']
 			);
 
 			$this->conversation_repo->update_last_active( $conv_db_id );
 			$this->conversation_repo->increment_message_count( $conv_db_id, 2 );
 		}
 
-		// 9. Return normalized public response shape (zero database IDs, hashes, or interaction IDs).
+		// 11. Return normalized public response shape.
 		$response_payload = [
-			'message'         => $assistant_text,
+			'message'         => $dispatch_result['assistant_text'],
 			'conversation_id' => $public_id,
 			'request_id'      => $req_id,
 			'meta'            => [
-				'model'    => $model,
+				'model'    => $dispatch_result['model'],
 				'provider' => $provider_id,
 			],
 		];
@@ -311,6 +204,230 @@ class ChatService {
 		}
 
 		return $response_payload;
+	}
+
+	/**
+	 * Dispatches chat turn to the designated AI provider.
+	 *
+	 * @param string      $provider_id             Provider identifier ('gemini', 'openai', 'claude').
+	 * @param string      $message                 User message string.
+	 * @param string      $system_instruction      Grounded system prompt.
+	 * @param int         $conv_db_id              Conversation database ID.
+	 * @param string|null $previous_interaction_id Gemini previous interaction UUID.
+	 * @param string      $session_id              Client session identifier.
+	 * @param string      $req_id                  Request UUID for diagnostics.
+	 * @return array{assistant_text: string, model: string, input_tokens: int, output_tokens: int, latency_ms: int}|WP_Error
+	 */
+	private function dispatch_provider_chat(
+		string $provider_id,
+		string $message,
+		string $system_instruction,
+		int $conv_db_id,
+		?string $previous_interaction_id,
+		string $session_id,
+		string $req_id
+	) {
+		$start_time = microtime( true );
+
+		if ( 'openai' === $provider_id ) {
+			return $this->dispatch_openai_turn( $conv_db_id, $message, $system_instruction, $start_time, $req_id );
+		}
+
+		if ( 'claude' === $provider_id ) {
+			return $this->dispatch_claude_turn( $message, $req_id );
+		}
+
+		return $this->dispatch_gemini_turn( $message, $system_instruction, $previous_interaction_id, $session_id, $conv_db_id, $start_time, $req_id );
+	}
+
+	/**
+	 * Dispatches chat interaction via OpenAI Responses API.
+	 */
+	private function dispatch_openai_turn( int $conv_db_id, string $message, string $system_instruction, float $start_time, string $req_id ) {
+		$model            = SettingsService::get_provider_model( 'openai' );
+		$context_messages = $this->build_context_messages( $conv_db_id, $message );
+
+		try {
+			$provider = $this->get_provider_registry()->get( 'openai' );
+			if ( null === $provider ) {
+				return new WP_Error( 'PROVIDER_NOT_FOUND', __( 'OpenAI provider is not registered.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
+			}
+
+			$response = $provider->chat(
+				$context_messages,
+				[
+					'model'              => $model,
+					'system_instruction' => $system_instruction,
+				]
+			);
+
+			return [
+				'assistant_text' => $response->get_content(),
+				'input_tokens'   => $response->get_input_tokens(),
+				'output_tokens'  => $response->get_output_tokens(),
+				'model'          => $response->get_model(),
+				'latency_ms'     => (int) round( ( microtime( true ) - $start_time ) * 1000 ),
+			];
+		} catch ( Providers\ProviderException $e ) {
+			return $this->map_provider_error( $e, $req_id );
+		}
+	}
+
+	/**
+	 * Dispatches chat interaction to Claude placeholder.
+	 */
+	private function dispatch_claude_turn( string $message, string $req_id ) {
+		try {
+			$provider = $this->get_provider_registry()->get( 'claude' );
+			if ( null === $provider ) {
+				return new WP_Error( 'PROVIDER_NOT_FOUND', __( 'Claude provider is not registered.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
+			}
+			$provider->chat( [ [ 'role' => 'user', 'content' => $message ] ] );
+			return new WP_Error( 'PROVIDER_ERROR', __( 'Claude chat is not available.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
+		} catch ( Providers\ProviderException $e ) {
+			return $this->map_provider_error( $e, $req_id );
+		}
+	}
+
+	/**
+	 * Dispatches chat interaction via Google Gemini Interactions API with stale interaction retry.
+	 */
+	private function dispatch_gemini_turn(
+		string $message,
+		string $system_instruction,
+		?string $previous_interaction_id,
+		string $session_id,
+		int $conv_db_id,
+		float $start_time,
+		string $req_id
+	) {
+		$model       = SettingsService::get_provider_model( 'gemini' );
+		$ai_response = $this->gemini_client->create_interaction(
+			$message,
+			$previous_interaction_id,
+			[
+				'model'              => $model,
+				'system_instruction' => $system_instruction,
+			]
+		);
+		$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
+
+		if ( is_wp_error( $ai_response ) ) {
+			if ( ! empty( $previous_interaction_id ) && $this->is_stale_interaction_error( $ai_response ) ) {
+				$this->session_service->clear_interaction_id( $session_id, $conv_db_id );
+				$start_time  = microtime( true );
+				$ai_response = $this->gemini_client->create_interaction(
+					$message,
+					null,
+					[
+						'model'              => $model,
+						'system_instruction' => $system_instruction,
+					]
+				);
+				$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );
+			}
+
+			if ( is_wp_error( $ai_response ) ) {
+				return $this->map_gemini_error( $ai_response, $req_id );
+			}
+		}
+
+		$usage         = $ai_response['usage'] ?? [];
+		$input_tokens  = absint( $usage['input_tokens'] ?? 0 );
+		$output_tokens = absint( $usage['output_tokens'] ?? 0 );
+
+		$new_interaction_id = $ai_response['interaction_id'] ?? '';
+		if ( ! empty( $new_interaction_id ) ) {
+			$this->session_service->set_interaction_id( $session_id, $conv_db_id, (string) $new_interaction_id );
+		}
+
+		return [
+			'assistant_text' => $ai_response['text'] ?? '',
+			'input_tokens'   => $input_tokens,
+			'output_tokens'  => $output_tokens,
+			'model'          => $model,
+			'latency_ms'     => $latency_ms,
+		];
+	}
+
+	/**
+	 * Detects and records human handoff requests if intent is present.
+	 *
+	 * @param string $message    User message.
+	 * @param int    $conv_db_id Conversation database ID.
+	 * @return array{status: string, public_id: string}|null
+	 */
+	private function check_handoff_intent( string $message, int $conv_db_id ): ?array {
+		if ( null === $this->handoff_service || $conv_db_id <= 0 ) {
+			return null;
+		}
+
+		$detected_reason = $this->handoff_service->detect_handoff_intent( $message );
+		if ( null === $detected_reason ) {
+			return null;
+		}
+
+		$handoff_result = $this->handoff_service->create_handoff( $conv_db_id, $detected_reason );
+		if ( is_array( $handoff_result ) && ! empty( $handoff_result['public_id'] ) ) {
+			return [
+				'status'    => 'requested',
+				'public_id' => (string) $handoff_result['public_id'],
+			];
+		}
+
+		return null;
+	}
+
+	/**
+	 * Augments the base system instruction with retrieved RAG website knowledge if enabled.
+	 *
+	 * @param string $message          User message query.
+	 * @param string $base_instruction Base system instruction.
+	 * @return string Augmented instruction.
+	 */
+	private function get_grounded_instruction( string $message, string $base_instruction ): string {
+		if ( ! (bool) $this->settings_service->get( 'knowledge_enabled', false ) || null === $this->knowledge_retriever || null === $this->context_builder ) {
+			return $base_instruction;
+		}
+
+		$chunks = $this->knowledge_retriever->retrieve( $message );
+		if ( empty( $chunks ) ) {
+			return $base_instruction;
+		}
+
+		$rag_context = $this->context_builder->build( $chunks );
+		return ! empty( $rag_context ) ? $base_instruction . "\n\n" . $rag_context : $base_instruction;
+	}
+
+	/**
+	 * Compiles conversation history into normalized multi-turn context messages.
+	 *
+	 * @param int    $conv_db_id Conversation primary ID.
+	 * @param string $message    Current user message.
+	 * @return array<int, array{role: string, content: string}>
+	 */
+	private function build_context_messages( int $conv_db_id, string $message ): array {
+		$context_messages = [];
+		if ( $conv_db_id > 0 ) {
+			$context_messages = $this->message_repo->get_context_messages( $conv_db_id, 20 );
+		}
+
+		$has_current = false;
+		if ( ! empty( $context_messages ) ) {
+			$last_msg = end( $context_messages );
+			if ( 'user' === ( $last_msg['role'] ?? '' ) && ( $last_msg['content'] ?? '' ) === $message ) {
+				$has_current = true;
+			}
+		}
+
+		if ( ! $has_current ) {
+			$context_messages[] = [
+				'role'    => 'user',
+				'content' => $message,
+			];
+		}
+
+		return $context_messages;
 	}
 
 	/**

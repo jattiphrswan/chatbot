@@ -89,11 +89,13 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 > 2. `wp-config.php` constants (`GCA_GEMINI_API_KEY`, `GCA_OPENAI_API_KEY`, `GCA_CLAUDE_API_KEY`)
 > 3. Encrypted database credentials in `gca_provider_credentials` (AES-256-CBC with `AUTH_KEY` salt). Empty form submissions never overwrite stored keys.
 
-### 2.5 Multi-Provider Architecture (N18)
+### 2.5 Multi-Provider Architecture (N18–N19.5)
 - **`ProviderInterface` (`SkyFish\GeminiChat\Providers\ProviderInterface`):** Strict contract standardizing multi-provider access across AI backends (`get_id()`, `get_name()`, `get_models()`, `chat()`, `test_connection()`).
+- **`AbstractProvider` (`SkyFish\GeminiChat\Providers\AbstractProvider`):** Base class encapsulating shared ID, name, model list, configuration checks, and API key lookup routines (N19.5 DRY refactor).
 - **`ProviderRegistry` (`SkyFish\GeminiChat\Providers\ProviderRegistry`):** Central container for registering and retrieving configured AI provider instances (`gemini`, `openai`, `claude`).
-- **`GeminiProvider`:** First-party provider wrapping `GeminiClient` with model metadata (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-2.5-flash`).
-- **`OpenAIProvider` & `ClaudeProvider`:** Prepared placeholder adapters. In Node N18, both throw `ProviderException::not_configured` upon `chat()` or `test_connection()`, ensuring strictly zero live outbound HTTP calls.
+- **`GeminiProvider`:** First-party provider wrapping `GeminiClient` with model metadata (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-1.5-flash`).
+- **`OpenAIClient` & `OpenAIProvider`:** Live operational OpenAI provider adapter communicating via POST `/v1/responses` with structured instruction, multi-turn history mapping, and safe credential isolation.
+- **`ClaudeProvider`:** Prepared placeholder adapter throwing `ProviderException::not_configured` upon `chat()` or `test_connection()` (zero outbound HTTP calls until Node N20).
 
 
 ## 3. Security Boundary & Data Flow
