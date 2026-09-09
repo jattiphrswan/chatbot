@@ -165,6 +165,15 @@ class Plugin {
 
 		// Email Notifications (N17.4).
 		require_once GCA_PLUGIN_DIR . 'includes/notifications/class-notification-service.php';
+
+		// AI Providers (N16 / N18).
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderInterface.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderResponse.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderException.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ProviderRegistry.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/GeminiProvider.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIProvider.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ClaudeProvider.php';
 	}
 
 	/**
@@ -208,6 +217,13 @@ class Plugin {
 	 * @var Shortcode|null
 	 */
 	private ?Shortcode $shortcode = null;
+
+	/**
+	 * AI Provider Registry instance (N18).
+	 *
+	 * @var \SkyFish\GeminiChat\Providers\ProviderRegistry|null
+	 */
+	private ?\SkyFish\GeminiChat\Providers\ProviderRegistry $provider_registry = null;
 
 	/**
 	 * Accessor to Assets loader.
@@ -510,6 +526,21 @@ class Plugin {
 			$registry->register( new \SkyFish\GeminiChat\Integrations\Handoff\HandoffIntegration( $this->get_handoff_service(), $this->get_notification_service() ) );
 		}
 		return $registry;
+	}
+
+	/**
+	 * Accessor to ProviderRegistry (N18).
+	 *
+	 * @return \SkyFish\GeminiChat\Providers\ProviderRegistry
+	 */
+	public function get_provider_registry(): \SkyFish\GeminiChat\Providers\ProviderRegistry {
+		if ( null === $this->provider_registry ) {
+			$this->provider_registry = new \SkyFish\GeminiChat\Providers\ProviderRegistry();
+			$this->provider_registry->register( new \SkyFish\GeminiChat\Providers\GeminiProvider( $this->get_gemini_client() ) );
+			$this->provider_registry->register( new \SkyFish\GeminiChat\Providers\OpenAIProvider() );
+			$this->provider_registry->register( new \SkyFish\GeminiChat\Providers\ClaudeProvider() );
+		}
+		return $this->provider_registry;
 	}
 
 	/**

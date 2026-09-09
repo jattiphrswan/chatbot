@@ -44,6 +44,14 @@ SkyFish\GeminiChat
 │       └── SendHandoffNotificationAction: External action for internal team email notification dispatches.
 ├── Notifications/
 │   └── NotificationService: Internal operational email dispatcher via wp_mail() with header injection defense and idempotency.
+├── Providers/
+│   ├── ProviderInterface: Standard interface for multi-provider AI adapters.
+│   ├── ProviderRegistry: Central registry container for AI model providers.
+│   ├── ProviderException: Domain exception with automatic credential masking.
+│   ├── ProviderResponse: Normalized provider response value object.
+│   ├── GeminiProvider: Google Gemini adapter wrapping GeminiClient.
+│   ├── OpenAIProvider: OpenAI adapter placeholder throwing ProviderException::not_configured in N18.
+│   └── ClaudeProvider: Anthropic Claude adapter placeholder throwing ProviderException::not_configured in N18.
 ├── Services/
 │   ├── GeminiClient: HTTP transport wrapper for Google Gemini REST API.
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.

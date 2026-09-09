@@ -33,8 +33,15 @@ class Activator {
 			'welcome_message'       => 'Hi! How can I help you today?',
 			'placeholder'           => 'Type your message...',
 
-			// AI.
+			// AI & Providers (N18).
+			'default_provider'      => 'gemini',
 			'model'                 => 'gemini-3.8-flash',
+			'provider_gemini_enabled'       => true,
+			'provider_gemini_model'         => 'gemini-3.8-flash',
+			'provider_openai_enabled'       => false,
+			'provider_openai_model'         => 'gpt-4o-mini',
+			'provider_claude_enabled'       => false,
+			'provider_claude_model'         => 'claude-3-5-haiku-20241022',
 			'system_instruction'    => 'You are a helpful customer support assistant for this website.',
 
 			// Widget.

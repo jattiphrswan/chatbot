@@ -142,6 +142,9 @@ class AdminMenu {
 
 		// Admin post action hooks for Email Notifications (N17.4)
 		add_action( 'admin_post_gca_send_test_email', [ $this, 'handle_send_test_email' ] );
+
+		// Admin post action hooks for Provider Credentials (N18)
+		add_action( 'admin_post_gca_remove_provider_key', [ $this, 'handle_remove_provider_key' ] );
 	}
 
 	/**
@@ -1166,6 +1169,28 @@ class AdminMenu {
 		wp_safe_redirect( add_query_arg( [
 			'page' => self::SETTINGS_MENU_SLUG,
 			$param => 1,
+		], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handles POST action to remove a stored provider API key (N18).
+	 */
+	public function handle_remove_provider_key(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'gemini-chat-assistant' ) );
+		}
+
+		$provider = isset( $_POST['provider'] ) ? sanitize_key( (string) $_POST['provider'] ) : '';
+		check_admin_referer( 'gca_remove_provider_key_' . $provider );
+
+		if ( in_array( $provider, SettingsService::ALLOWED_PROVIDERS, true ) ) {
+			SettingsService::remove_provider_api_key( $provider );
+		}
+
+		wp_safe_redirect( add_query_arg( [
+			'page'        => self::SETTINGS_MENU_SLUG,
+			'key_removed' => $provider,
 		], admin_url( 'admin.php' ) ) );
 		exit;
 	}

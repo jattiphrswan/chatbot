@@ -211,12 +211,8 @@ class HandoffServiceTest {
 		echo "\n-- Section 7: Scope Verification & Disallowed APIs --\n";
 
 		// Assert no notification triggers in N17.3
-		$this->assert( ! function_exists( 'gca_send_handoff_notification' ), '7.1 No handoff notification sender function in N17.3' );
-
-		// Assert no multi-AI providers
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\OpenAIProvider' ), '7.2 OpenAIProvider absent' );
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\ClaudeProvider' ), '7.3 ClaudeProvider absent' );
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\ProviderFactory' ), '7.4 ProviderFactory absent' );
+		$this->assert( ! function_exists( 'gca_send_handoff_notification' ), '7.1 No legacy handoff notification sender function' );
+		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\ProviderFactory' ), '7.2 ProviderFactory absent' );
 	}
 }
 

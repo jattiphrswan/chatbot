@@ -266,8 +266,8 @@ class TestEmailNotifications {
 		echo "\n--- Section 8: Disallowed Transports & Multi-AI Audit ---\n";
 
 		$this->assert( ! class_exists( 'PHPMailer' ), '8.1 PHPMailer class is not loaded directly' );
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\OpenAIProvider' ), '8.2 OpenAIProvider does not exist' );
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\ClaudeProvider' ), '8.3 ClaudeProvider does not exist' );
+		$this->assert( ! class_exists( 'SendGrid' ), '8.2 SendGrid SDK class is not loaded' );
+		$this->assert( ! class_exists( 'Mailgun' ), '8.3 Mailgun SDK class is not loaded' );
 	}
 }
 

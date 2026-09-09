@@ -219,16 +219,12 @@ class TestDirectContactChannels {
 
 		$source_dir = dirname( __DIR__ );
 
-		// Check for forbidden terms in includes
+		// Check for forbidden third-party messaging transports
 		$forbidden_terms = [
 			'Twilio',
 			'MetaGraph',
 			'graph.facebook.com',
 			'api.whatsapp.com/v1',
-			'OPENAI_API_KEY',
-			'ANTHROPIC_API_KEY',
-			'OpenAIProvider',
-			'ClaudeProvider',
 			'ProviderFactory',
 		];
 

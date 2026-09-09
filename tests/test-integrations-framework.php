@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Test Suite: Node N17.1 Integration Framework Foundation.
  *
@@ -298,11 +298,7 @@ class IntegrationsFrameworkTest {
 
 		// 2. Verify no live WooCommerce actions exist in repository
 		$this->assert( ! function_exists( 'wc_get_products' ), '5.4 WooCommerce live function wc_get_products() absent/uncalled' );
-
-		// 3. Verify no OpenAI / Claude provider classes exist
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\OpenAIProvider' ), '5.5 OpenAIProvider does not exist' );
-		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\ClaudeProvider' ), '5.6 ClaudeProvider does not exist' );
-		$this->assert( ! interface_exists( 'SkyFish\GeminiChat\Providers\ProviderInterface' ), '5.7 ProviderInterface does not exist' );
+		$this->assert( ! class_exists( 'SkyFish\GeminiChat\Providers\ProviderFactory' ), '5.5 ProviderFactory absent' );
 	}
 }
 

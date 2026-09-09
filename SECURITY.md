@@ -4,18 +4,23 @@
 
 | Threat Category | Potential Attack Vector | Mitigation Control |
 | :--- | :--- | :--- |
-| **API Key Exposure** | Client inspection, JS leakage, response payloads, database breaches | API key is NEVER stored in `gca_settings`, database tables, or options. Loaded strictly server-side from `GEMINI_API_KEY` or `wp-config.php` (`GCA_GEMINI_API_KEY`). Frontend receives zero knowledge of the key. |
+| **API Key Exposure** | Client inspection, JS leakage, response payloads, database breaches | API keys are NEVER stored in `gca_settings`, public options, or returned in HTML source. Stored in isolated `gca_provider_credentials` encrypted with AES-256-CBC or loaded from environment variables / constants. Inputs are never populated with stored secrets. Frontend receives zero knowledge of keys. |
 | **Unauthorized Chat Usage** | Malicious bot spamming REST endpoints | Enforce WordPress REST Nonces (`X-WP-Nonce`), IP-based rate limiting, and session throttling via transients. |
 | **Cross-Site Scripting (XSS)** | Injection of malicious JS in chat prompts/replies | Strict sanitization of user input (`sanitize_text_field`), DOMPurify / safe HTML escaping during frontend markdown rendering. |
 | **SQL Injection** | Malformed parameters in chat or log queries | Complete usage of `$wpdb->prepare()` for all dynamic SQL queries. |
 | **Privilege Escalation** | Unauthorized access to admin settings/health API | Enforce `current_user_can('manage_options')` checks in all administrative controllers and page handlers. |
 | **Denial of Service (DoS)** | Giant message payloads exhausting server RAM | Strict payload limits (`max_message_length`) and rate limits (`rate_limit_5m`, `rate_limit_1h`). |
 
-## 2. Server-Side Secrets Architecture
-- **Environment Variable (Preferred):** `GEMINI_API_KEY` read via `getenv()`, `$_ENV`, or `$_SERVER`.
-- **Server Constant (Fallback):** `GCA_GEMINI_API_KEY` defined in `wp-config.php`.
-- **Database Isolation:** Zero credentials stored in `wp_options` or custom tables.
-- **Admin UI Isolation:** Admin UI only reports status as **Configured** or **Not Configured**. Never outputs complete, partial, or masked keys.
+## 2. Server-Side Secrets Architecture & Multi-Provider Credentials (Node N18)
+- **Precedence Hierarchy:**
+  1. **Environment Variables (Highest Priority):** `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`.
+  2. **Server Constants (Secondary):** `GCA_GEMINI_API_KEY`, `GCA_OPENAI_API_KEY`, `GCA_CLAUDE_API_KEY` defined in `wp-config.php`.
+  3. **Encrypted Database Storage (Fallback):** Option `gca_provider_credentials` (`autoload = 'no'`) encrypted with AES-256-CBC and WordPress `AUTH_KEY` salt.
+- **Form Submission Isolation:** Leaving API key fields blank during settings save NEVER overwrites or deletes existing credentials. Only non-empty strings trigger updates.
+- **Admin UI Isolation:** Admin UI renders password fields with `value=""` (never echoing stored secrets back to the browser). UI displays status badges (Configured / Not Configured) and source descriptions without exposing characters.
+- **Explicit Key Removal:** Deleting stored database credentials requires explicit administrative POST requests (`action=gca_remove_provider_key`) protected by unique WordPress nonces (`gca_remove_provider_key_{provider}`) and `manage_options` capability checks.
+- **Exception Masking:** `ProviderException::strip_credentials()` sanitizes error messages using regex to mask OpenAI (`sk-...`), Anthropic (`sk-ant-...`), and Google (`AIza...`) keys before they can reach logs or error views.
+- **Zero Live Outbound HTTP Calls in N18:** `OpenAIProvider` and `ClaudeProvider` do not make network calls; both throw `ProviderException::not_configured` upon execution.
 
 
 ## 3. REST API Security Layer

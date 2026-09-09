@@ -80,10 +80,21 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 - WordPress Options (`wp_options`):
   - `gca_settings`: Serialized array of configuration settings (model, active_profile_id, rate limits, widget toggles).
   - `gca_ai_profiles`: Serialized array of up to 25 configured AI profiles (`autoload = 'no'`).
+  - `gca_provider_credentials`: Dedicated option (`autoload = 'no'`) storing AES-256-CBC encrypted provider API keys (N18).
   - `gca_db_version`: Current schema migration version.
 
-> **CRITICAL CREDENTIAL ARCHITECTURE:**
-> The Gemini API Key is **NEVER** stored in `gca_settings` or `wp_options`. It is loaded strictly from the server environment (`GEMINI_API_KEY`) with fallback to the `GCA_GEMINI_API_KEY` constant in `wp-config.php`.
+> **CRITICAL CREDENTIAL ARCHITECTURE (N18):**
+> API credentials are **NEVER** stored in `gca_settings` or returned in client-side HTML/REST responses. They are loaded strictly with precedence:
+> 1. Server environment variables (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`)
+> 2. `wp-config.php` constants (`GCA_GEMINI_API_KEY`, `GCA_OPENAI_API_KEY`, `GCA_CLAUDE_API_KEY`)
+> 3. Encrypted database credentials in `gca_provider_credentials` (AES-256-CBC with `AUTH_KEY` salt). Empty form submissions never overwrite stored keys.
+
+### 2.5 Multi-Provider Architecture (N18)
+- **`ProviderInterface` (`SkyFish\GeminiChat\Providers\ProviderInterface`):** Strict contract standardizing multi-provider access across AI backends (`get_id()`, `get_name()`, `get_models()`, `chat()`, `test_connection()`).
+- **`ProviderRegistry` (`SkyFish\GeminiChat\Providers\ProviderRegistry`):** Central container for registering and retrieving configured AI provider instances (`gemini`, `openai`, `claude`).
+- **`GeminiProvider`:** First-party provider wrapping `GeminiClient` with model metadata (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-2.5-flash`).
+- **`OpenAIProvider` & `ClaudeProvider`:** Prepared placeholder adapters. In Node N18, both throw `ProviderException::not_configured` upon `chat()` or `test_connection()`, ensuring strictly zero live outbound HTTP calls.
+
 
 ## 3. Security Boundary & Data Flow
 

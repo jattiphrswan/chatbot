@@ -102,6 +102,361 @@ class SettingsService {
 			return trim( GCA_GEMINI_API_KEY );
 		}
 
+		// 3. Check stored database credential (fallback for admin-entered key).
+		$stored_key = self::get_stored_credential( 'gemini' );
+		if ( ! empty( $stored_key ) ) {
+			return $stored_key;
+		}
+
+		return '';
+	}
+
+	/**
+	 * Internal option name for encrypted/isolated credentials.
+	 */
+	public const CREDENTIALS_OPTION_KEY = 'gca_provider_credentials';
+
+	/**
+	 * Supported provider slugs.
+	 */
+	public const ALLOWED_PROVIDERS = [ 'gemini', 'openai', 'claude' ];
+
+	/**
+	 * Retrieves the configured default provider slug.
+	 *
+	 * Defaults to 'gemini'.
+	 *
+	 * @return string
+	 */
+	public static function get_default_provider(): string {
+		$provider = (string) self::get( 'default_provider', 'gemini' );
+		$provider = sanitize_key( $provider );
+		return in_array( $provider, self::ALLOWED_PROVIDERS, true ) ? $provider : 'gemini';
+	}
+
+	/**
+	 * Checks whether a given provider is enabled.
+	 *
+	 * @param string $provider_id Provider identifier ('gemini', 'openai', 'claude').
+	 * @return bool
+	 */
+	public static function is_provider_enabled( string $provider_id ): bool {
+		$provider_id = sanitize_key( $provider_id );
+		if ( ! in_array( $provider_id, self::ALLOWED_PROVIDERS, true ) ) {
+			return false;
+		}
+
+		// Gemini defaults to true if unconfigured in settings.
+		$default_enabled = ( 'gemini' === $provider_id );
+		return (bool) self::get( 'provider_' . $provider_id . '_enabled', $default_enabled );
+	}
+
+	/**
+	 * Checks whether a provider is configured with credentials.
+	 *
+	 * @param string $provider_id Provider identifier ('gemini', 'openai', 'claude').
+	 * @return bool
+	 */
+	public static function is_provider_configured( string $provider_id ): bool {
+		$key = self::get_provider_api_key( $provider_id );
+		return ! empty( $key );
+	}
+
+	/**
+	 * Retrieves configured default model for a provider.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @return string
+	 */
+	public static function get_provider_model( string $provider_id ): string {
+		$provider_id = sanitize_key( $provider_id );
+		switch ( $provider_id ) {
+			case 'openai':
+				$val = (string) self::get( 'provider_openai_model', 'gpt-4o-mini' );
+				return ! empty( $val ) ? sanitize_text_field( $val ) : 'gpt-4o-mini';
+
+			case 'claude':
+				$val = (string) self::get( 'provider_claude_model', 'claude-3-5-haiku-20241022' );
+				return ! empty( $val ) ? sanitize_text_field( $val ) : 'claude-3-5-haiku-20241022';
+
+			case 'gemini':
+			default:
+				$val = (string) self::get( 'provider_gemini_model', '' );
+				if ( empty( $val ) ) {
+					$val = (string) self::get( 'model', 'gemini-3.8-flash' );
+				}
+				return ! empty( $val ) ? sanitize_text_field( $val ) : 'gemini-3.8-flash';
+		}
+	}
+
+	/**
+	 * Retrieves the API key for a specified provider securely server-side.
+	 *
+	 * Priority order:
+	 * 1. Environment variable (e.g. GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY)
+	 * 2. wp-config.php constant (e.g. GCA_GEMINI_API_KEY, GCA_OPENAI_API_KEY, GCA_CLAUDE_API_KEY)
+	 * 3. Stored server-side credential option.
+	 *
+	 * NEVER expose or serialize this value to public REST or client JS.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @return string Plaintext API key or empty string.
+	 */
+	public static function get_provider_api_key( string $provider_id ): string {
+		$provider_id = sanitize_key( $provider_id );
+
+		switch ( $provider_id ) {
+			case 'gemini':
+				return self::get_api_key();
+
+			case 'openai':
+				// 1. Environment variable.
+				$env = getenv( 'OPENAI_API_KEY' );
+				if ( ! empty( $env ) && is_string( $env ) ) {
+					return trim( $env );
+				}
+				if ( ! empty( $_ENV['OPENAI_API_KEY'] ) && is_string( $_ENV['OPENAI_API_KEY'] ) ) {
+					return trim( $_ENV['OPENAI_API_KEY'] );
+				}
+				if ( ! empty( $_SERVER['OPENAI_API_KEY'] ) && is_string( $_SERVER['OPENAI_API_KEY'] ) ) {
+					return trim( $_SERVER['OPENAI_API_KEY'] );
+				}
+				// 2. Server constant.
+				if ( defined( 'GCA_OPENAI_API_KEY' ) && is_string( GCA_OPENAI_API_KEY ) && ! empty( GCA_OPENAI_API_KEY ) ) {
+					return trim( GCA_OPENAI_API_KEY );
+				}
+				// 3. Stored credential.
+				return self::get_stored_credential( 'openai' );
+
+			case 'claude':
+				// 1. Environment variable.
+				$env = getenv( 'ANTHROPIC_API_KEY' );
+				if ( ! empty( $env ) && is_string( $env ) ) {
+					return trim( $env );
+				}
+				if ( ! empty( $_ENV['ANTHROPIC_API_KEY'] ) && is_string( $_ENV['ANTHROPIC_API_KEY'] ) ) {
+					return trim( $_ENV['ANTHROPIC_API_KEY'] );
+				}
+				if ( ! empty( $_SERVER['ANTHROPIC_API_KEY'] ) && is_string( $_SERVER['ANTHROPIC_API_KEY'] ) ) {
+					return trim( $_SERVER['ANTHROPIC_API_KEY'] );
+				}
+				// 2. Server constant.
+				if ( defined( 'GCA_CLAUDE_API_KEY' ) && is_string( GCA_CLAUDE_API_KEY ) && ! empty( GCA_CLAUDE_API_KEY ) ) {
+					return trim( GCA_CLAUDE_API_KEY );
+				}
+				if ( defined( 'GCA_ANTHROPIC_API_KEY' ) && is_string( GCA_ANTHROPIC_API_KEY ) && ! empty( GCA_ANTHROPIC_API_KEY ) ) {
+					return trim( GCA_ANTHROPIC_API_KEY );
+				}
+				// 3. Stored credential.
+				return self::get_stored_credential( 'claude' );
+
+			default:
+				return '';
+		}
+	}
+
+	/**
+	 * Updates a provider's API key securely.
+	 *
+	 * Empty submissions are ignored by callers to prevent accidental deletion.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @param string $api_key     New plaintext API key.
+	 * @return bool True if successfully stored.
+	 */
+	public static function update_provider_api_key( string $provider_id, string $api_key ): bool {
+		$provider_id = sanitize_key( $provider_id );
+		$api_key     = trim( $api_key );
+
+		if ( ! in_array( $provider_id, self::ALLOWED_PROVIDERS, true ) || empty( $api_key ) ) {
+			return false;
+		}
+
+		$credentials = get_option( self::CREDENTIALS_OPTION_KEY, [] );
+		if ( ! is_array( $credentials ) ) {
+			$credentials = [];
+		}
+
+		$credentials[ $provider_id ] = self::encode_credential( $api_key );
+		return update_option( self::CREDENTIALS_OPTION_KEY, $credentials, 'no' );
+	}
+
+	/**
+	 * Explicitly removes a stored provider API key.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @return bool True if removed.
+	 */
+	public static function remove_provider_api_key( string $provider_id ): bool {
+		$provider_id = sanitize_key( $provider_id );
+		if ( ! in_array( $provider_id, self::ALLOWED_PROVIDERS, true ) ) {
+			return false;
+		}
+
+		$credentials = get_option( self::CREDENTIALS_OPTION_KEY, [] );
+		if ( ! is_array( $credentials ) ) {
+			$credentials = [];
+		}
+
+		if ( isset( $credentials[ $provider_id ] ) ) {
+			unset( $credentials[ $provider_id ] );
+			return update_option( self::CREDENTIALS_OPTION_KEY, $credentials, 'no' );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks whether a provider credential is specifically stored in the database.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @return bool True if a credential exists in database options.
+	 */
+	public static function has_stored_credential( string $provider_id ): bool {
+		$provider_id = sanitize_key( $provider_id );
+		$credentials = get_option( self::CREDENTIALS_OPTION_KEY, [] );
+		return is_array( $credentials ) && ! empty( $credentials[ $provider_id ] );
+	}
+
+	/**
+	 * Identifies the source of a provider credential.
+	 *
+	 * @param string $provider_id Provider identifier ('gemini', 'openai', 'claude').
+	 * @return string 'environment', 'constant', 'database', or 'none'.
+	 */
+	public static function get_credential_source( string $provider_id ): string {
+		$provider_id = sanitize_key( $provider_id );
+
+		switch ( $provider_id ) {
+			case 'gemini':
+				if ( ! empty( getenv( 'GEMINI_API_KEY' ) ) || ! empty( $_ENV['GEMINI_API_KEY'] ) || ! empty( $_SERVER['GEMINI_API_KEY'] ) ) {
+					return 'environment';
+				}
+				if ( defined( 'GCA_GEMINI_API_KEY' ) && is_string( GCA_GEMINI_API_KEY ) && ! empty( GCA_GEMINI_API_KEY ) ) {
+					return 'constant';
+				}
+				if ( self::has_stored_credential( 'gemini' ) ) {
+					return 'database';
+				}
+				return 'none';
+
+			case 'openai':
+				if ( ! empty( getenv( 'OPENAI_API_KEY' ) ) || ! empty( $_ENV['OPENAI_API_KEY'] ) || ! empty( $_SERVER['OPENAI_API_KEY'] ) ) {
+					return 'environment';
+				}
+				if ( defined( 'GCA_OPENAI_API_KEY' ) && is_string( GCA_OPENAI_API_KEY ) && ! empty( GCA_OPENAI_API_KEY ) ) {
+					return 'constant';
+				}
+				if ( self::has_stored_credential( 'openai' ) ) {
+					return 'database';
+				}
+				return 'none';
+
+			case 'claude':
+				if ( ! empty( getenv( 'ANTHROPIC_API_KEY' ) ) || ! empty( $_ENV['ANTHROPIC_API_KEY'] ) || ! empty( $_SERVER['ANTHROPIC_API_KEY'] ) ) {
+					return 'environment';
+				}
+				if ( ( defined( 'GCA_CLAUDE_API_KEY' ) && is_string( GCA_CLAUDE_API_KEY ) && ! empty( GCA_CLAUDE_API_KEY ) ) ||
+				     ( defined( 'GCA_ANTHROPIC_API_KEY' ) && is_string( GCA_ANTHROPIC_API_KEY ) && ! empty( GCA_ANTHROPIC_API_KEY ) ) ) {
+					return 'constant';
+				}
+				if ( self::has_stored_credential( 'claude' ) ) {
+					return 'database';
+				}
+				return 'none';
+
+			default:
+				return 'none';
+		}
+	}
+
+	/**
+	 * Internal helper to read and decode a stored credential.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @return string Decoded credential or empty string.
+	 */
+	private static function get_stored_credential( string $provider_id ): string {
+		$credentials = get_option( self::CREDENTIALS_OPTION_KEY, [] );
+		if ( ! is_array( $credentials ) || empty( $credentials[ $provider_id ] ) ) {
+			return '';
+		}
+
+		return self::decode_credential( (string) $credentials[ $provider_id ] );
+	}
+
+	/**
+	 * Obfuscates/encodes credentials before storing in options.
+	 *
+	 * Uses OpenSSL AES-256-CBC if available with WordPress AUTH_KEY salt,
+	 * falling back to XOR base64 encoding.
+	 *
+	 * @param string $plaintext Plain API key.
+	 * @return string Encrypted/encoded string.
+	 */
+	private static function encode_credential( string $plaintext ): string {
+		if ( empty( $plaintext ) ) {
+			return '';
+		}
+
+		$salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'gca_fallback_salt_key_18';
+
+		if ( function_exists( 'openssl_encrypt' ) ) {
+			$key = hash( 'sha256', $salt, true );
+			$iv  = openssl_random_pseudo_bytes( 16 );
+			$enc = openssl_encrypt( $plaintext, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
+			if ( false !== $enc ) {
+				return 'enc:' . base64_encode( $iv . $enc );
+			}
+		}
+
+		// Lightweight obfuscation fallback if OpenSSL is unavailable.
+		$out = '';
+		$len = strlen( $plaintext );
+		$slen = strlen( $salt );
+		for ( $i = 0; $i < $len; $i++ ) {
+			$out .= chr( ord( $plaintext[ $i ] ) ^ ord( $salt[ $i % $slen ] ) );
+		}
+		return 'obf:' . base64_encode( $out );
+	}
+
+	/**
+	 * Decodes/decrypts stored credential string.
+	 *
+	 * @param string $encoded Encoded string from database.
+	 * @return string Decoded plain API key.
+	 */
+	private static function decode_credential( string $encoded ): string {
+		if ( empty( $encoded ) ) {
+			return '';
+		}
+
+		$salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'gca_fallback_salt_key_18';
+
+		if ( 0 === strpos( $encoded, 'enc:' ) && function_exists( 'openssl_decrypt' ) ) {
+			$raw = base64_decode( substr( $encoded, 4 ) );
+			if ( strlen( $raw ) > 16 ) {
+				$iv  = substr( $raw, 0, 16 );
+				$enc = substr( $raw, 16 );
+				$key = hash( 'sha256', $salt, true );
+				$dec = openssl_decrypt( $enc, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
+				if ( false !== $dec ) {
+					return $dec;
+				}
+			}
+		}
+
+		if ( 0 === strpos( $encoded, 'obf:' ) ) {
+			$raw  = base64_decode( substr( $encoded, 4 ) );
+			$out  = '';
+			$len  = strlen( $raw );
+			$slen = strlen( $salt );
+			for ( $i = 0; $i < $len; $i++ ) {
+				$out .= chr( ord( $raw[ $i ] ) ^ ord( $salt[ $i % $slen ] ) );
+			}
+			return $out;
+		}
+
 		return '';
 	}
 
@@ -124,12 +479,37 @@ class SettingsService {
 		$sanitized['welcome_message'] = isset( $input['welcome_message'] ) ? sanitize_textarea_field( $input['welcome_message'] ) : $defaults['welcome_message'];
 		$sanitized['placeholder']     = isset( $input['placeholder'] ) ? sanitize_text_field( $input['placeholder'] ) : $defaults['placeholder'];
 
-		// AI.
-		$sanitized['model']              = isset( $input['model'] ) ? sanitize_text_field( trim( $input['model'] ) ) : $defaults['model'];
+		// AI & Providers (N18).
+		$default_provider = isset( $input['default_provider'] ) ? sanitize_key( $input['default_provider'] ) : 'gemini';
+		$sanitized['default_provider'] = in_array( $default_provider, self::ALLOWED_PROVIDERS, true ) ? $default_provider : 'gemini';
+
+		// Provider: Gemini.
+		$sanitized['provider_gemini_enabled'] = ! empty( $input['provider_gemini_enabled'] );
+		$gemini_model = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-3.8-flash' );
+		$sanitized['provider_gemini_model']   = ! empty( $gemini_model ) ? $gemini_model : 'gemini-3.8-flash';
+		$sanitized['model']                   = $sanitized['provider_gemini_model']; // Backward compatibility.
+
+		// Provider: OpenAI.
+		$sanitized['provider_openai_enabled'] = ! empty( $input['provider_openai_enabled'] );
+		$openai_model = isset( $input['provider_openai_model'] ) ? sanitize_text_field( trim( (string) $input['provider_openai_model'] ) ) : 'gpt-4o-mini';
+		$sanitized['provider_openai_model']   = ! empty( $openai_model ) ? $openai_model : 'gpt-4o-mini';
+
+		// Provider: Claude.
+		$sanitized['provider_claude_enabled'] = ! empty( $input['provider_claude_enabled'] );
+		$claude_model = isset( $input['provider_claude_model'] ) ? sanitize_text_field( trim( (string) $input['provider_claude_model'] ) ) : 'claude-3-5-haiku-20241022';
+		$sanitized['provider_claude_model']   = ! empty( $claude_model ) ? $claude_model : 'claude-3-5-haiku-20241022';
+
 		$sanitized['system_instruction'] = isset( $input['system_instruction'] ) ? sanitize_textarea_field( $input['system_instruction'] ) : $defaults['system_instruction'];
 
-		if ( empty( $sanitized['model'] ) ) {
-			$sanitized['model'] = 'gemini-3.8-flash';
+		// Secure Credential Updates (only when new non-empty key entered).
+		if ( ! empty( $input['api_key_gemini'] ) && is_string( $input['api_key_gemini'] ) ) {
+			self::update_provider_api_key( 'gemini', $input['api_key_gemini'] );
+		}
+		if ( ! empty( $input['api_key_openai'] ) && is_string( $input['api_key_openai'] ) ) {
+			self::update_provider_api_key( 'openai', $input['api_key_openai'] );
+		}
+		if ( ! empty( $input['api_key_claude'] ) && is_string( $input['api_key_claude'] ) ) {
+			self::update_provider_api_key( 'claude', $input['api_key_claude'] );
 		}
 
 		// Widget.

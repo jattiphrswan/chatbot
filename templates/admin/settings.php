@@ -46,6 +46,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<code>define( 'GCA_GEMINI_API_KEY', 'your-gemini-api-key-here' );</code>
 			<p><?php esc_html_e( 'Or export the environment variable on your web server:', 'gemini-chat-assistant' ); ?> <code>GEMINI_API_KEY="your-gemini-api-key-here"</code></p>
 		</div>
+	<?php endif; ?>
+
+	<?php if ( ! empty( $_GET['key_removed'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+		<div class="notice notice-success is-dismissible gca-admin-notice">
+			<p><?php printf( esc_html__( 'Stored API key for %s has been removed.', 'gemini-chat-assistant' ), esc_html( ucfirst( sanitize_key( (string) $_GET['key_removed'] ) ) ) ); ?></p>
+		</div>
+	<?php endif; ?>
+
 	<?php if ( ! empty( $_GET['test_sent'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 		<div class="notice notice-success is-dismissible gca-admin-notice">
 			<p><?php esc_html_e( 'Test email accepted for sending by WordPress mail transport.', 'gemini-chat-assistant' ); ?></p>
@@ -64,7 +72,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Navigation Tabs -->
 		<div class="gca-nav-tab-wrapper">
 			<button type="button" class="gca-tab-btn active" data-tab="general"><?php esc_html_e( 'General', 'gemini-chat-assistant' ); ?></button>
-			<button type="button" class="gca-tab-btn" data-tab="ai"><?php esc_html_e( 'AI & Model', 'gemini-chat-assistant' ); ?></button>
+			<button type="button" class="gca-tab-btn" data-tab="ai"><?php esc_html_e( 'AI Providers', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="widget"><?php esc_html_e( 'Widget Display', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="prechat"><?php esc_html_e( 'Pre-Chat Form', 'gemini-chat-assistant' ); ?></button>
 			<button type="button" class="gca-tab-btn" data-tab="faq"><?php esc_html_e( 'FAQ & Content', 'gemini-chat-assistant' ); ?></button>
@@ -108,17 +116,208 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 		</div>
 
-		<!-- Panel: AI & Model -->
+		<!-- Panel: AI & Providers (N18) -->
 		<div class="gca-tab-panel" id="gca-panel-ai">
+			<?php
+			$default_provider  = \SkyFish\GeminiChat\Admin\SettingsService::get_default_provider();
+
+			$gemini_enabled    = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_enabled( 'gemini' );
+			$gemini_configured = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_configured( 'gemini' );
+			$gemini_source     = \SkyFish\GeminiChat\Admin\SettingsService::get_credential_source( 'gemini' );
+			$gemini_model      = \SkyFish\GeminiChat\Admin\SettingsService::get_provider_model( 'gemini' );
+
+			$openai_enabled    = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_enabled( 'openai' );
+			$openai_configured = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_configured( 'openai' );
+			$openai_source     = \SkyFish\GeminiChat\Admin\SettingsService::get_credential_source( 'openai' );
+			$openai_model      = \SkyFish\GeminiChat\Admin\SettingsService::get_provider_model( 'openai' );
+
+			$claude_enabled    = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_enabled( 'claude' );
+			$claude_configured = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_configured( 'claude' );
+			$claude_source     = \SkyFish\GeminiChat\Admin\SettingsService::get_credential_source( 'claude' );
+			$claude_model      = \SkyFish\GeminiChat\Admin\SettingsService::get_provider_model( 'claude' );
+			?>
+
+			<!-- Default Provider Selector -->
 			<div class="gca-section-card">
-				<h3><?php esc_html_e( 'Google Gemini AI Configuration', 'gemini-chat-assistant' ); ?></h3>
+				<h3><?php esc_html_e( 'Default AI Provider', 'gemini-chat-assistant' ); ?></h3>
+				<p class="description" style="margin-bottom: 12px;">
+					<?php esc_html_e( 'Select the primary AI provider used by the public chatbot.', 'gemini-chat-assistant' ); ?>
+				</p>
 				<div class="gca-form-grid">
 					<div class="gca-field-row">
-						<label for="gca_model"><?php esc_html_e( 'Model Slug', 'gemini-chat-assistant' ); ?></label>
-						<input type="text" id="gca_model" name="gca_settings[model]" value="<?php echo esc_attr( $settings['model'] ); ?>" />
-						<span class="description"><?php esc_html_e( 'Configured Gemini model (default: gemini-3.8-flash).', 'gemini-chat-assistant' ); ?></span>
+						<label for="gca_default_provider"><?php esc_html_e( 'Default Provider', 'gemini-chat-assistant' ); ?></label>
+						<select id="gca_default_provider" name="gca_settings[default_provider]">
+							<option value="gemini" <?php selected( $default_provider, 'gemini' ); ?>><?php esc_html_e( 'Google Gemini (Native)', 'gemini-chat-assistant' ); ?></option>
+							<option value="openai" <?php selected( $default_provider, 'openai' ); ?>><?php esc_html_e( 'OpenAI (Prepared)', 'gemini-chat-assistant' ); ?></option>
+							<option value="claude" <?php selected( $default_provider, 'claude' ); ?>><?php esc_html_e( 'Anthropic Claude (Prepared)', 'gemini-chat-assistant' ); ?></option>
+						</select>
+						<span class="description"><?php esc_html_e( 'Currently active provider for visitor chat responses.', 'gemini-chat-assistant' ); ?></span>
 					</div>
+				</div>
+			</div>
 
+			<!-- Google Gemini Card -->
+			<div class="gca-section-card" style="margin-top: 16px;">
+				<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f1; padding-bottom: 10px; margin-bottom: 14px;">
+					<h3 style="margin: 0;"><?php esc_html_e( 'Google Gemini', 'gemini-chat-assistant' ); ?></h3>
+					<span class="gca-admin-pill <?php echo $gemini_configured ? 'gca-admin-pill--success' : 'gca-admin-pill--warning'; ?>">
+						<?php echo $gemini_configured ? esc_html__( 'Configured', 'gemini-chat-assistant' ) : esc_html__( 'Not Configured', 'gemini-chat-assistant' ); ?>
+					</span>
+				</div>
+				<div class="gca-form-grid">
+					<div class="gca-field-row">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[provider_gemini_enabled]" value="1" <?php checked( $gemini_enabled ); ?> />
+							<strong><?php esc_html_e( 'Enable Google Gemini', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_provider_gemini_model"><?php esc_html_e( 'Model', 'gemini-chat-assistant' ); ?></label>
+						<select id="gca_provider_gemini_model" name="gca_settings[provider_gemini_model]">
+							<option value="gemini-3.8-flash" <?php selected( $gemini_model, 'gemini-3.8-flash' ); ?>><?php esc_html_e( 'gemini-3.8-flash (Recommended Default)', 'gemini-chat-assistant' ); ?></option>
+							<option value="gemini-3.7-flash" <?php selected( $gemini_model, 'gemini-3.7-flash' ); ?>><?php esc_html_e( 'gemini-3.7-flash', 'gemini-chat-assistant' ); ?></option>
+							<option value="gemini-2.5-flash" <?php selected( $gemini_model, 'gemini-2.5-flash' ); ?>><?php esc_html_e( 'gemini-2.5-flash', 'gemini-chat-assistant' ); ?></option>
+						</select>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_api_key_gemini"><?php esc_html_e( 'API Key', 'gemini-chat-assistant' ); ?></label>
+						<input type="password" id="gca_api_key_gemini" name="gca_settings[api_key_gemini]" value="" autocomplete="new-password" class="regular-text" placeholder="<?php echo $gemini_configured ? esc_attr__( 'API key configured. Enter new key to update...', 'gemini-chat-assistant' ) : esc_attr__( 'Enter Gemini API key...', 'gemini-chat-assistant' ); ?>" />
+						<span class="description">
+							<?php
+							if ( 'environment' === $gemini_source ) {
+								esc_html_e( 'Credentials loaded securely from GEMINI_API_KEY environment variable.', 'gemini-chat-assistant' );
+							} elseif ( 'constant' === $gemini_source ) {
+								esc_html_e( 'Credentials loaded securely from GCA_GEMINI_API_KEY constant in wp-config.php.', 'gemini-chat-assistant' );
+							} elseif ( 'database' === $gemini_source ) {
+								esc_html_e( 'Credentials securely stored in database (encrypted AES-256).', 'gemini-chat-assistant' );
+							} else {
+								esc_html_e( 'No API key configured. API keys are never echoed back in HTML.', 'gemini-chat-assistant' );
+							}
+							?>
+						</span>
+						<?php if ( 'database' === $gemini_source ) : ?>
+							<div style="margin-top: 8px;">
+								<button type="submit" form="gca-remove-key-form-gemini" class="button button-secondary button-small" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to remove the stored Gemini API key from database?', 'gemini-chat-assistant' ) ); ?>');">
+									<span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 2px;"></span>
+									<?php esc_html_e( 'Remove Stored API Key', 'gemini-chat-assistant' ); ?>
+								</button>
+							</div>
+						<?php endif; ?>
+					</div>
+				</div>
+			</div>
+
+			<!-- OpenAI Card -->
+			<div class="gca-section-card" style="margin-top: 16px;">
+				<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f1; padding-bottom: 10px; margin-bottom: 14px;">
+					<h3 style="margin: 0;"><?php esc_html_e( 'OpenAI', 'gemini-chat-assistant' ); ?></h3>
+					<span class="gca-admin-pill <?php echo $openai_configured ? 'gca-admin-pill--success' : 'gca-admin-pill--warning'; ?>">
+						<?php echo $openai_configured ? esc_html__( 'Configured', 'gemini-chat-assistant' ) : esc_html__( 'Not Configured', 'gemini-chat-assistant' ); ?>
+					</span>
+				</div>
+				<div class="gca-form-grid">
+					<div class="gca-field-row">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[provider_openai_enabled]" value="1" <?php checked( $openai_enabled ); ?> />
+							<strong><?php esc_html_e( 'Enable OpenAI', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_provider_openai_model"><?php esc_html_e( 'Model', 'gemini-chat-assistant' ); ?></label>
+						<select id="gca_provider_openai_model" name="gca_settings[provider_openai_model]">
+							<option value="gpt-4o-mini" <?php selected( $openai_model, 'gpt-4o-mini' ); ?>><?php esc_html_e( 'gpt-4o-mini (Recommended)', 'gemini-chat-assistant' ); ?></option>
+							<option value="gpt-4o" <?php selected( $openai_model, 'gpt-4o' ); ?>><?php esc_html_e( 'gpt-4o', 'gemini-chat-assistant' ); ?></option>
+							<option value="gpt-4-turbo" <?php selected( $openai_model, 'gpt-4-turbo' ); ?>><?php esc_html_e( 'gpt-4-turbo', 'gemini-chat-assistant' ); ?></option>
+						</select>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_api_key_openai"><?php esc_html_e( 'API Key', 'gemini-chat-assistant' ); ?></label>
+						<input type="password" id="gca_api_key_openai" name="gca_settings[api_key_openai]" value="" autocomplete="new-password" class="regular-text" placeholder="<?php echo $openai_configured ? esc_attr__( 'API key configured. Enter new key to update...', 'gemini-chat-assistant' ) : esc_attr__( 'Enter OpenAI API key (sk-...)...', 'gemini-chat-assistant' ); ?>" />
+						<span class="description">
+							<?php
+							if ( 'environment' === $openai_source ) {
+								esc_html_e( 'Credentials loaded securely from OPENAI_API_KEY environment variable.', 'gemini-chat-assistant' );
+							} elseif ( 'constant' === $openai_source ) {
+								esc_html_e( 'Credentials loaded securely from GCA_OPENAI_API_KEY constant in wp-config.php.', 'gemini-chat-assistant' );
+							} elseif ( 'database' === $openai_source ) {
+								esc_html_e( 'Credentials securely stored in database (encrypted AES-256).', 'gemini-chat-assistant' );
+							} else {
+								esc_html_e( 'No API key configured. API keys are never echoed back in HTML.', 'gemini-chat-assistant' );
+							}
+							?>
+						</span>
+						<p class="description" style="margin-top: 4px; color: #646970;">
+							<em><?php esc_html_e( 'Note: Live OpenAI chat requests are inactive in N18 and will throw ProviderException::not_configured until full chat engine support is activated.', 'gemini-chat-assistant' ); ?></em>
+						</p>
+						<?php if ( 'database' === $openai_source ) : ?>
+							<div style="margin-top: 8px;">
+								<button type="submit" form="gca-remove-key-form-openai" class="button button-secondary button-small" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to remove the stored OpenAI API key from database?', 'gemini-chat-assistant' ) ); ?>');">
+									<span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 2px;"></span>
+									<?php esc_html_e( 'Remove Stored API Key', 'gemini-chat-assistant' ); ?>
+								</button>
+							</div>
+						<?php endif; ?>
+					</div>
+				</div>
+			</div>
+
+			<!-- Anthropic Claude Card -->
+			<div class="gca-section-card" style="margin-top: 16px;">
+				<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f1; padding-bottom: 10px; margin-bottom: 14px;">
+					<h3 style="margin: 0;"><?php esc_html_e( 'Anthropic Claude', 'gemini-chat-assistant' ); ?></h3>
+					<span class="gca-admin-pill <?php echo $claude_configured ? 'gca-admin-pill--success' : 'gca-admin-pill--warning'; ?>">
+						<?php echo $claude_configured ? esc_html__( 'Configured', 'gemini-chat-assistant' ) : esc_html__( 'Not Configured', 'gemini-chat-assistant' ); ?>
+					</span>
+				</div>
+				<div class="gca-form-grid">
+					<div class="gca-field-row">
+						<label class="gca-toggle-label">
+							<input type="checkbox" name="gca_settings[provider_claude_enabled]" value="1" <?php checked( $claude_enabled ); ?> />
+							<strong><?php esc_html_e( 'Enable Anthropic Claude', 'gemini-chat-assistant' ); ?></strong>
+						</label>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_provider_claude_model"><?php esc_html_e( 'Model', 'gemini-chat-assistant' ); ?></label>
+						<select id="gca_provider_claude_model" name="gca_settings[provider_claude_model]">
+							<option value="claude-3-5-haiku-20241022" <?php selected( $claude_model, 'claude-3-5-haiku-20241022' ); ?>><?php esc_html_e( 'claude-3-5-haiku-20241022 (Recommended)', 'gemini-chat-assistant' ); ?></option>
+							<option value="claude-3-5-sonnet-20241022" <?php selected( $claude_model, 'claude-3-5-sonnet-20241022' ); ?>><?php esc_html_e( 'claude-3-5-sonnet-20241022', 'gemini-chat-assistant' ); ?></option>
+							<option value="claude-3-opus-20240229" <?php selected( $claude_model, 'claude-3-opus-20240229' ); ?>><?php esc_html_e( 'claude-3-opus-20240229', 'gemini-chat-assistant' ); ?></option>
+						</select>
+					</div>
+					<div class="gca-field-row">
+						<label for="gca_api_key_claude"><?php esc_html_e( 'API Key', 'gemini-chat-assistant' ); ?></label>
+						<input type="password" id="gca_api_key_claude" name="gca_settings[api_key_claude]" value="" autocomplete="new-password" class="regular-text" placeholder="<?php echo $claude_configured ? esc_attr__( 'API key configured. Enter new key to update...', 'gemini-chat-assistant' ) : esc_attr__( 'Enter Claude API key (sk-ant-...)...', 'gemini-chat-assistant' ); ?>" />
+						<span class="description">
+							<?php
+							if ( 'environment' === $claude_source ) {
+								esc_html_e( 'Credentials loaded securely from ANTHROPIC_API_KEY environment variable.', 'gemini-chat-assistant' );
+							} elseif ( 'constant' === $claude_source ) {
+								esc_html_e( 'Credentials loaded securely from GCA_CLAUDE_API_KEY / GCA_ANTHROPIC_API_KEY constant in wp-config.php.', 'gemini-chat-assistant' );
+							} elseif ( 'database' === $claude_source ) {
+								esc_html_e( 'Credentials securely stored in database (encrypted AES-256).', 'gemini-chat-assistant' );
+							} else {
+								esc_html_e( 'No API key configured. API keys are never echoed back in HTML.', 'gemini-chat-assistant' );
+							}
+							?>
+						</span>
+						<p class="description" style="margin-top: 4px; color: #646970;">
+							<em><?php esc_html_e( 'Note: Live Claude chat requests are inactive in N18 and will throw ProviderException::not_configured until full chat engine support is activated.', 'gemini-chat-assistant' ); ?></em>
+						</p>
+						<?php if ( 'database' === $claude_source ) : ?>
+							<div style="margin-top: 8px;">
+								<button type="submit" form="gca-remove-key-form-claude" class="button button-secondary button-small" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to remove the stored Claude API key from database?', 'gemini-chat-assistant' ) ); ?>');">
+									<span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 2px;"></span>
+									<?php esc_html_e( 'Remove Stored API Key', 'gemini-chat-assistant' ); ?>
+								</button>
+							</div>
+						<?php endif; ?>
+					</div>
+				</div>
+			</div>
+
+			<!-- Active AI Persona Card -->
+			<div class="gca-section-card" style="margin-top: 16px;">
+				<div class="gca-form-grid">
 					<?php
 					$profile_service = new \SkyFish\GeminiChat\Admin\ProfileService();
 					$active_profile  = $profile_service->get_active_profile();
@@ -134,14 +333,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 							</span>
 						</p>
 						<p class="description" style="margin-bottom: 12px;">
-							<?php esc_html_e( 'AI personas, instructions, tone, and behavioral rules are now centrally managed under AI Assistant.', 'gemini-chat-assistant' ); ?>
+							<?php esc_html_e( 'AI personas, instructions, tone, and behavioral rules are centrally managed under AI Assistant.', 'gemini-chat-assistant' ); ?>
 						</p>
 						<a href="<?php echo esc_url( $ai_url ); ?>" class="button button-secondary">
 							<span class="dashicons dashicons-superhero" style="vertical-align: middle; margin-right: 4px;"></span>
 							<?php esc_html_e( 'Manage AI Profiles & Prompts &rarr;', 'gemini-chat-assistant' ); ?>
 						</a>
-						<!-- Hidden passthrough fields to protect existing configuration during general settings save -->
-						<input type="hidden" name="gca_settings[system_instruction]" value="<?php echo esc_attr( $settings['system_instruction'] ); ?>" />
+						<!-- Passthrough hidden fields to preserve profile state -->
+						<input type="hidden" name="gca_settings[system_instruction]" value="<?php echo esc_attr( $settings['system_instruction'] ?? '' ); ?>" />
 						<?php if ( ! empty( $settings['active_profile_id'] ) ) : ?>
 							<input type="hidden" name="gca_settings[active_profile_id]" value="<?php echo esc_attr( $settings['active_profile_id'] ); ?>" />
 						<?php endif; ?>
@@ -448,4 +647,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 		<?php submit_button( __( 'Save All Settings', 'gemini-chat-assistant' ) ); ?>
 	</form>
+
+	<?php foreach ( \SkyFish\GeminiChat\Admin\SettingsService::ALLOWED_PROVIDERS as $provider_slug ) : ?>
+		<?php if ( \SkyFish\GeminiChat\Admin\SettingsService::has_stored_credential( $provider_slug ) ) : ?>
+			<form id="gca-remove-key-form-<?php echo esc_attr( $provider_slug ); ?>" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display: none;">
+				<input type="hidden" name="action" value="gca_remove_provider_key" />
+				<input type="hidden" name="provider" value="<?php echo esc_attr( $provider_slug ); ?>" />
+				<?php wp_nonce_field( 'gca_remove_provider_key_' . $provider_slug ); ?>
+			</form>
+		<?php endif; ?>
+	<?php endforeach; ?>
 </div>

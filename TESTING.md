@@ -38,6 +38,7 @@
 - **`test-handoff-service.php`:** Verifies Human Handoff schema v1.3.0, HandoffRepository CRUD operations & active request duplicate prevention, HandoffService intent detection & automatic N14 Lead association, controlled status transitions, integration registry adapter registration, and strict exclusion of external transport/mail/multi-provider APIs.
 - **`test-email-notifications.php`:** Verifies NotificationService recipient parsing, whitespace trimming & 10-recipient ceiling, subject sanitization & CR/LF header injection defense, plain-text body formatting with PII minimization, failure isolation on wp_mail() false, idempotency markers via transients, settings sanitization, and SendHandoffNotificationAction framework registration.
 - **`test-direct-contact-channels.php`:** Verifies Direct Contact Channels settings defaults, phone/email/WhatsApp sanitization, tel/mailto/wa.me URL construction, XSS protection, localized config structures, and negative security assertions (zero third-party APIs).
+- **`test-provider-credentials.php`:** Verifies ProviderInterface contracts, ProviderRegistry lookup/checks, Gemini/OpenAI/Claude adapters, AES-256 encrypted credential persistence in `gca_provider_credentials`, environment/constant override priorities, empty submission protection, regex credential masking in ProviderException, and zero outbound HTTP requests for placeholder adapters.
 
 
 ### 2.4 Static Analysis & Linting
