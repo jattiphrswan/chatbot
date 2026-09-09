@@ -63,6 +63,7 @@ gemini-chat-assistant/
 │   │   └── class-notification-service.php
 │   ├── Providers/
 │   │   ├── AbstractProvider.php
+│   │   ├── ClaudeClient.php
 │   │   ├── ClaudeProvider.php
 │   │   ├── GeminiProvider.php
 │   │   ├── OpenAIClient.php
@@ -128,6 +129,8 @@ gemini-chat-assistant/
 │   ├── test-handoff-service.php
 │   ├── test-email-notifications.php
 │   ├── test-direct-contact-channels.php
+│   ├── test-openai-integration.php
+│   ├── test-claude-integration.php
 │   └── bootstrap.php
 ├── vendor/
 ├── .editorconfig

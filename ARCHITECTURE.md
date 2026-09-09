@@ -89,13 +89,13 @@ The architecture of **Gemini Chat Assistant** is strictly tiered and follows a u
 > 2. `wp-config.php` constants (`GCA_GEMINI_API_KEY`, `GCA_OPENAI_API_KEY`, `GCA_CLAUDE_API_KEY`)
 > 3. Encrypted database credentials in `gca_provider_credentials` (AES-256-CBC with `AUTH_KEY` salt). Empty form submissions never overwrite stored keys.
 
-### 2.5 Multi-Provider Architecture (N18–N19.5)
+### 2.5 Multi-Provider Architecture (N18–N20)
 - **`ProviderInterface` (`SkyFish\GeminiChat\Providers\ProviderInterface`):** Strict contract standardizing multi-provider access across AI backends (`get_id()`, `get_name()`, `get_models()`, `chat()`, `test_connection()`).
 - **`AbstractProvider` (`SkyFish\GeminiChat\Providers\AbstractProvider`):** Base class encapsulating shared ID, name, model list, configuration checks, and API key lookup routines (N19.5 DRY refactor).
 - **`ProviderRegistry` (`SkyFish\GeminiChat\Providers\ProviderRegistry`):** Central container for registering and retrieving configured AI provider instances (`gemini`, `openai`, `claude`).
 - **`GeminiProvider`:** First-party provider wrapping `GeminiClient` with model metadata (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-1.5-flash`).
-- **`OpenAIClient` & `OpenAIProvider`:** Live operational OpenAI provider adapter communicating via POST `/v1/responses` with structured instruction, multi-turn history mapping, and safe credential isolation.
-- **`ClaudeProvider`:** Prepared placeholder adapter throwing `ProviderException::not_configured` upon `chat()` or `test_connection()` (zero outbound HTTP calls until Node N20).
+- **`OpenAIClient` & `OpenAIProvider`:** Live operational OpenAI provider adapter communicating via POST `/v1/responses` with structured instruction, multi-turn history mapping, and safe credential isolation (Node N19).
+- **`ClaudeClient` & `ClaudeProvider`:** Live operational Anthropic Claude provider adapter communicating via POST `/v1/messages` with top-level `system` instruction, multi-turn history mapping, `max_tokens`, multiple content block concatenation, and safe credential isolation (Node N20).
 
 
 ## 3. Security Boundary & Data Flow
@@ -373,3 +373,68 @@ HTTP Transport: wp_remote_post()
 4. **Minimal Token Test Connection:** Admin connection testing executes a 1-token query (`max_output_tokens: 1`) without running open-ended requests.
 5. **Secret Redaction:** Strict regex scrubbing prevents API keys (`sk-*`, `AIza*`, `Bearer *`) from appearing in error traces or logs.
 6. **Zero Claude Leaks & Zero Gemini Regressions:** Gemini chat remains completely operational and unaffected; Claude remains safely inert as a placeholder.
+
+## 11. Live Anthropic Claude Messages API Integration (Node N20)
+
+```
+ChatService (handle_chat)
+       │
+       ├─► Check SettingsService::get_default_provider() === 'claude'
+       │
+       ▼
+ClaudeProvider::chat( $messages, $options )
+       │
+       ├─► Validate enabled & API key configured (validate_configuration via AbstractProvider)
+       ├─► Extract system instructions (ProfileService system prompt + RAG website chunks)
+       ├─► Normalize user & assistant turns to chronological input array (normalize_input_messages)
+       │
+       ▼
+ClaudeClient::create_response( $messages, $options )
+       │
+       ├─► Endpoint: POST https://api.anthropic.com/v1/messages
+       ├─► Headers:
+       │     - x-api-key: <ANTHROPIC_API_KEY> (Server-Side Only)
+       │     - anthropic-version: 2023-06-01
+       │     - Content-Type: application/json
+       │     - Accept: application/json
+       ├─► Payload:
+       │     - model: "claude-3-5-haiku-20241022" / "claude-3-5-sonnet-20241022" / "claude-3-opus-20240229" / etc.
+       │     - max_tokens: 1024 (Required by Anthropic)
+       │     - system: "<system prompt + RAG knowledge>" (Top-level string, never inserted as a fake user turn)
+       │     - messages: [ { role: "user"|"assistant", content: "..." } ]
+       │
+       ▼
+HTTP Transport: wp_remote_post()
+       │
+       ├─► Success (HTTP 200):
+       │     - Iterate over content[] array
+       │     - Aggregate all blocks where type == "text"
+       │     - Parse token usage: input_tokens, output_tokens, total_tokens = input + output
+       │     - Normalize stop_reason: end_turn|stop_sequence -> "stop", max_tokens -> "length", tool_use -> "tool_calls"
+       │     - Capture request_id from request-id / x-request-id header or body id
+       │     - Return ProviderResponse
+       │
+       └─► Error Handling:
+             - 400 -> ProviderException::invalid_request
+             - 401 -> ProviderException::authentication_failed
+             - 403 -> ProviderException::authentication_failed
+             - 404 -> ProviderException::model_unavailable
+             - 408 -> ProviderException::timeout
+             - 413 -> ProviderException::invalid_request
+             - 429 -> ProviderException::rate_limited
+             - 500, 502, 503, 504, 529 -> ProviderException::provider_unavailable
+             - WP_Error -> ProviderException::timeout / provider_unavailable
+             - Malformed / missing text -> ProviderException::invalid_response
+             - All exception messages sanitized via ProviderException::strip_credentials()
+```
+
+### Core Tenets of N20:
+1. **Modern Messages API:** Implements Anthropic's `/v1/messages` endpoint with `anthropic-version: 2023-06-01`.
+2. **Top-Level System Parameter:** Normalizes system instructions and RAG retrieval snippets strictly into Anthropic's top-level `system` property, never injecting them as fake user messages.
+3. **Mandatory `max_tokens` Guard:** Always transmits a sensible, safe `max_tokens` constraint (default 1024).
+4. **Multi-Block Text Parsing:** Robustly combines all `text` blocks in the response `content` array in their original order.
+5. **Admin 1-Token Test Connection:** Administrators can verify Claude connectivity with minimal overhead (`max_tokens: 1`) via dedicated admin action and UI notices.
+6. **Provider Ecosystem Status:**
+   - Google Gemini: **LIVE** / operational
+   - OpenAI: **LIVE** / operational
+   - Anthropic Claude: **LIVE-capable** when configured

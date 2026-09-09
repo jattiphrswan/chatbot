@@ -175,6 +175,7 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/GeminiProvider.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIClient.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/OpenAIProvider.php';
+		require_once GCA_PLUGIN_DIR . 'includes/Providers/ClaudeClient.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Providers/ClaudeProvider.php';
 	}
 

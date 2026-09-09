@@ -20,7 +20,7 @@
 - **Admin UI Isolation:** Admin UI renders password fields with `value=""` (never echoing stored secrets back to the browser). UI displays status badges (Configured / Not Configured) and source descriptions without exposing characters.
 - **Explicit Key Removal:** Deleting stored database credentials requires explicit administrative POST requests (`action=gca_remove_provider_key`) protected by unique WordPress nonces (`gca_remove_provider_key_{provider}`) and `manage_options` capability checks.
 - **Exception Masking:** `ProviderException::strip_credentials()` sanitizes error messages using regex to mask OpenAI (`sk-...`), Anthropic (`sk-ant-...`), and Google (`AIza...`) keys before they can reach logs or error views.
-- **Zero Live Outbound HTTP Calls in N18:** `OpenAIProvider` and `ClaudeProvider` do not make network calls; both throw `ProviderException::not_configured` upon execution.
+- **Live Provider Outbound HTTP Calls (N19 & N20):** `OpenAIProvider` (Node N19) and `ClaudeProvider` (Node N20) make live outbound HTTP requests only when explicitly enabled and configured with API credentials. When unconfigured or disabled, zero outbound requests are made (throwing `ProviderException::not_configured`). All API keys remain server-side and are never exposed client-side or logged.
 
 
 ## 3. REST API Security Layer

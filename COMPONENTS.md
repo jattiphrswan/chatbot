@@ -53,7 +53,8 @@ SkyFish\GeminiChat
 │   ├── GeminiProvider: Google Gemini adapter wrapping GeminiClient.
 │   ├── OpenAIClient: WordPress HTTP API client for OpenAI Responses API (POST /v1/responses).
 │   ├── OpenAIProvider: Live OpenAI provider adapter handling authentication, message normalization, instructions, token extraction, and error mapping.
-│   └── ClaudeProvider: Anthropic Claude adapter placeholder throwing ProviderException::not_configured.
+│   ├── ClaudeClient: WordPress HTTP API client for Anthropic Messages API (POST /v1/messages).
+│   └── ClaudeProvider: Live Anthropic Claude provider adapter handling authentication, message normalization, system instructions, token extraction, and error mapping.
 ├── Services/
 │   ├── GeminiClient: HTTP transport wrapper for Google Gemini REST API.
 │   ├── ContextManager: Manages rolling conversational window and Gemini message formatting.

@@ -229,28 +229,47 @@ class ChatService {
 	) {
 		$start_time = microtime( true );
 
-		if ( 'openai' === $provider_id ) {
-			return $this->dispatch_openai_turn( $conv_db_id, $message, $system_instruction, $start_time, $req_id );
+		if ( 'gemini' === $provider_id ) {
+			return $this->dispatch_gemini_turn( $message, $system_instruction, $previous_interaction_id, $session_id, $conv_db_id, $start_time, $req_id );
 		}
 
-		if ( 'claude' === $provider_id ) {
-			return $this->dispatch_claude_turn( $message, $req_id );
-		}
-
-		return $this->dispatch_gemini_turn( $message, $system_instruction, $previous_interaction_id, $session_id, $conv_db_id, $start_time, $req_id );
+		return $this->dispatch_multi_turn_provider( $provider_id, $conv_db_id, $message, $system_instruction, $start_time, $req_id );
 	}
 
 	/**
-	 * Dispatches chat interaction via OpenAI Responses API.
+	 * Dispatches chat interaction via a multi-turn history-based AI provider (e.g. OpenAI, Claude).
+	 *
+	 * @param string $provider_id        Provider identifier slug ('openai', 'claude').
+	 * @param int    $conv_db_id         Conversation database ID.
+	 * @param string $message             User message string.
+	 * @param string $system_instruction Grounded system instruction prompt.
+	 * @param float  $start_time         Dispatch start timestamp for latency tracking.
+	 * @param string $req_id             Request identifier.
+	 * @return array{assistant_text: string, model: string, input_tokens: int, output_tokens: int, latency_ms: int}|WP_Error
 	 */
-	private function dispatch_openai_turn( int $conv_db_id, string $message, string $system_instruction, float $start_time, string $req_id ) {
-		$model            = SettingsService::get_provider_model( 'openai' );
+	private function dispatch_multi_turn_provider(
+		string $provider_id,
+		int $conv_db_id,
+		string $message,
+		string $system_instruction,
+		float $start_time,
+		string $req_id
+	) {
+		$model            = SettingsService::get_provider_model( $provider_id );
 		$context_messages = $this->build_context_messages( $conv_db_id, $message );
 
 		try {
-			$provider = $this->get_provider_registry()->get( 'openai' );
+			$provider = $this->get_provider_registry()->get( $provider_id );
 			if ( null === $provider ) {
-				return new WP_Error( 'PROVIDER_NOT_FOUND', __( 'OpenAI provider is not registered.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
+				return new WP_Error(
+					'PROVIDER_NOT_FOUND',
+					sprintf(
+						/* translators: %s: Provider ID */
+						__( 'AI provider "%s" is not registered.', 'gemini-chat-assistant' ),
+						$provider_id
+					),
+					[ 'status' => 500 ]
+				);
 			}
 
 			$response = $provider->chat(
@@ -268,22 +287,6 @@ class ChatService {
 				'model'          => $response->get_model(),
 				'latency_ms'     => (int) round( ( microtime( true ) - $start_time ) * 1000 ),
 			];
-		} catch ( Providers\ProviderException $e ) {
-			return $this->map_provider_error( $e, $req_id );
-		}
-	}
-
-	/**
-	 * Dispatches chat interaction to Claude placeholder.
-	 */
-	private function dispatch_claude_turn( string $message, string $req_id ) {
-		try {
-			$provider = $this->get_provider_registry()->get( 'claude' );
-			if ( null === $provider ) {
-				return new WP_Error( 'PROVIDER_NOT_FOUND', __( 'Claude provider is not registered.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
-			}
-			$provider->chat( [ [ 'role' => 'user', 'content' => $message ] ] );
-			return new WP_Error( 'PROVIDER_ERROR', __( 'Claude chat is not available.', 'gemini-chat-assistant' ), [ 'status' => 500 ] );
 		} catch ( Providers\ProviderException $e ) {
 			return $this->map_provider_error( $e, $req_id );
 		}

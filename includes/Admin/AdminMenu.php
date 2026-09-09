@@ -148,6 +148,9 @@ class AdminMenu {
 
 		// Admin post action hooks for OpenAI Connection Test (N19)
 		add_action( 'admin_post_gca_test_openai_connection', [ $this, 'handle_test_openai_connection' ] );
+
+		// Admin post action hooks for Claude Connection Test (N20)
+		add_action( 'admin_post_gca_test_claude_connection', [ $this, 'handle_test_claude_connection' ] );
 	}
 
 	/**
@@ -1082,6 +1085,36 @@ class AdminMenu {
 		];
 		if ( ! empty( $error_param ) ) {
 			$redirect_args['openai_test_error'] = $error_param;
+		}
+
+		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, $redirect_args );
+	}
+
+	/**
+	 * Handles POST action to test connection to Anthropic Claude API (Node N20).
+	 */
+	public function handle_test_claude_connection(): void {
+		$this->verify_admin_action( 'gca_test_claude_connection' );
+
+		$status_param = 'connected';
+		$error_param  = '';
+
+		try {
+			$provider = new \SkyFish\GeminiChat\Providers\ClaudeProvider();
+			$provider->test_connection();
+		} catch ( \SkyFish\GeminiChat\Providers\ProviderException $e ) {
+			$status_param = 'failed';
+			$error_param  = $e->get_error_type();
+		} catch ( \Throwable $t ) {
+			$status_param = 'failed';
+			$error_param  = 'generic_error';
+		}
+
+		$redirect_args = [
+			'claude_test_status' => $status_param,
+		];
+		if ( ! empty( $error_param ) ) {
+			$redirect_args['claude_test_error'] = $error_param;
 		}
 
 		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, $redirect_args );

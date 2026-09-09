@@ -91,6 +91,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php endif; ?>
 	<?php endif; ?>
 
+	<?php if ( ! empty( $_GET['claude_test_status'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+		<?php if ( 'connected' === $_GET['claude_test_status'] ) : ?>
+			<div class="notice notice-success is-dismissible gca-admin-notice">
+				<p><strong><?php esc_html_e( 'Claude Connection Test:', 'gemini-chat-assistant' ); ?></strong> <?php esc_html_e( 'Connected successfully to Anthropic Messages API. Model and credentials verified.', 'gemini-chat-assistant' ); ?></p>
+			</div>
+		<?php else : ?>
+			<?php
+			$err_type = ! empty( $_GET['claude_test_error'] ) ? sanitize_key( (string) $_GET['claude_test_error'] ) : '';
+			$err_msg  = __( 'Unable to connect to Anthropic Claude API. Please check your credentials and configuration.', 'gemini-chat-assistant' );
+			if ( 'auth_failed' === $err_type || 'authentication_error' === $err_type ) {
+				$err_msg = __( 'Authentication failed. Please verify your Anthropic Claude API key.', 'gemini-chat-assistant' );
+			} elseif ( 'model_unavailable' === $err_type ) {
+				$err_msg = __( 'Configured model is unavailable for your account or does not exist.', 'gemini-chat-assistant' );
+			} elseif ( 'rate_limited' === $err_type || 'rate_limit' === $err_type ) {
+				$err_msg = __( 'Anthropic rate limit reached. Please check your Anthropic account billing and tier limits.', 'gemini-chat-assistant' );
+			} elseif ( 'timeout' === $err_type ) {
+				$err_msg = __( 'Connection to Anthropic Claude timed out.', 'gemini-chat-assistant' );
+			} elseif ( 'not_configured' === $err_type ) {
+				$err_msg = __( 'Claude provider is disabled or no API key is configured.', 'gemini-chat-assistant' );
+			}
+			?>
+			<div class="notice notice-error is-dismissible gca-admin-notice">
+				<p><strong><?php esc_html_e( 'Claude Connection Test Failed:', 'gemini-chat-assistant' ); ?></strong> <?php echo esc_html( $err_msg ); ?></p>
+			</div>
+		<?php endif; ?>
+	<?php endif; ?>
+
 	<form method="post" action="options.php">
 		<?php
 		settings_fields( 'gca_settings_group' );
@@ -315,6 +342,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<option value="claude-3-5-haiku-20241022" <?php selected( $claude_model, 'claude-3-5-haiku-20241022' ); ?>><?php esc_html_e( 'claude-3-5-haiku-20241022 (Recommended)', 'gemini-chat-assistant' ); ?></option>
 							<option value="claude-3-5-sonnet-20241022" <?php selected( $claude_model, 'claude-3-5-sonnet-20241022' ); ?>><?php esc_html_e( 'claude-3-5-sonnet-20241022', 'gemini-chat-assistant' ); ?></option>
 							<option value="claude-3-opus-20240229" <?php selected( $claude_model, 'claude-3-opus-20240229' ); ?>><?php esc_html_e( 'claude-3-opus-20240229', 'gemini-chat-assistant' ); ?></option>
+							<option value="claude-sonnet-4-6" <?php selected( $claude_model, 'claude-sonnet-4-6' ); ?>><?php esc_html_e( 'claude-sonnet-4-6', 'gemini-chat-assistant' ); ?></option>
+							<option value="claude-opus-4-8" <?php selected( $claude_model, 'claude-opus-4-8' ); ?>><?php esc_html_e( 'claude-opus-4-8', 'gemini-chat-assistant' ); ?></option>
+							<option value="claude-haiku-4-5-20251001" <?php selected( $claude_model, 'claude-haiku-4-5-20251001' ); ?>><?php esc_html_e( 'claude-haiku-4-5-20251001', 'gemini-chat-assistant' ); ?></option>
 						</select>
 					</div>
 					<div class="gca-field-row">
@@ -334,16 +364,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 							?>
 						</span>
 						<p class="description" style="margin-top: 4px; color: #646970;">
-							<em><?php esc_html_e( 'Note: Live Claude chat requests are inactive in N18 and will throw ProviderException::not_configured until full chat engine support is activated.', 'gemini-chat-assistant' ); ?></em>
+							<em><?php esc_html_e( 'Anthropic Messages API integration active (Node N20). Uses POST https://api.anthropic.com/v1/messages with server-side credentials.', 'gemini-chat-assistant' ); ?></em>
 						</p>
-						<?php if ( 'database' === $claude_source ) : ?>
-							<div style="margin-top: 8px;">
+						<div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+							<?php if ( $claude_configured ) : ?>
+								<button type="submit" form="gca-test-claude-form" class="button button-secondary">
+									<span class="dashicons dashicons-update" style="vertical-align: middle; margin-right: 2px;"></span>
+									<?php esc_html_e( 'Test Claude Connection', 'gemini-chat-assistant' ); ?>
+								</button>
+							<?php endif; ?>
+							<?php if ( 'database' === $claude_source ) : ?>
 								<button type="submit" form="gca-remove-key-form-claude" class="button button-secondary button-small" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to remove the stored Claude API key from database?', 'gemini-chat-assistant' ) ); ?>');">
 									<span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 2px;"></span>
 									<?php esc_html_e( 'Remove Stored API Key', 'gemini-chat-assistant' ); ?>
 								</button>
-							</div>
-						<?php endif; ?>
+							<?php endif; ?>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -694,5 +730,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<form id="gca-test-openai-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display: none;">
 		<input type="hidden" name="action" value="gca_test_openai_connection" />
 		<?php wp_nonce_field( 'gca_test_openai_connection' ); ?>
+	</form>
+
+	<form id="gca-test-claude-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display: none;">
+		<input type="hidden" name="action" value="gca_test_claude_connection" />
+		<?php wp_nonce_field( 'gca_test_claude_connection' ); ?>
 	</form>
 </div>

@@ -42,7 +42,8 @@
 | `GeminiProvider` | `SkyFish\GeminiChat\Providers` | Google Gemini AI provider implementation extending AbstractProvider and wrapping `GeminiClient`. | `GeminiClient`, `AbstractProvider` |
 | `OpenAIClient` | `SkyFish\GeminiChat\Providers` | Dedicated HTTP client executing requests against OpenAI Responses API (`/v1/responses`). | `wp_remote_post`, `ProviderException`, `ProviderResponse` |
 | `OpenAIProvider` | `SkyFish\GeminiChat\Providers` | Live OpenAI AI provider adapter extending AbstractProvider (delegates to OpenAIClient). | `OpenAIClient`, `SettingsService`, `AbstractProvider`, `ProviderResponse` |
-| `ClaudeProvider` | `SkyFish\GeminiChat\Providers` | Anthropic Claude provider placeholder adapter extending AbstractProvider (throws `not_configured`; zero HTTP calls). | `AbstractProvider`, `ProviderException` |
+| `ClaudeClient` | `SkyFish\GeminiChat\Providers` | Dedicated HTTP client executing requests against Anthropic Messages API (`/v1/messages`). | `wp_remote_post`, `ProviderException`, `ProviderResponse` |
+| `ClaudeProvider` | `SkyFish\GeminiChat\Providers` | Live Anthropic Claude AI provider adapter extending AbstractProvider (delegates to ClaudeClient). | `ClaudeClient`, `SettingsService`, `AbstractProvider`, `ProviderResponse` |
 | `LogRepository` | `SkyFish\GeminiChat\Database` | Writes logs to `wp_gca_logs`. | `$wpdb` |
 | `GeminiClient` | `SkyFish\GeminiChat\Services` | Makes HTTP calls to Google Gemini API endpoints. | `wp_remote_post`, `Encryption` |
 | `ContextManager` | `SkyFish\GeminiChat\Services` | Compiles conversation history into Gemini format. | `MessageRepository`, `TokenCounter` |
