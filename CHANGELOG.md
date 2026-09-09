@@ -5,6 +5,19 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-09-09
+### Added
+- **Multi-AI Provider Foundation:** Native multi-provider support across Google Gemini, OpenAI Responses API (`/v1/responses`), and Anthropic Claude Messages API (`/v1/messages`).
+- **Provider & Model Selection:** Centralized `ModelRegistry` and `ProviderSelectionService` with administrator defaults and optional visitor frontend selection controls.
+- **Mid-Conversation Provider Switching:** Switch seamlessly between Gemini, OpenAI, and Claude without losing conversation history or context.
+- **Secure Credential Architecture:** AES-256-CBC database encryption for API keys in dedicated `gca_provider_credentials` option with server environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) and `wp-config.php` constant overrides.
+- **Credential Masking:** Regex scrubbing in `ProviderException` guaranteeing zero secret leakage in logs, REST responses, or admin UI notices.
+- **AI Profiles & Persona Customizer:** Configurable AI personas with customizable roles, tones, response styles, and behavioral constraints.
+- **Website Knowledge & FAQ RAG Grounding:** Untrusted knowledge injection fences protecting against prompt injection attacks.
+- **Business Integrations & Escalation:** Human handoff detection, native `wp_mail()` notifications, WooCommerce read catalog queries, and Direct Contact Channels (Phone, Email, WhatsApp).
+- **Rate Limiting & Cost Protection:** Dual-tier transient rate limiter enforcing session and IP quotas prior to external AI dispatch.
+- **Admin Dashboard & Analytics:** Comprehensive administration suite for settings, appearance customization, conversations, leads, and usage analytics.
+
 ## [1.3.4-N17.5] - 2026-09-07
 ### Added
 - Direct Contact Channels Integration (`templates/chat-widget.php`, `public/css/chat.css`, `templates/admin/settings.php`, `includes/Admin/SettingsService.php`, `includes/class-assets.php`):
