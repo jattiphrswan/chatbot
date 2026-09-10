@@ -5,6 +5,15 @@ All notable changes to the **Gemini Chat Assistant** plugin will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased - Node 24 (2026-09-10)
+- Critical-error follow-up: return structured JSON for catchable chat-service exceptions, expose an admin-only file/line/request-ID diagnostic, suppress WordPress fatal HTML in the widget, and handle non-JSON 504 responses as timeouts. The underlying hosting/PHP failure remains unproven without its log entry.
+- Follow-up: show Latest Chat Generation separately in admin, preserving frontend failures across successful connection tests; record UTC time/request ID and correct the missing-key hint when server fallback is configured. Live frontend cause remains unproven pending this diagnostic.
+- Shared admin/frontend Gemini generateContent transport and text validation; removed legacy interaction payload fields and one-token diagnostic limit.
+- Added redacted upstream HTTP/code/status/message/model/endpoint diagnostics, with separate payload, permission, quota, service and network errors.
+- Matched the saved provider model and supplied stored conversation history as contents.
+- Scoped widget typography to 21px/30px desktop and 19px/27px mobile, tightened header spacing, and refreshed CSS cache versions after file changes. Colors and card design unchanged.
+- Live acceptance remains BLOCKED: the deployed site returned a generic public HTTP 503; authenticated upstream diagnostics and deployment access are unavailable. See NODE24-REPORT.md.
+
 ## [1.0.1] - 2026-09-09
 ### Fixed
 - **Activation Fatal Error Fix:** Resolved critical `Class "SkyFish\GeminiChat\LeadRepository" not found` error during WordPress plugin activation by adding missing `use SkyFish\GeminiChat\Database\LeadRepository;` namespace import in `includes/class-plugin.php` and `includes/Admin/AdminMenu.php`.

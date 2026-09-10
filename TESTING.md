@@ -1,5 +1,11 @@
 # Testing Strategy & Quality Assurance: Gemini Chat Assistant
 
+Critical-error regression: `php tests/test-rest-controller.php` passes 30 assertions including structured responses for PHP Error and exclusion of exception secrets. `node tests/test-chat-error-messages.cjs` passes five checks covering WordPress fatal HTML, internal details, plain validation messages and timeout text.
+
+Follow-up regression: the Gemini client suite now has 57 passing assertions, including redacted frontend failure/request ID storage and proof that a successful admin test cannot overwrite the last frontend failure.
+
+Node 24 validation is recorded in `NODE24-REPORT.md`. Run `php tests/test-gemini-client.php` for mocked HTTP 400/401/403/404/429/500/503, credential redaction, dynamic model reload, history payload, empty HTTP 200 and timeout coverage. These tests do not establish live Google generation success. Live admin acceptance requires installing the patch, saving the dashboard credential, refreshing/reloading the selected model, running Test Connection and inspecting the new upstream fields, then sending Hello in the frontend and checking WordPress logs.
+
 ## 1. Testing Pyramid
 
 ```

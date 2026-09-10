@@ -43,7 +43,7 @@ class Assets {
 			self::CSS_HANDLE,
 			GCA_PLUGIN_URL . 'public/css/chat.css',
 			[],
-			$version
+			$version . '.' . filemtime( GCA_PLUGIN_DIR . 'public/css/chat.css' )
 		);
 
 		// Apply scoped appearance CSS variables.
@@ -57,7 +57,7 @@ class Assets {
 			self::JS_HANDLE,
 			GCA_PLUGIN_URL . 'public/js/chat.js',
 			[],
-			$version,
+			$version . '.' . filemtime( GCA_PLUGIN_DIR . 'public/js/chat.js' ),
 			[ 'in_footer' => true ]
 		);
 

@@ -98,6 +98,9 @@ if ( ! function_exists( 'wp_remote_post' ) ) {
 if ( ! function_exists( 'wp_remote_get' ) ) {
 	function wp_remote_get( $url, $args = [] ) {
 		global $mock_http_response, $last_http_request;
+		if ( isset( $GLOBALS['node24_models_response'] ) && str_contains( $url, '/models' ) ) {
+			return $GLOBALS['node24_models_response'];
+		}
 		$last_http_request = [
 			'url'  => $url,
 			'args' => $args,
@@ -168,6 +171,7 @@ class GeminiClientTest {
 		$this->test_transport_timeout_error();
 		$this->test_empty_response_handling();
 		$this->test_connection_method();
+		$this->test_generation_diagnostics();
 
 		echo "\n========================================\n";
 		echo "Results: {$this->passed} Passed, {$this->failed} Failed\n";
@@ -278,9 +282,9 @@ class GeminiClientTest {
 		$this->assert( 'test_secret_key_abc' === $last_http_request['args']['headers']['x-goog-api-key'], 'API key sent in x-goog-api-key header' );
 
 		$payload = json_decode( $last_http_request['args']['body'], true );
-		$this->assert( 'gemini-2.5-flash' === $payload['model'], 'Payload includes configured model' );
-		$this->assert( 'prev_inter_999' === $payload['previous_interaction_id'], 'Payload includes previous_interaction_id' );
-		$this->assert( isset( $payload['system_instruction']['parts'][0]['text'] ) && 'You are a helpful assistant.' === $payload['system_instruction']['parts'][0]['text'], 'Payload includes system_instruction' );
+		$this->assert( str_ends_with( $last_http_request['url'], '/gemini-2.5-flash:generateContent' ), 'Endpoint uses the selected model without a key in the URL' );
+		$this->assert( ! isset( $payload['previous_interaction_id'] ), 'generateContent excludes unsupported interaction ID' );
+		$this->assert( isset( $payload['systemInstruction']['parts'][0]['text'] ) && 'You are a helpful assistant.' === $payload['systemInstruction']['parts'][0]['text'], 'Payload includes REST systemInstruction' );
 
 		putenv( 'GEMINI_API_KEY' );
 	}
@@ -377,6 +381,48 @@ class GeminiClientTest {
 
 		$res = $client->parse_response( $empty_body );
 		$this->assert( is_wp_error( $res ) && 'GCA_GEMINI_EMPTY_RESPONSE' === $res->get_error_code(), 'Empty step array maps to GCA_GEMINI_EMPTY_RESPONSE' );
+	}
+
+	private function test_generation_diagnostics(): void {
+		global $mock_http_response, $last_http_request;
+		putenv( 'GEMINI_API_KEY=node24_secret_key' );
+		$client = new GeminiClient();
+		$GLOBALS['node24_models_response'] = [ 'response' => [ 'code' => 200 ], 'body' => json_encode( [ 'models' => [ [ 'name' => 'models/dynamic-test-model', 'supportedGenerationMethods' => [ 'generateContent' ] ] ] ] ) ];
+		foreach ( [ 400 => 'INVALID_REQUEST', 401 => 'AUTH_ERROR', 403 => 'AUTH_ERROR', 404 => 'MODEL_UNAVAILABLE', 429 => 'RATE_LIMITED', 500 => 'UNAVAILABLE', 503 => 'UNAVAILABLE' ] as $status => $type ) {
+			$mock_http_response = [ 'response' => [ 'code' => $status ], 'body' => json_encode( [ 'error' => [ 'code' => $status, 'status' => 'UPSTREAM_STATUS', 'message' => 'Upstream detail node24_secret_key' ] ] ) ];
+			$diag = $client->run_connection_diagnostic( 'dynamic-test-model' );
+			$this->assert( ! $diag['success'] && $diag['http_status'] === $status && $diag['error_type'] === $type, "Generation HTTP $status classified accurately" );
+			$this->assert( 'Passed' === $diag['authentication'] && 'Yes' === $diag['model_available'], "Generation HTTP $status preserves discovery results" );
+			$this->assert( 'UPSTREAM_STATUS' === $diag['google_error_status'] && (string) $status === $diag['google_error_code'] && str_contains( $diag['google_error_message'], '[REDACTED]' ) && ! str_contains( json_encode( $diag ), 'node24_secret_key' ), "Generation HTTP $status retains safe Google details" );
+		}
+		$mock_http_response = [ 'response' => [ 'code' => 200 ], 'body' => '{}' ];
+		$diag = $client->run_connection_diagnostic( 'dynamic-test-model' );
+		$this->assert( ! $diag['success'] && 200 === $diag['http_status'], 'HTTP 200 without generated text fails diagnostic' );
+		$mock_http_response = [ 'response' => [ 'code' => 200 ], 'body' => json_encode( [ 'candidates' => [ [ 'content' => [ 'parts' => [ [ 'text' => 'OK' ] ] ] ] ] ] ) ];
+		$diag = $client->run_connection_diagnostic( 'dynamic-test-model' );
+		$payload = json_decode( $last_http_request['args']['body'], true );
+		$this->assert( $diag['success'] && str_ends_with( $diag['endpoint'], '/dynamic-test-model:generateContent' ) && 'Reply only with OK' === $payload['contents'][0]['parts'][0]['text'], 'Successful minimal generation uses exact dynamic model' );
+		$this->assert( ! isset( $payload['generationConfig']['maxOutputTokens'] ), 'Diagnostic does not impose a one-token output limit' );
+		$saved_settings = get_option( SettingsService::OPTION_KEY, [] );
+		update_option( SettingsService::OPTION_KEY, [ 'provider_gemini_model' => 'dynamic-test-model', 'model' => 'legacy-model' ] );
+		$this->assert( 'dynamic-test-model' === ( new GeminiClient() )->get_model(), 'New client reloads the saved provider model instead of the legacy setting' );
+		$client->create_interaction( 'Hello', 'legacy-id', [ 'history' => [ [ 'role' => 'user', 'content' => 'Earlier question' ], [ 'role' => 'assistant', 'content' => 'Earlier answer' ] ] ] );
+		$payload = json_decode( $last_http_request['args']['body'], true );
+		$this->assert( 3 === count( $payload['contents'] ) && 'model' === $payload['contents'][1]['role'] && 'Hello' === $payload['contents'][2]['parts'][0]['text'], 'generateContent carries history and appends the current prompt exactly once' );
+		update_option( SettingsService::OPTION_KEY, $saved_settings );
+		$mock_http_response = [ 'response' => [ 'code' => 503 ], 'body' => json_encode( [ 'error' => [ 'code' => 503, 'status' => 'UNAVAILABLE', 'message' => 'Overloaded node24_secret_key' ] ] ) ];
+		$client->create_interaction( 'Hello', null, [ 'request_id' => 'chat-regression-id' ] );
+		$chat_report = get_option( 'gca_gemini_last_chat' );
+		$this->assert( 'Failed' === $chat_report['generation_result'] && 'chat-regression-id' === $chat_report['request_id'] && ! str_contains( json_encode( $chat_report ), 'node24_secret_key' ), 'Frontend failure retains its request ID and redacted upstream error' );
+		$mock_http_response = [ 'response' => [ 'code' => 200 ], 'body' => json_encode( [ 'candidates' => [ [ 'content' => [ 'parts' => [ [ 'text' => 'OK' ] ] ] ] ] ] ) ];
+		$client->run_connection_diagnostic( 'dynamic-test-model' );
+		$this->assert( $chat_report === get_option( 'gca_gemini_last_chat' ), 'Successful admin test cannot overwrite the last frontend failure' );
+		$mock_http_response = new WP_Error( 'http_request_failed', 'cURL error 28: timed out' );
+		// Test transport directly because the mocked reachability probe also times out.
+		$result = $client->create_interaction( 'Hello' );
+		$this->assert( 'GCA_GEMINI_TIMEOUT' === $result->get_error_code() && null === get_option( 'gca_gemini_last_generation' )['http_status'], 'Timeout records no invented upstream HTTP status' );
+		unset( $GLOBALS['node24_models_response'] );
+		putenv( 'GEMINI_API_KEY' );
 	}
 
 	private function test_connection_method(): void {

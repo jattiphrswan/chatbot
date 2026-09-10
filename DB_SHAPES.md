@@ -1,5 +1,11 @@
 # Database Shapes: Gemini Chat Assistant
 
+`gca_chat_server_error` (autoload disabled) records the last catchable chat-service exception: UTC timestamp, request ID, class, plugin-relative file (basename for external files) and line. No exception message, trace, prompt or credential is stored. This record remains available after later successful calls and is explicitly labeled Last Chat Server Error.
+
+Node 24 follow-up: `gca_gemini_last_chat` stores the most recent frontend generation independently from admin tests (autoload disabled). It contains the safe generation metadata plus `checked_at` (UTC), `generation_result`, `error_type`, `last_error`, and `request_id`. The admin-only Latest Chat Generation panel renders this record. `gca_gemini_last_generation` retains the latest generation of either kind for compatibility.
+
+Node 24 diagnostic options (autoload disabled): `gca_gemini_diagnostics` holds the admin test report, now including `http_status` (integer or null for no response), `google_error_code`, `google_error_status`, `google_error_message`, `selected_model` and key-free `endpoint`. `gca_gemini_last_generation` holds the same safe transport metadata for the most recent admin or frontend generation, plus `connection_error` for network failures. Each replaces the previous record; neither stores request headers, keys, prompts or raw responses. No table schema changes.
+
 ## 1. Overview
 Gemini Chat Assistant uses 3 dedicated tables prefixed with `{$wpdb->prefix}gca_` plus options stored in WordPress standard `wp_options` table.
 

@@ -1557,3 +1557,15 @@
 	border-color: var(--gca-border);
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
+
+/* Node 24: scoped typography and space for header controls. */
+.gca-widget .gca-header { gap: 8px; padding-inline: 12px; }
+.gca-widget .gca-header__title { font-size: 21px !important; font-weight: 650 !important; letter-spacing: normal; }
+.gca-widget .gca-header__actions { gap: 6px !important; margin-inline-start: 0; }
+.gca-widget .gca-header .gca-btn-action { width: 36px; min-width: 36px; max-width: 36px; padding: 0; }
+.gca-widget .gca-home__headline { font-size: 30px !important; font-weight: 700 !important; line-height: 1.15 !important; margin: 0 0 9px !important; letter-spacing: normal; }
+.gca-widget .gca-start-card__title { overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .gca-widget .gca-header__title { font-size: 19px !important; }
+  .gca-widget .gca-home__headline { font-size: 27px !important; }
+}

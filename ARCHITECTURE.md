@@ -1,5 +1,7 @@
 # System Architecture: Gemini Chat Assistant
 
+Node 24 correction: GeminiClient uses `POST /v1beta/models/{saved-model}:generateContent` with `x-goog-api-key` authentication, `contents`, optional `systemInstruction` and `generationConfig`. The legacy PHP method name remains for compatibility; `previous_interaction_id` is no longer sent upstream. ChatService supplies stored conversation messages through contents. When message storage is disabled, no stored history is available. Admin Test Connection uses this same request path with `Reply only with OK` and requires nonempty generated text. The provider model setting takes precedence over the legacy model alias. Older Interactions API descriptions below describe historical behavior.
+
 ## 1. High-Level Architecture
 
 The architecture of **Gemini Chat Assistant** is strictly tiered and follows a unidirectional request-response pipeline.

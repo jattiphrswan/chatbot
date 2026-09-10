@@ -291,7 +291,25 @@ class RestController extends WP_REST_Controller {
 		$model        = ! empty( $raw_model ) && is_string( $raw_model ) ? sanitize_text_field( trim( $raw_model ) ) : null;
 
 		// 6. Orchestrate chat interaction through ChatService.
-		$result = $this->chat_service->handle_chat( $message, $session_id, $context, $request_id, $provider, $model );
+		try {
+			$result = $this->chat_service->handle_chat( $message, $session_id, $context, $request_id, $provider, $model );
+		} catch ( \Throwable $error ) {
+			// Do not store exception messages or traces: they can contain credentials or prompts.
+			$file = str_replace( '\\', '/', $error->getFile() );
+			$root = rtrim( str_replace( '\\', '/', GCA_PLUGIN_DIR ), '/' ) . '/';
+			update_option( 'gca_chat_server_error', [
+				'checked_at' => gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+				'request_id' => $request_id,
+				'error_class' => get_class( $error ),
+				'file' => 0 === strpos( $file, $root ) ? substr( $file, strlen( $root ) ) : basename( $file ),
+				'line' => $error->getLine(),
+			], false );
+			return $this->format_error_response( new WP_Error(
+				'CHAT_SERVER_ERROR',
+				__( 'The website encountered an error while processing your message. Please try again later.', 'gemini-chat-assistant' ),
+				[ 'status' => 500 ]
+			), $request_id );
+		}
 
 		if ( is_wp_error( $result ) ) {
 			return $this->format_error_response( $result, $request_id );

@@ -358,12 +358,16 @@ class ChatService {
 		float $start_time,
 		string $req_id
 	) {
+		$history = $this->build_context_messages( $conv_db_id, $message );
+		array_pop( $history ); // The client appends the current message once.
 		$ai_response = $this->gemini_client->create_interaction(
 			$message,
 			$previous_interaction_id,
 			[
 				'model'              => $model_id,
 				'system_instruction' => $system_instruction,
+				'history'            => $history,
+				'request_id'         => $req_id,
 			]
 		);
 		$latency_ms  = (int) round( ( microtime( true ) - $start_time ) * 1000 );

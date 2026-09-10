@@ -281,6 +281,7 @@ class RestControllerTest {
 		$this->test_admin_permission_denied_for_guest();
 		$this->test_admin_permission_allowed_for_admin();
 		$this->test_handle_chat_valid();
+		$this->test_handle_chat_exception();
 		$this->test_handle_chat_invalid_message();
 		$this->test_handle_chat_invalid_session();
 		$this->test_handle_chat_rate_limited();
@@ -380,6 +381,23 @@ class RestControllerTest {
 		$this->assert( true === $data['success'], 'Response success flag is true' );
 		$this->assert( 'Hello there! I am the Gemini assistant.' === $data['data']['message'], 'Response assistant text matched' );
 		$this->assert( '550e8400-e29b-41d4-a716-446655440000' === $data['data']['conversation_id'], 'Public conversation UUID returned' );
+	}
+
+	private function test_handle_chat_exception(): void {
+		$chat_service = new class extends ChatService {
+			public function handle_chat( string $message, string $session_id, array $context = [], ?string $request_id = null, ?string $requested_provider = null, ?string $requested_model = null ) {
+				throw new \Error( 'Private diagnostic API_KEY_SECRET prompt content' );
+			}
+		};
+		$controller = new RestController( null, $chat_service );
+		$request = new WP_REST_Request( 'POST', '/gca/v1/chat' );
+		$request->set_param( 'message', 'Hello' );
+		$request->set_param( 'session_id', 'gca_runtime_error_session_0123456789' );
+		$res = $controller->handle_chat( $request );
+		$this->assert( 500 === $res->get_status() && 'CHAT_SERVER_ERROR' === $res->get_data()['error']['code'], 'PHP Error becomes a structured chat error instead of fatal HTML' );
+		$report = get_option( 'gca_chat_server_error' );
+		$this->assert( 'Error' === $report['error_class'] && $report['line'] > 0 && ! empty( $report['request_id'] ), 'Admin-only error location and request ID recorded' );
+		$this->assert( ! str_contains( json_encode( [ $res->get_data(), $report ] ), 'API_KEY_SECRET' ), 'Exception details and credentials excluded from public and stored diagnostics' );
 	}
 
 	private function test_handle_chat_invalid_message(): void {

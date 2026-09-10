@@ -599,7 +599,10 @@
 		 * @return {string}
 		 */
 		function resolveErrorMessage(data) {
-			const code = data && data.error && data.error.code;
+			const code = (data && data.error && data.error.code) || (data && data.code);
+			if (code === 'internal_server_error' || code === 'CHAT_SERVER_ERROR') {
+				return i18n.errorGeneric || 'The website encountered an error. Please try again later.';
+			}
 
 			if (code === 'RATE_LIMITED') {
 				return i18n.rateLimited || 'Too many requests. Please wait a moment.';
@@ -626,7 +629,9 @@
 				return i18n.errorDenied || 'Chat is currently unavailable.';
 			}
 
-			return (data && data.error && data.error.message) || (data && data.message) || i18n.errorGeneric || 'Something went wrong. Please try again.';
+			const message = (data && data.error && data.error.message) || (data && data.message);
+			return typeof message === 'string' && !/<[^>]*>|&lt;/i.test(message)
+				? message : (i18n.errorGeneric || 'Something went wrong. Please try again.');
 		}
 
 		/**
@@ -697,6 +702,10 @@
 					const is429 = response.status === 429;
 					return response.json().then(function (json) {
 						return { ok: response.ok, status: response.status, data: json, is429: is429 };
+					}, function () {
+						return { ok: false, status: response.status, is429: is429, data: {
+							error: { code: response.status === 504 ? 'GEMINI_TIMEOUT' : 'CHAT_SERVER_ERROR' }
+						} };
 					});
 				})
 				.then(function (res) {

@@ -42,6 +42,43 @@ class GeminiClient {
 	 */
 	public const DEFAULT_TIMEOUT = 30;
 
+	/** Safe metadata only: never persist request headers, prompts or raw responses. */
+	private array $last_request_diagnostic = [];
+
+	/** Keep frontend evidence separate so a successful admin test cannot replace it. */
+	private function record_generation_result( $result, array $options ): void {
+		$this->last_request_diagnostic['checked_at'] = gmdate( 'Y-m-d H:i:s' ) . ' UTC';
+		$this->last_request_diagnostic['generation_result'] = is_wp_error( $result ) ? 'Failed' : 'Passed';
+		$this->last_request_diagnostic['error_type'] = is_wp_error( $result ) ? $result->get_error_code() : '';
+		$this->last_request_diagnostic['last_error'] = is_wp_error( $result ) ? $this->safe_error_text( $result->get_error_message() ) : '';
+		$this->last_request_diagnostic['request_id'] = sanitize_text_field( (string) ( $options['request_id'] ?? '' ) );
+		update_option( 'gca_gemini_last_generation', $this->last_request_diagnostic, false );
+		if ( empty( $options['diagnostic_test'] ) ) {
+			update_option( 'gca_gemini_last_chat', $this->last_request_diagnostic, false );
+		}
+	}
+
+	private function safe_error_text( string $text ): string {
+		$key = $this->get_api_key();
+		if ( '' !== $key ) {
+			$text = str_replace( [ $key, rawurlencode( $key ) ], '[REDACTED]', $text );
+		}
+		$text = preg_replace( '/AIza[0-9A-Za-z_-]+|([?&]key=)[^&\s]+/i', '[REDACTED]', $text );
+		return sanitize_text_field( (string) $text );
+	}
+
+	private function safe_response_details( int $status, string $body, string $model, string $endpoint ): array {
+		$data = json_decode( $body, true );
+		return [
+			'http_status' => $status ?: null,
+			'google_error_code' => $this->safe_error_text( (string) ( $data['error']['code'] ?? '' ) ),
+			'google_error_status' => $this->safe_error_text( (string) ( $data['error']['status'] ?? '' ) ),
+			'google_error_message' => $this->safe_error_text( (string) ( $data['error']['message'] ?? '' ) ),
+			'selected_model' => $model,
+			'endpoint' => $endpoint,
+		];
+	}
+
 	/**
 	 * Settings service instance.
 	 *
@@ -115,8 +152,7 @@ class GeminiClient {
 			return $override_model;
 		}
 
-		$settings = $this->settings_service ?? SettingsService::get_instance();
-		$model    = $settings->get( 'model', self::DEFAULT_MODEL );
+		$model    = SettingsService::get_provider_model( 'gemini' );
 
 		return ! empty( $model ) ? (string) $model : self::DEFAULT_MODEL;
 	}
@@ -141,11 +177,7 @@ class GeminiClient {
 	/**
 	 * Executes a lightweight connection test to Google Gemini API.
 	 *
-	 * Sends a minimal prompt ('ping') with maxOutputTokens: 1 to verify credentials
-	 * and model availability with minimal token consumption and no cost surprise.
-	 *
-	/**
-	 * Executes a lightweight connection test to Google Gemini API.
+	 * Sends 'Reply only with OK' through the frontend generation path and requires text.
 	 *
 	 * @param string|null $override_model Optional model override to test.
 	 * @return bool|WP_Error True on success, WP_Error on failure.
@@ -157,7 +189,7 @@ class GeminiClient {
 		}
 
 		$code = ! empty( $diag['error_type'] ) ? 'GCA_GEMINI_' . $diag['error_type'] : 'GCA_GEMINI_TEST_FAILED';
-		return new WP_Error( $code, $diag['last_error'] ?? __( 'Connection test failed.', 'gemini-chat-assistant' ) );
+		return new WP_Error( $code, $diag['last_error'] ?? __( 'Connection test failed.', 'gemini-chat-assistant' ), [ 'status' => $diag['http_status'] ?? 502 ] );
 	}
 
 	/**
@@ -222,7 +254,7 @@ class GeminiClient {
 		$report['api_reachable'] = 'Yes';
 
 		// STEP 2: Call GET /v1beta/models with configured API key.
-		$models_url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . rawurlencode( $api_key );
+		$models_url = self::API_BASE;
 		$step2      = wp_remote_get( $models_url, [
 			'timeout'   => 20,
 			'sslverify' => true,
@@ -234,7 +266,7 @@ class GeminiClient {
 		if ( is_wp_error( $step2 ) ) {
 			$err_msg    = $step2->get_error_message();
 			$is_timeout = ( false !== stripos( $err_msg, 'timed out' ) || false !== stripos( $err_msg, 'cURL error 28' ) );
-			$report['authentication'] = 'Failed';
+			$report['authentication'] = 'Not Tested';
 			$report['error_type']     = $is_timeout ? 'TIMEOUT' : 'NETWORK';
 			$report['last_error']     = $is_timeout
 				? __( 'Your server connected too slowly to Google Gemini and the request timed out.', 'gemini-chat-assistant' )
@@ -246,34 +278,12 @@ class GeminiClient {
 		$code2 = (int) wp_remote_retrieve_response_code( $step2 );
 		$body2 = wp_remote_retrieve_body( $step2 );
 
-		if ( 401 === $code2 || 403 === $code2 ) {
-			$report['authentication'] = 'Failed';
-			$report['error_type']     = 'AUTH_ERROR';
-			$report['last_error']     = __( 'The Gemini API key was rejected. Please check the key and API access.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
-		if ( 429 === $code2 ) {
-			$report['authentication'] = 'Passed';
-			$report['error_type']     = 'RATE_LIMITED';
-			$report['last_error']     = __( 'Gemini rate limit or quota has been reached.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
-		if ( $code2 >= 500 ) {
-			$report['authentication'] = 'Passed';
-			$report['error_type']     = 'SERVER_ERROR';
-			$report['last_error']     = __( 'Google Gemini is temporarily unavailable.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
 		if ( $code2 < 200 || $code2 >= 300 ) {
-			$report['authentication'] = 'Failed';
-			$report['error_type']     = 'HTTP_ERROR';
-			$report['last_error']     = sprintf( __( 'Google Gemini returned unexpected HTTP status %d.', 'gemini-chat-assistant' ), $code2 );
+			$error = $this->handle_http_error( $code2, $body2 );
+			$report = array_merge( $report, $this->safe_response_details( $code2, $body2, $model, $models_url ) );
+			$report['authentication'] = in_array( $code2, [ 401, 403 ], true ) ? 'Failed' : 'Not Tested';
+			$report['error_type'] = str_replace( 'GCA_GEMINI_', '', $error->get_error_code() );
+			$report['last_error'] = $error->get_error_message();
 			update_option( 'gca_gemini_diagnostics', $report, false );
 			return $report;
 		}
@@ -310,88 +320,20 @@ class GeminiClient {
 
 		$report['model_available'] = $model_found ? 'Yes' : ( empty( $discovered_models ) ? 'Not Tested' : 'No' );
 
-		// STEP 3: Minimal generation request with selected model.
-		$gen_url = self::API_BASE . '/' . rawurlencode( $model ) . ':generateContent?key=' . rawurlencode( $api_key );
-		$payload = [
-			'contents'         => [
-				[
-					'role'  => 'user',
-					'parts' => [ [ 'text' => 'ping' ] ],
-				],
-			],
-			'generationConfig' => [
-				'maxOutputTokens' => 1,
-			],
-		];
-
-		$step3 = wp_remote_post( $gen_url, [
-			'timeout'   => 20,
-			'sslverify' => true,
-			'headers'   => [
-				'Content-Type'   => 'application/json',
-				'x-goog-api-key' => $api_key,
-			],
-			'body'      => (string) wp_json_encode( $payload ),
+		// Use the same transport, payload builder and response validation as frontend chat.
+		$result = $this->create_interaction( 'Reply only with OK', null, [
+			'model' => $model,
+			'system_instruction' => '',
+			'diagnostic_test' => true,
 		] );
-
-		if ( is_wp_error( $step3 ) ) {
-			$err_msg    = $step3->get_error_message();
-			$is_timeout = ( false !== stripos( $err_msg, 'timed out' ) || false !== stripos( $err_msg, 'cURL error 28' ) );
-			$report['generation_test'] = 'Failed';
-			$report['error_type']      = $is_timeout ? 'TIMEOUT' : 'NETWORK';
-			$report['last_error']      = $is_timeout
-				? __( 'Your server connected too slowly to Google Gemini and the request timed out.', 'gemini-chat-assistant' )
-				: __( 'Your WordPress server could not reach Google Gemini.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
+		$report = array_merge( $report, $this->last_request_diagnostic );
+		$report['generation_test'] = is_wp_error( $result ) ? 'Failed' : 'Passed';
+		$report['success'] = ! is_wp_error( $result );
+		$report['error_type'] = is_wp_error( $result ) ? str_replace( 'GCA_GEMINI_', '', $result->get_error_code() ) : '';
+		if ( isset( $report['connection_error'] ) && 'TIMEOUT' !== $report['error_type'] ) {
+			$report['error_type'] = 'NETWORK';
 		}
-
-		$code3 = (int) wp_remote_retrieve_response_code( $step3 );
-		$body3 = wp_remote_retrieve_body( $step3 );
-
-		if ( 404 === $code3 ) {
-			$report['generation_test'] = 'Failed';
-			$report['error_type']      = 'MODEL_UNAVAILABLE';
-			$report['last_error']      = __( 'The selected Gemini model is unavailable. Please choose another model.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
-		if ( 401 === $code3 || 403 === $code3 ) {
-			$report['generation_test'] = 'Failed';
-			$report['error_type']      = 'AUTH_ERROR';
-			$report['last_error']      = __( 'The Gemini API key was rejected. Please check the key and API access.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
-		if ( 429 === $code3 ) {
-			$report['generation_test'] = 'Failed';
-			$report['error_type']      = 'RATE_LIMITED';
-			$report['last_error']      = __( 'Gemini rate limit or quota has been reached.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
-		if ( $code3 >= 500 ) {
-			$report['generation_test'] = 'Failed';
-			$report['error_type']      = 'SERVER_ERROR';
-			$report['last_error']      = __( 'Google Gemini is temporarily unavailable.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
-		if ( $code3 < 200 || $code3 >= 300 ) {
-			$report['generation_test'] = 'Failed';
-			$report['error_type']      = 'HTTP_ERROR';
-			$report['last_error']      = sprintf( __( 'Generation test returned unexpected HTTP status %d.', 'gemini-chat-assistant' ), $code3 );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
-		$report['generation_test'] = 'Passed';
-		$report['success']         = true;
-		$report['last_error']      = __( 'Connection verified successfully.', 'gemini-chat-assistant' );
+		$report['last_error'] = is_wp_error( $result ) ? $result->get_error_message() : __( 'Connection verified successfully.', 'gemini-chat-assistant' );
 		update_option( 'gca_gemini_diagnostics', $report, false );
 
 		return $report;
@@ -408,7 +350,7 @@ class GeminiClient {
 			return new WP_Error( 'GCA_GEMINI_NOT_CONFIGURED', __( 'API key is not configured.', 'gemini-chat-assistant' ) );
 		}
 
-		$url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . rawurlencode( $api_key );
+		$url = self::API_BASE;
 		$res = wp_remote_get( $url, [
 			'timeout'   => 15,
 			'sslverify' => true,
@@ -418,14 +360,14 @@ class GeminiClient {
 		] );
 
 		if ( is_wp_error( $res ) ) {
-			return $res;
+			return $this->handle_transport_error( $res );
 		}
 
 		$code = (int) wp_remote_retrieve_response_code( $res );
 		$body = wp_remote_retrieve_body( $res );
 
 		if ( $code < 200 || $code >= 300 ) {
-			return new WP_Error( 'GCA_GEMINI_API_ERROR', sprintf( __( 'Google API returned HTTP %d', 'gemini-chat-assistant' ), $code ) );
+			return $this->handle_http_error( $code, $body );
 		}
 
 		$json = json_decode( $body, true );
@@ -487,7 +429,7 @@ class GeminiClient {
 		$model              = $this->get_model( $options['model'] ?? null );
 		$system_instruction = $this->get_system_instruction( $options['system_instruction'] ?? null );
 
-		$endpoint = self::API_BASE . '/' . rawurlencode( $model ) . ':generateContent?key=' . rawurlencode( $api_key );
+		$endpoint = self::API_BASE . '/' . rawurlencode( $model ) . ':generateContent';
 
 		$contents = [];
 		if ( ! empty( $options['history'] ) && is_array( $options['history'] ) ) {
@@ -509,22 +451,19 @@ class GeminiClient {
 
 		$payload = [
 			'contents' => $contents,
-			'model'    => $model,
 		];
 
 		if ( '' !== $system_instruction ) {
-			$payload['system_instruction'] = [
+			$payload['systemInstruction'] = [
 				'parts' => [ [ 'text' => $system_instruction ] ],
 			];
 		}
 
-		if ( ! empty( $previous_interaction_id ) ) {
-			$payload['previous_interaction_id'] = $previous_interaction_id;
-		}
+		// generateContent is stateless: conversation memory is sent through contents.
 
 		// Allow optional generation options if provided.
 		if ( isset( $options['generation_config'] ) && is_array( $options['generation_config'] ) ) {
-			$payload['generation_config'] = $options['generation_config'];
+			$payload['generationConfig'] = $options['generation_config'];
 		}
 
 		$timeout = isset( $options['timeout'] ) && is_numeric( $options['timeout'] )
@@ -545,20 +484,32 @@ class GeminiClient {
 			'body'        => (string) wp_json_encode( $payload ),
 		];
 
+		$this->last_request_diagnostic = $this->safe_response_details( 0, '', $model, $endpoint );
 		$response = wp_remote_post( $endpoint, $request_args );
 
 		if ( is_wp_error( $response ) ) {
-			return $this->handle_transport_error( $response );
+			$error = $this->handle_transport_error( $response );
+			$this->last_request_diagnostic['connection_error'] = $error->get_error_message();
+			$this->record_generation_result( $error, $options );
+			return $error;
 		}
 
 		$status_code   = (int) wp_remote_retrieve_response_code( $response );
 		$response_body = wp_remote_retrieve_body( $response );
+		$this->last_request_diagnostic = $this->safe_response_details( $status_code, $response_body, $model, $endpoint );
 
 		if ( $status_code >= 200 && $status_code < 300 ) {
-			return $this->parse_response( $response_body );
+			$parsed = $this->parse_response( $response_body );
+			if ( ! is_wp_error( $parsed ) ) {
+				$parsed['model'] = $model;
+			}
+			$this->record_generation_result( $parsed, $options );
+			return $parsed;
 		}
 
-		return $this->handle_http_error( $status_code, $response_body );
+		$error = $this->handle_http_error( $status_code, $response_body );
+		$this->record_generation_result( $error, $options );
+		return $error;
 	}
 
 	/**
@@ -777,7 +728,7 @@ class GeminiClient {
 			sprintf(
 				/* translators: %s: Transport error message */
 				__( 'Network error connecting to Gemini API: %s', 'gemini-chat-assistant' ),
-				$error_message
+				$this->safe_error_text( $error_message )
 			),
 			[ 'status' => 503 ]
 		);
@@ -795,7 +746,7 @@ class GeminiClient {
 		$decoded       = json_decode( $response_body, true );
 
 		if ( is_array( $decoded ) && isset( $decoded['error']['message'] ) ) {
-			$error_message = sanitize_text_field( (string) $decoded['error']['message'] );
+			$error_message = $this->safe_error_text( (string) $decoded['error']['message'] );
 		}
 
 		switch ( $status_code ) {
@@ -857,12 +808,17 @@ class GeminiClient {
 				break;
 		}
 
+		if ( in_array( $status_code, [ 500, 503 ], true ) ) {
+			$msg = __( 'Google Gemini is temporarily unavailable. Please try again shortly.', 'gemini-chat-assistant' ) . ( '' !== $error_message ? ' ' . $error_message : '' );
+		}
+
 		return new WP_Error(
 			$code,
 			$msg,
 			[
 				'status'      => $status_code,
 				'api_message' => $error_message,
+				'api_code' => $this->safe_error_text( (string) ( $decoded['error']['status'] ?? $decoded['error']['code'] ?? '' ) ),
 			]
 		);
 	}

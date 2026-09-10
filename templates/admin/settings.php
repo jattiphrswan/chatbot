@@ -356,6 +356,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 								}
 							} elseif ( \SkyFish\GeminiChat\Admin\SettingsService::has_stored_credential( 'gemini' ) ) {
 								esc_html_e( 'API key is saved in WordPress Dashboard (encrypted AES-256). To replace it, enter a new key above and click Save All Settings.', 'gemini-chat-assistant' );
+							} elseif ( $gemini_configured ) {
+								esc_html_e( 'API key is available through server configuration fallback. Enter and save a key above to use a dashboard credential.', 'gemini-chat-assistant' );
 							} else {
 								esc_html_e( 'No API key configured. Enter your Google Gemini API key above and click Save All Settings.', 'gemini-chat-assistant' );
 							}
@@ -446,7 +448,38 @@ if ( ! defined( 'ABSPATH' ) ) {
 										<?php echo esc_html( $gemini_diag['last_error'] ?? ( $gemini_configured ? __( 'None', 'gemini-chat-assistant' ) : __( 'API key not configured.', 'gemini-chat-assistant' ) ) ); ?>
 									</td>
 								</tr>
+								<?php foreach ( [ 'http_status' => __( 'HTTP Status', 'gemini-chat-assistant' ), 'google_error_code' => __( 'Google Error Code', 'gemini-chat-assistant' ), 'google_error_status' => __( 'Google Error Status', 'gemini-chat-assistant' ), 'google_error_message' => __( 'Google Error Message', 'gemini-chat-assistant' ), 'endpoint' => __( 'Endpoint', 'gemini-chat-assistant' ) ] as $diag_key => $diag_label ) : ?>
+								<tr>
+									<td><strong><?php echo esc_html( $diag_label ); ?>:</strong></td>
+									<td style="overflow-wrap: anywhere;"><?php echo esc_html( $gemini_diag[ $diag_key ] ?? 'Not recorded' ); ?></td>
+								</tr>
+								<?php endforeach; ?>
 							</table>
+							<?php $chat_server_error = get_option( 'gca_chat_server_error', [] ); ?>
+							<?php if ( is_array( $chat_server_error ) && ! empty( $chat_server_error ) ) : ?>
+							<h4><?php esc_html_e( 'Last Chat Server Error', 'gemini-chat-assistant' ); ?></h4>
+							<p class="description"><?php esc_html_e( 'Recorded PHP exception location. This is separate from Google API errors; use the server PHP log for the full cause.', 'gemini-chat-assistant' ); ?></p>
+							<table style="width: 100%; table-layout: fixed;">
+							<?php foreach ( [ 'checked_at' => 'Recorded At', 'request_id' => 'Request ID', 'error_class' => 'PHP Error Type', 'file' => 'File', 'line' => 'Line' ] as $field => $label ) : ?>
+							<tr><td><?php echo esc_html( $label ); ?></td><td style="overflow-wrap: anywhere;"><?php echo esc_html( $chat_server_error[ $field ] ?? '' ); ?></td></tr>
+							<?php endforeach; ?>
+							</table>
+							<?php endif; ?>
+							<h4><?php esc_html_e( 'Latest Chat Generation', 'gemini-chat-assistant' ); ?></h4>
+							<p class="description"><?php esc_html_e( 'This is the chat request result, separate from Test Connection. Send a chat message, then reload this settings page.', 'gemini-chat-assistant' ); ?></p>
+							<?php $gemini_chat_diag = get_option( 'gca_gemini_last_chat', [] ); ?>
+							<?php if ( empty( $gemini_chat_diag ) ) : ?>
+								<p><?php esc_html_e( 'No separate chat result recorded yet.', 'gemini-chat-assistant' ); ?></p>
+								<?php $gemini_chat_diag = get_option( 'gca_gemini_last_generation', [] ); ?>
+								<?php if ( ! empty( $gemini_chat_diag ) ) : ?><p><?php esc_html_e( 'Previous generation record (may be an admin test):', 'gemini-chat-assistant' ); ?></p><?php endif; ?>
+							<?php endif; ?>
+							<?php if ( is_array( $gemini_chat_diag ) && ! empty( $gemini_chat_diag ) ) : ?>
+							<table style="width: 100%; font-size: 13px; text-align: left; table-layout: fixed;">
+								<?php foreach ( [ 'checked_at' => __( 'Recorded At', 'gemini-chat-assistant' ), 'generation_result' => __( 'Generation Result', 'gemini-chat-assistant' ), 'request_id' => __( 'Request ID', 'gemini-chat-assistant' ), 'selected_model' => __( 'Selected Model', 'gemini-chat-assistant' ), 'http_status' => __( 'Google HTTP Status', 'gemini-chat-assistant' ), 'google_error_code' => __( 'Google Error Code', 'gemini-chat-assistant' ), 'google_error_status' => __( 'Google Error Status', 'gemini-chat-assistant' ), 'google_error_message' => __( 'Google Error Message', 'gemini-chat-assistant' ), 'connection_error' => __( 'Connection Error', 'gemini-chat-assistant' ), 'last_error' => __( 'Last Error', 'gemini-chat-assistant' ), 'endpoint' => __( 'Endpoint', 'gemini-chat-assistant' ) ] as $diag_key => $diag_label ) : ?>
+								<tr><td><strong><?php echo esc_html( $diag_label ); ?>:</strong></td><td style="overflow-wrap: anywhere;"><?php echo esc_html( $gemini_chat_diag[ $diag_key ] ?? 'Not recorded' ); ?></td></tr>
+								<?php endforeach; ?>
+							</table>
+							<?php endif; ?>
 						</div>
 					</div>
 				</div>

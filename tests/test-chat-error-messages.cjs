@@ -1,0 +1,15 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync(require('node:path').join(__dirname, '../public/js/chat.js'), 'utf8');
+const resolver = source.match(/function resolveErrorMessage\(data\) \{[\s\S]*?\n\t\t\}/)[0];
+const context = { i18n: { errorGeneric: 'Please try again later.' } };
+vm.createContext(context);
+vm.runInContext(resolver, context);
+const resolve = context.resolveErrorMessage;
+assert.equal(resolve({ code: 'internal_server_error', message: '<p>Critical error</p>' }), 'Please try again later.');
+assert.equal(resolve({ error: { code: 'CHAT_SERVER_ERROR', message: 'Private internal detail' } }), 'Please try again later.');
+assert.equal(resolve({ message: '<p>Hosting proxy failure</p>' }), 'Please try again later.');
+assert.equal(resolve({ error: { message: 'Message is too long.' } }), 'Message is too long.');
+assert.match(resolve({ error: { code: 'GEMINI_TIMEOUT' } }), /too long/);
+console.log('5 chat error-message assertions passed.');
