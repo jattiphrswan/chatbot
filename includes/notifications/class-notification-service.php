@@ -388,7 +388,8 @@ class NotificationService {
 			return;
 		}
 		$transient_key = self::TRANSIENT_PREFIX . md5( $public_id );
-		set_transient( $transient_key, current_time( 'mysql', true ), 7 * DAY_IN_SECONDS );
+		$day_seconds   = defined( 'DAY_IN_SECONDS' ) ? DAY_IN_SECONDS : 86400;
+		set_transient( $transient_key, current_time( 'mysql', true ), 7 * $day_seconds );
 	}
 
 	/**

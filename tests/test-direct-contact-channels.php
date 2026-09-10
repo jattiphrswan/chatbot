@@ -14,6 +14,8 @@ namespace SkyFish\GeminiChat\Tests;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\Assets;
 
+require_once __DIR__ . '/bootstrap.php';
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -246,7 +248,7 @@ class TestDirectContactChannels {
 }
 
 // Auto-run if executed directly via CLI or test runner.
-if ( defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
+if ( 'cli' === php_sapi_name() || defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
 	$suite = new TestDirectContactChannels();
 	$suite->run();
 }

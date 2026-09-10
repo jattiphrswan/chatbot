@@ -135,13 +135,13 @@ class Assets {
 					'enabled' => (bool) ( $settings['contact_phone_enabled'] ?? false ) && ! empty( $settings['contact_phone_number'] ),
 					'number'  => esc_attr( (string) ( $settings['contact_phone_number'] ?? '' ) ),
 					'label'   => esc_html( (string) ( $settings['contact_phone_label'] ?? __( 'Call Us', 'gemini-chat-assistant' ) ) ),
-					'url'     => ! empty( $settings['contact_phone_number'] ) ? 'tel:' . preg_replace( '/[^0-9+]/', '', (string) $settings['contact_phone_number'] ) : '',
+					'url'     => ! empty( $settings['contact_phone_number'] ) ? 'tel:' . preg_replace( '/[^0-9+\-]/', '', (string) $settings['contact_phone_number'] ) : '',
 				],
 				'email'    => [
 					'enabled' => (bool) ( $settings['contact_email_enabled'] ?? false ) && ! empty( $settings['contact_email_address'] ),
 					'address' => sanitize_email( (string) ( $settings['contact_email_address'] ?? '' ) ),
 					'label'   => esc_html( (string) ( $settings['contact_email_label'] ?? __( 'Email Us', 'gemini-chat-assistant' ) ) ),
-					'url'     => ! empty( $settings['contact_email_address'] ) ? 'mailto:' . rawurlencode( sanitize_email( (string) $settings['contact_email_address'] ) ) : '',
+					'url'     => ! empty( $settings['contact_email_address'] ) ? 'mailto:' . sanitize_email( (string) $settings['contact_email_address'] ) : '',
 				],
 				'whatsapp' => [
 					'enabled' => (bool) ( $settings['contact_whatsapp_enabled'] ?? false ) && ! empty( $settings['contact_whatsapp_number'] ),

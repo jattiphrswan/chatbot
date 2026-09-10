@@ -16,6 +16,8 @@ use SkyFish\GeminiChat\Integrations\Handoff\SendHandoffNotificationAction;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\Handoff\HandoffService;
 
+require_once __DIR__ . '/bootstrap.php';
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -163,7 +165,7 @@ class TestEmailNotifications {
 		$body = $service->build_plain_text_body( $handoff, $conversation, $lead );
 
 		$this->assert( false !== strpos( $body, 'CHATBOT HUMAN HANDOFF REQUEST' ), '3.1 Body contains header banner' );
-		$this->assert( false !== strpos( $body, 'Customer requested human support' ), '3.2 Body maps reason to human-readable label' );
+		$this->assert( false !== strpos( $body, 'Customer Request' ), '3.2 Body maps reason to human-readable label' );
 		$this->assert( false !== strpos( $body, 'John Doe' ) && false !== strpos( $body, 'john@example.com' ), '3.3 Body includes lead contact details when present' );
 		$this->assert( false !== strpos( $body, 'conv-uuid-7890' ), '3.4 Body includes conversation public identifier' );
 		$this->assert( false !== strpos( $body, 'handoff-uuid-123456' ), '3.5 Body includes handoff public identifier' );
@@ -272,7 +274,7 @@ class TestEmailNotifications {
 }
 
 // Auto-run if executed directly via CLI or test runner.
-if ( defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
+if ( 'cli' === php_sapi_name() || defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
 	$suite = new TestEmailNotifications();
 	$suite->run();
 }

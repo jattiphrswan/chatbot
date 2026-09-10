@@ -60,7 +60,17 @@ class SettingsService {
 			$saved = [];
 		}
 
-		return wp_parse_args( $saved, $defaults );
+		$settings = wp_parse_args( $saved, $defaults );
+
+		// Allow individual gca_* options to override or populate settings.
+		foreach ( array_keys( $defaults ) as $k ) {
+			$indiv = get_option( "gca_{$k}", null );
+			if ( null !== $indiv ) {
+				$settings[ $k ] = $indiv;
+			}
+		}
+
+		return $settings;
 	}
 
 	/**
@@ -524,6 +534,18 @@ class SettingsService {
 	}
 
 	/**
+	 * Sanitizes a single setting field using the central sanitize_settings pipeline.
+	 *
+	 * @param string $key   Setting key.
+	 * @param mixed  $value Raw submitted value.
+	 * @return mixed Sanitized value.
+	 */
+	public static function sanitize_setting( string $key, mixed $value ): mixed {
+		$sanitized = self::sanitize_settings( [ $key => $value ] );
+		return $sanitized[ $key ] ?? $value;
+	}
+
+	/**
 	 * Sanitizes and validates settings input before saving to database.
 	 *
 	 * Note: API keys are NEVER handled here.
@@ -630,17 +652,18 @@ class SettingsService {
 		$sanitized['handoff_email_subject'] = \SkyFish\GeminiChat\Notifications\NotificationService::sanitize_subject( $subject );
 
 		// Direct Contact Channels (N17.5).
-		$sanitized['contact_channels_enabled'] = ! empty( $input['contact_channels_enabled'] );
+		$sanitized['contact_channels_enabled'] = (bool) filter_var( $input['contact_channels_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN );
 
 		// Phone / Call
-		$sanitized['contact_phone_enabled'] = ! empty( $input['contact_phone_enabled'] );
-		$raw_phone                          = isset( $input['contact_phone_number'] ) ? (string) $input['contact_phone_number'] : '';
-		$sanitized['contact_phone_number']  = preg_replace( '/[^0-9+\-().\s]/', '', trim( $raw_phone ) );
+		$sanitized['contact_phone_enabled'] = (bool) filter_var( $input['contact_phone_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN );
+		$raw_phone                          = isset( $input['contact_phone_number'] ) ? wp_strip_all_tags( (string) $input['contact_phone_number'] ) : '';
+		$stripped_phone                     = preg_replace( '/[^0-9+\-().\s]/', '', $raw_phone );
+		$sanitized['contact_phone_number']  = trim( preg_replace( '/\s+/', ' ', $stripped_phone ) );
 		$phone_label                        = isset( $input['contact_phone_label'] ) ? sanitize_text_field( trim( (string) $input['contact_phone_label'] ) ) : '';
 		$sanitized['contact_phone_label']   = ! empty( $phone_label ) ? mb_substr( $phone_label, 0, 50 ) : 'Call Us';
 
 		// Email
-		$sanitized['contact_email_enabled'] = ! empty( $input['contact_email_enabled'] );
+		$sanitized['contact_email_enabled'] = (bool) filter_var( $input['contact_email_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN );
 		$raw_email                          = isset( $input['contact_email_address'] ) ? (string) $input['contact_email_address'] : '';
 		$clean_email                        = sanitize_email( trim( $raw_email ) );
 		$sanitized['contact_email_address'] = is_email( $clean_email ) ? $clean_email : '';
@@ -648,7 +671,7 @@ class SettingsService {
 		$sanitized['contact_email_label']   = ! empty( $email_label ) ? mb_substr( $email_label, 0, 50 ) : 'Email Us';
 
 		// WhatsApp
-		$sanitized['contact_whatsapp_enabled'] = ! empty( $input['contact_whatsapp_enabled'] );
+		$sanitized['contact_whatsapp_enabled'] = (bool) filter_var( $input['contact_whatsapp_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN );
 		$raw_wa_num                            = isset( $input['contact_whatsapp_number'] ) ? (string) $input['contact_whatsapp_number'] : '';
 		// Strip all non-digit characters except leading plus
 		$sanitized['contact_whatsapp_number']  = preg_replace( '/[^0-9+]/', '', trim( $raw_wa_num ) );
