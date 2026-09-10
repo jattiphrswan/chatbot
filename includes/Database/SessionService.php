@@ -129,6 +129,29 @@ class SessionService {
 	}
 
 	/**
+	 * Convenience alias returning conversation entity array with id key.
+	 *
+	 * @param string|null $session_token Optional existing client session token.
+	 * @param int         $user_id       WordPress user ID.
+	 * @param string|null $title         Optional conversation title.
+	 * @return array{id: int, conversation_id: int, session_token: string, public_id: string, is_new: bool}
+	 */
+	public function get_or_create_conversation(
+		?string $session_token = null,
+		int $user_id = 0,
+		?string $title = null
+	): array {
+		$session = $this->get_or_create_session( $session_token, $user_id, $title );
+		return [
+			'id'              => $session['conversation_id'],
+			'conversation_id' => $session['conversation_id'],
+			'session_token'   => $session['session_token'],
+			'public_id'       => $session['public_id'],
+			'is_new'          => $session['is_new'],
+		];
+	}
+
+	/**
 	 * Stores transient session cache data with length-safe key.
 	 *
 	 * @param string               $session_token Client session token.

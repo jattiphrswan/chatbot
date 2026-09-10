@@ -55,11 +55,11 @@ class ModelRegistry {
 			],
 			[
 				'id'                => 'gemini-3.8-flash',
-				'name'              => 'Gemini 3.8 Flash (Legacy)',
+				'name'              => 'Gemini 3.8 Flash',
 				'provider'          => 'gemini',
 				'context_window'    => 1048576,
 				'max_output_tokens' => 8192,
-				'description'       => 'Legacy model identifier retained for backwards compatibility.',
+				'description'       => 'Fast multimodal model for conversational interactions.',
 				'recommended'       => false,
 			],
 		],
@@ -165,8 +165,17 @@ class ModelRegistry {
 	 * @return array<int, array{id: string, name: string, provider: string, context_window: int, max_output_tokens: int, description: string, recommended: bool}>
 	 */
 	public static function get_models_for_provider( string $provider_id ): array {
-		$provider_id = sanitize_key( $provider_id );
-		return self::MODELS[ $provider_id ] ?? [];
+		$provider_id   = sanitize_key( $provider_id );
+		$static_models = self::MODELS[ $provider_id ] ?? [];
+
+		if ( 'gemini' === $provider_id ) {
+			$discovered = get_option( 'gca_discovered_models_gemini', [] );
+			if ( is_array( $discovered ) && ! empty( $discovered ) ) {
+				return $discovered;
+			}
+		}
+
+		return $static_models;
 	}
 
 	/**

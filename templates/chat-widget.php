@@ -119,26 +119,24 @@ $has_contact_channels = $contact_channels_enabled && ( $contact_phone_enabled ||
 >
 	<!-- Header -->
 	<header class="gca-header">
-		<div class="gca-header__info">
-			<div class="gca-header__avatar" aria-hidden="true">
-				<?php if ( ! empty( $avatar_url ) ) : ?>
-					<img src="<?php echo esc_url( $avatar_url ); ?>" alt="" class="gca-avatar-img" />
-				<?php else : ?>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
-						<rect x="3" y="8" width="18" height="12" rx="2"></rect>
-						<circle cx="9" cy="14" r="1"></circle>
-						<circle cx="15" cy="14" r="1"></circle>
-					</svg>
-				<?php endif; ?>
-			</div>
-			<div class="gca-header__titles">
-				<h3 class="gca-header__title"><?php echo esc_html( $assistant_name ); ?></h3>
-				<span class="gca-header__status">
-					<span class="gca-header__status-dot" aria-hidden="true"></span>
-					<?php esc_html_e( 'Online', 'gemini-chat-assistant' ); ?>
-				</span>
-			</div>
+		<div class="gca-header__avatar" aria-hidden="true">
+			<?php if ( ! empty( $avatar_url ) ) : ?>
+				<img src="<?php echo esc_url( $avatar_url ); ?>" alt="" class="gca-avatar-img" />
+			<?php else : ?>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+					<rect x="3" y="8" width="18" height="12" rx="2"></rect>
+					<circle cx="9" cy="14" r="1"></circle>
+					<circle cx="15" cy="14" r="1"></circle>
+				</svg>
+			<?php endif; ?>
+		</div>
+		<div class="gca-header__titles">
+			<h3 class="gca-header__title"><?php echo esc_html( $assistant_name ); ?></h3>
+			<span class="gca-header__status">
+				<span class="gca-header__status-dot" aria-hidden="true"></span>
+				<?php esc_html_e( 'Online', 'gemini-chat-assistant' ); ?>
+			</span>
 		</div>
 		<div class="gca-header__actions">
 			<button
@@ -182,17 +180,15 @@ $has_contact_channels = $contact_channels_enabled && ( $contact_phone_enabled ||
 
 				<!-- Start Conversation Card -->
 				<button type="button" class="gca-start-card" aria-label="<?php esc_attr_e( 'Start a Conversation', 'gemini-chat-assistant' ); ?>">
-					<div class="gca-start-card__content">
-						<div class="gca-start-card__icon" aria-hidden="true">
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-							</svg>
-						</div>
-						<div class="gca-start-card__text">
-							<span class="gca-start-card__title"><?php esc_html_e( 'Start a Conversation', 'gemini-chat-assistant' ); ?></span>
-							<span class="gca-start-card__desc"><?php esc_html_e( 'Ask us about products, services, or anything else you need help with.', 'gemini-chat-assistant' ); ?></span>
-						</div>
-					</div>
+					<span class="gca-start-card__icon" aria-hidden="true">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+						</svg>
+					</span>
+					<span class="gca-start-card__content">
+						<span class="gca-start-card__title"><?php esc_html_e( 'Start a Conversation', 'gemini-chat-assistant' ); ?></span>
+						<span class="gca-start-card__description"><?php esc_html_e( 'Ask us about products, services, or support.', 'gemini-chat-assistant' ); ?></span>
+					</span>
 					<span class="gca-start-card__arrow" aria-hidden="true">
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 							<polyline points="9 18 15 12 9 6"></polyline>

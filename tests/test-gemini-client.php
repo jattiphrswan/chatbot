@@ -95,6 +95,23 @@ if ( ! function_exists( 'wp_remote_post' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_remote_get' ) ) {
+	function wp_remote_get( $url, $args = [] ) {
+		global $mock_http_response, $last_http_request;
+		$last_http_request = [
+			'url'  => $url,
+			'args' => $args,
+		];
+		if ( strpos( $url, 'https://generativelanguage.googleapis.com/' ) === 0 && false === strpos( $url, 'models' ) ) {
+			if ( is_wp_error( $mock_http_response ) ) {
+				return $mock_http_response;
+			}
+			return [ 'response' => [ 'code' => 200 ], 'body' => '' ];
+		}
+		return $mock_http_response;
+	}
+}
+
 if ( ! function_exists( 'wp_remote_retrieve_response_code' ) ) {
 	function wp_remote_retrieve_response_code( $response ) {
 		if ( is_array( $response ) && isset( $response['response']['code'] ) ) {

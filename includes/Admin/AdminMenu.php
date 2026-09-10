@@ -149,6 +149,7 @@ class AdminMenu {
 
 		// Admin post action hooks for Gemini Connection Test
 		add_action( 'admin_post_gca_test_gemini_connection', [ $this, 'handle_test_gemini_connection' ] );
+		add_action( 'admin_post_gca_refresh_gemini_models', [ $this, 'handle_refresh_gemini_models' ] );
 
 		// Admin post action hooks for OpenAI Connection Test (N19)
 		add_action( 'admin_post_gca_test_openai_connection', [ $this, 'handle_test_openai_connection' ] );
@@ -1092,6 +1093,26 @@ class AdminMenu {
 		];
 		if ( ! empty( $error_param ) ) {
 			$redirect_args['gemini_test_error'] = $error_param;
+		}
+
+		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, $redirect_args );
+	}
+
+	/**
+	 * Handles POST action to refresh available Gemini models from Google API.
+	 */
+	public function handle_refresh_gemini_models(): void {
+		$this->verify_admin_action( 'gca_refresh_gemini_models' );
+
+		$client = new \SkyFish\GeminiChat\GeminiClient();
+		$res    = $client->fetch_available_models();
+
+		$status = is_wp_error( $res ) ? 'failed' : 'refreshed';
+		$redirect_args = [
+			'gemini_models_status' => $status,
+		];
+		if ( is_wp_error( $res ) ) {
+			$redirect_args['gemini_models_error'] = $res->get_error_message();
 		}
 
 		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, $redirect_args );

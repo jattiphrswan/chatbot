@@ -107,29 +107,46 @@ class SettingsService {
 	 * @return string
 	 */
 	public static function get_api_key(): string {
-		// 1. Check environment variable (preferred).
+		$source = (string) self::get( 'provider_gemini_credential_source', 'dashboard' );
+
+		// When explicitly configured for Server Constant / Advanced mode.
+		if ( 'server' === $source ) {
+			if ( defined( 'GCA_GEMINI_API_KEY' ) && is_string( GCA_GEMINI_API_KEY ) && ! empty( GCA_GEMINI_API_KEY ) ) {
+				return trim( GCA_GEMINI_API_KEY );
+			}
+			$env_key = getenv( 'GEMINI_API_KEY' );
+			if ( ! empty( $env_key ) && is_string( $env_key ) ) {
+				return trim( $env_key );
+			}
+			if ( ! empty( $_ENV['GEMINI_API_KEY'] ) && is_string( $_ENV['GEMINI_API_KEY'] ) ) {
+				return trim( $_ENV['GEMINI_API_KEY'] );
+			}
+			if ( ! empty( $_SERVER['GEMINI_API_KEY'] ) && is_string( $_SERVER['GEMINI_API_KEY'] ) ) {
+				return trim( $_SERVER['GEMINI_API_KEY'] );
+			}
+			return '';
+		}
+
+		// DEFAULT: WordPress Dashboard is PRIMARY.
+		// 1. Primary: Stored database credential entered via WordPress Admin Settings.
+		$stored_key = self::get_stored_credential( 'gemini' );
+		if ( ! empty( $stored_key ) ) {
+			return $stored_key;
+		}
+
+		// 2. Optional fallback: If dashboard key has not been entered yet, allow server constant as fallback.
+		if ( defined( 'GCA_GEMINI_API_KEY' ) && is_string( GCA_GEMINI_API_KEY ) && ! empty( GCA_GEMINI_API_KEY ) ) {
+			return trim( GCA_GEMINI_API_KEY );
+		}
 		$env_key = getenv( 'GEMINI_API_KEY' );
 		if ( ! empty( $env_key ) && is_string( $env_key ) ) {
 			return trim( $env_key );
 		}
-
 		if ( ! empty( $_ENV['GEMINI_API_KEY'] ) && is_string( $_ENV['GEMINI_API_KEY'] ) ) {
 			return trim( $_ENV['GEMINI_API_KEY'] );
 		}
-
 		if ( ! empty( $_SERVER['GEMINI_API_KEY'] ) && is_string( $_SERVER['GEMINI_API_KEY'] ) ) {
 			return trim( $_SERVER['GEMINI_API_KEY'] );
-		}
-
-		// 2. Check wp-config constant (fallback).
-		if ( defined( 'GCA_GEMINI_API_KEY' ) && is_string( GCA_GEMINI_API_KEY ) && ! empty( GCA_GEMINI_API_KEY ) ) {
-			return trim( GCA_GEMINI_API_KEY );
-		}
-
-		// 3. Check stored database credential (fallback for admin-entered key).
-		$stored_key = self::get_stored_credential( 'gemini' );
-		if ( ! empty( $stored_key ) ) {
-			return $stored_key;
 		}
 
 		return '';
@@ -421,14 +438,26 @@ class SettingsService {
 
 		switch ( $provider_id ) {
 			case 'gemini':
-				if ( ! empty( getenv( 'GEMINI_API_KEY' ) ) || ! empty( $_ENV['GEMINI_API_KEY'] ) || ! empty( $_SERVER['GEMINI_API_KEY'] ) ) {
-					return 'environment';
+				$source_mode = (string) self::get( 'provider_gemini_credential_source', 'dashboard' );
+				if ( 'server' === $source_mode ) {
+					if ( defined( 'GCA_GEMINI_API_KEY' ) && is_string( GCA_GEMINI_API_KEY ) && ! empty( GCA_GEMINI_API_KEY ) ) {
+						return 'constant';
+					}
+					if ( ! empty( getenv( 'GEMINI_API_KEY' ) ) || ! empty( $_ENV['GEMINI_API_KEY'] ) || ! empty( $_SERVER['GEMINI_API_KEY'] ) ) {
+						return 'environment';
+					}
+					return 'none';
+				}
+
+				// Dashboard mode is primary.
+				if ( self::has_stored_credential( 'gemini' ) ) {
+					return 'database';
 				}
 				if ( defined( 'GCA_GEMINI_API_KEY' ) && is_string( GCA_GEMINI_API_KEY ) && ! empty( GCA_GEMINI_API_KEY ) ) {
 					return 'constant';
 				}
-				if ( self::has_stored_credential( 'gemini' ) ) {
-					return 'database';
+				if ( ! empty( getenv( 'GEMINI_API_KEY' ) ) || ! empty( $_ENV['GEMINI_API_KEY'] ) || ! empty( $_SERVER['GEMINI_API_KEY'] ) ) {
+					return 'environment';
 				}
 				return 'none';
 
@@ -518,10 +547,12 @@ class SettingsService {
 		$sanitized['default_provider'] = in_array( $default_provider, self::ALLOWED_PROVIDERS, true ) ? $default_provider : 'gemini';
 
 		// Provider: Gemini.
-		$sanitized['provider_gemini_enabled'] = ! empty( $input['provider_gemini_enabled'] );
-		$raw_gemini_model                     = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-2.5-flash' );
-		$sanitized['provider_gemini_model']   = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', $raw_gemini_model ) ? $raw_gemini_model : 'gemini-2.5-flash';
-		$sanitized['model']                   = $sanitized['provider_gemini_model']; // Backward compatibility.
+		$sanitized['provider_gemini_enabled']           = ! empty( $input['provider_gemini_enabled'] );
+		$gemini_source_input                           = isset( $input['provider_gemini_credential_source'] ) ? sanitize_key( $input['provider_gemini_credential_source'] ) : 'dashboard';
+		$sanitized['provider_gemini_credential_source'] = in_array( $gemini_source_input, [ 'dashboard', 'server' ], true ) ? $gemini_source_input : 'dashboard';
+		$raw_gemini_model                               = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-2.5-flash' );
+		$sanitized['provider_gemini_model']             = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', $raw_gemini_model ) ? $raw_gemini_model : 'gemini-2.5-flash';
+		$sanitized['model']                             = $sanitized['provider_gemini_model']; // Backward compatibility.
 
 		// Provider: OpenAI.
 		$sanitized['provider_openai_enabled'] = ! empty( $input['provider_openai_enabled'] );

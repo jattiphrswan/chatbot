@@ -107,7 +107,14 @@ class LeadRepository {
 		}
 
 		$insert_id = (int) $this->wpdb->insert_id;
-		return $this->get_by_id( $insert_id );
+		$lead      = $this->get_by_id( $insert_id );
+
+		if ( is_array( $lead ) ) {
+			return $lead;
+		}
+
+		$insert_data['id'] = $insert_id;
+		return $insert_data;
 	}
 
 	/**

@@ -144,27 +144,317 @@ class GeminiClient {
 	 * Sends a minimal prompt ('ping') with maxOutputTokens: 1 to verify credentials
 	 * and model availability with minimal token consumption and no cost surprise.
 	 *
+	/**
+	 * Executes a lightweight connection test to Google Gemini API.
+	 *
 	 * @param string|null $override_model Optional model override to test.
 	 * @return bool|WP_Error True on success, WP_Error on failure.
 	 */
 	public function test_connection( ?string $override_model = null ) {
-		$result = $this->create_interaction(
-			'ping',
-			null,
-			[
-				'model'             => $this->get_model( $override_model ),
-				'generation_config' => [
-					'maxOutputTokens' => 1,
-				],
-				'timeout'           => 15,
-			]
-		);
-
-		if ( is_wp_error( $result ) ) {
-			return $result;
+		$diag = $this->run_connection_diagnostic( $override_model );
+		if ( ! empty( $diag['success'] ) ) {
+			return true;
 		}
 
-		return ! empty( $result['text'] ) || isset( $result['id'] );
+		$code = ! empty( $diag['error_type'] ) ? 'GCA_GEMINI_' . $diag['error_type'] : 'GCA_GEMINI_TEST_FAILED';
+		return new WP_Error( $code, $diag['last_error'] ?? __( 'Connection test failed.', 'gemini-chat-assistant' ) );
+	}
+
+	/**
+	 * Runs a 3-step diagnostic connection test against Google Gemini API.
+	 *
+	 * STEP 1: Can WordPress reach generativelanguage.googleapis.com?
+	 * STEP 2: Can WordPress call GET /v1beta/models with the configured API key?
+	 * STEP 3: Can it make a minimal generation request with the selected model?
+	 *
+	 * @param string|null $override_model Optional model override.
+	 * @return array<string, mixed> Diagnostic report.
+	 */
+	public function run_connection_diagnostic( ?string $override_model = null ): array {
+		$api_key = $this->get_api_key();
+		$source  = SettingsService::get( 'provider_gemini_credential_source', 'dashboard' );
+		$source_label = ( 'server' === $source )
+			? __( 'Server Configuration', 'gemini-chat-assistant' )
+			: __( 'WordPress Dashboard', 'gemini-chat-assistant' );
+
+		$model = $this->get_model( $override_model );
+
+		$report = [
+			'success'             => false,
+			'api_key_configured'  => ! empty( $api_key ),
+			'credential_source'   => $source_label,
+			'api_reachable'       => 'Not Tested',
+			'authentication'      => 'Not Tested',
+			'selected_model'      => $model,
+			'model_available'     => 'Not Tested',
+			'generation_test'     => 'Not Tested',
+			'error_type'          => '',
+			'last_error'          => '',
+		];
+
+		if ( empty( $api_key ) ) {
+			$report['error_type'] = 'NOT_CONFIGURED';
+			$report['last_error'] = ( 'server' === $source )
+				? __( 'Server API key is not configured.', 'gemini-chat-assistant' )
+				: __( 'No API key configured. Enter your Google Gemini API key above and click Save All Settings.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		// STEP 1: Reachability check to Google Gemini base URL.
+		$step1 = wp_remote_get( 'https://generativelanguage.googleapis.com/', [
+			'timeout'   => 15,
+			'sslverify' => true,
+		] );
+
+		if ( is_wp_error( $step1 ) ) {
+			$err_msg    = $step1->get_error_message();
+			$is_timeout = ( false !== stripos( $err_msg, 'timed out' ) || false !== stripos( $err_msg, 'cURL error 28' ) );
+			$report['api_reachable'] = 'No';
+			$report['error_type']    = $is_timeout ? 'TIMEOUT' : 'NETWORK';
+			$report['last_error']    = $is_timeout
+				? __( 'Your server connected too slowly to Google Gemini and the request timed out.', 'gemini-chat-assistant' )
+				: __( 'Your WordPress server could not reach Google Gemini.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		$report['api_reachable'] = 'Yes';
+
+		// STEP 2: Call GET /v1beta/models with configured API key.
+		$models_url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . rawurlencode( $api_key );
+		$step2      = wp_remote_get( $models_url, [
+			'timeout'   => 20,
+			'sslverify' => true,
+			'headers'   => [
+				'x-goog-api-key' => $api_key,
+			],
+		] );
+
+		if ( is_wp_error( $step2 ) ) {
+			$err_msg    = $step2->get_error_message();
+			$is_timeout = ( false !== stripos( $err_msg, 'timed out' ) || false !== stripos( $err_msg, 'cURL error 28' ) );
+			$report['authentication'] = 'Failed';
+			$report['error_type']     = $is_timeout ? 'TIMEOUT' : 'NETWORK';
+			$report['last_error']     = $is_timeout
+				? __( 'Your server connected too slowly to Google Gemini and the request timed out.', 'gemini-chat-assistant' )
+				: __( 'Your WordPress server could not reach Google Gemini.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		$code2 = (int) wp_remote_retrieve_response_code( $step2 );
+		$body2 = wp_remote_retrieve_body( $step2 );
+
+		if ( 401 === $code2 || 403 === $code2 ) {
+			$report['authentication'] = 'Failed';
+			$report['error_type']     = 'AUTH_ERROR';
+			$report['last_error']     = __( 'The Gemini API key was rejected. Please check the key and API access.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		if ( 429 === $code2 ) {
+			$report['authentication'] = 'Passed';
+			$report['error_type']     = 'RATE_LIMITED';
+			$report['last_error']     = __( 'Gemini rate limit or quota has been reached.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		if ( $code2 >= 500 ) {
+			$report['authentication'] = 'Passed';
+			$report['error_type']     = 'SERVER_ERROR';
+			$report['last_error']     = __( 'Google Gemini is temporarily unavailable.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		if ( $code2 < 200 || $code2 >= 300 ) {
+			$report['authentication'] = 'Failed';
+			$report['error_type']     = 'HTTP_ERROR';
+			$report['last_error']     = sprintf( __( 'Google Gemini returned unexpected HTTP status %d.', 'gemini-chat-assistant' ), $code2 );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		$report['authentication'] = 'Passed';
+
+		// Parse models to check model availability & update dynamic cache.
+		$discovered_models = [];
+		$model_found       = false;
+		$json2             = json_decode( $body2, true );
+		if ( is_array( $json2 ) && isset( $json2['models'] ) && is_array( $json2['models'] ) ) {
+			foreach ( $json2['models'] as $m_item ) {
+				$m_id    = str_replace( 'models/', '', (string) ( $m_item['name'] ?? '' ) );
+				$methods = $m_item['supportedGenerationMethods'] ?? [];
+				if ( is_array( $methods ) && in_array( 'generateContent', $methods, true ) ) {
+					$discovered_models[] = [
+						'id'                => $m_id,
+						'name'              => $m_item['displayName'] ?? $m_id,
+						'provider'          => 'gemini',
+						'context_window'    => absint( $m_item['inputTokenLimit'] ?? 1048576 ),
+						'max_output_tokens' => absint( $m_item['outputTokenLimit'] ?? 8192 ),
+						'description'       => (string) ( $m_item['description'] ?? '' ),
+						'recommended'       => ( 'gemini-2.5-flash' === $m_id ),
+					];
+					if ( $m_id === $model ) {
+						$model_found = true;
+					}
+				}
+			}
+			if ( ! empty( $discovered_models ) ) {
+				update_option( 'gca_discovered_models_gemini', $discovered_models, false );
+			}
+		}
+
+		$report['model_available'] = $model_found ? 'Yes' : ( empty( $discovered_models ) ? 'Not Tested' : 'No' );
+
+		// STEP 3: Minimal generation request with selected model.
+		$gen_url = self::API_BASE . '/' . rawurlencode( $model ) . ':generateContent?key=' . rawurlencode( $api_key );
+		$payload = [
+			'contents'         => [
+				[
+					'role'  => 'user',
+					'parts' => [ [ 'text' => 'ping' ] ],
+				],
+			],
+			'generationConfig' => [
+				'maxOutputTokens' => 1,
+			],
+		];
+
+		$step3 = wp_remote_post( $gen_url, [
+			'timeout'   => 20,
+			'sslverify' => true,
+			'headers'   => [
+				'Content-Type'   => 'application/json',
+				'x-goog-api-key' => $api_key,
+			],
+			'body'      => (string) wp_json_encode( $payload ),
+		] );
+
+		if ( is_wp_error( $step3 ) ) {
+			$err_msg    = $step3->get_error_message();
+			$is_timeout = ( false !== stripos( $err_msg, 'timed out' ) || false !== stripos( $err_msg, 'cURL error 28' ) );
+			$report['generation_test'] = 'Failed';
+			$report['error_type']      = $is_timeout ? 'TIMEOUT' : 'NETWORK';
+			$report['last_error']      = $is_timeout
+				? __( 'Your server connected too slowly to Google Gemini and the request timed out.', 'gemini-chat-assistant' )
+				: __( 'Your WordPress server could not reach Google Gemini.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		$code3 = (int) wp_remote_retrieve_response_code( $step3 );
+		$body3 = wp_remote_retrieve_body( $step3 );
+
+		if ( 404 === $code3 ) {
+			$report['generation_test'] = 'Failed';
+			$report['error_type']      = 'MODEL_UNAVAILABLE';
+			$report['last_error']      = __( 'The selected Gemini model is unavailable. Please choose another model.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		if ( 401 === $code3 || 403 === $code3 ) {
+			$report['generation_test'] = 'Failed';
+			$report['error_type']      = 'AUTH_ERROR';
+			$report['last_error']      = __( 'The Gemini API key was rejected. Please check the key and API access.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		if ( 429 === $code3 ) {
+			$report['generation_test'] = 'Failed';
+			$report['error_type']      = 'RATE_LIMITED';
+			$report['last_error']      = __( 'Gemini rate limit or quota has been reached.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		if ( $code3 >= 500 ) {
+			$report['generation_test'] = 'Failed';
+			$report['error_type']      = 'SERVER_ERROR';
+			$report['last_error']      = __( 'Google Gemini is temporarily unavailable.', 'gemini-chat-assistant' );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		if ( $code3 < 200 || $code3 >= 300 ) {
+			$report['generation_test'] = 'Failed';
+			$report['error_type']      = 'HTTP_ERROR';
+			$report['last_error']      = sprintf( __( 'Generation test returned unexpected HTTP status %d.', 'gemini-chat-assistant' ), $code3 );
+			update_option( 'gca_gemini_diagnostics', $report, false );
+			return $report;
+		}
+
+		$report['generation_test'] = 'Passed';
+		$report['success']         = true;
+		$report['last_error']      = __( 'Connection verified successfully.', 'gemini-chat-assistant' );
+		update_option( 'gca_gemini_diagnostics', $report, false );
+
+		return $report;
+	}
+
+	/**
+	 * Dynamically discovers models supporting generateContent from Google API.
+	 *
+	 * @return array<int, array<string, mixed>>|WP_Error
+	 */
+	public function fetch_available_models() {
+		$api_key = $this->get_api_key();
+		if ( empty( $api_key ) ) {
+			return new WP_Error( 'GCA_GEMINI_NOT_CONFIGURED', __( 'API key is not configured.', 'gemini-chat-assistant' ) );
+		}
+
+		$url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . rawurlencode( $api_key );
+		$res = wp_remote_get( $url, [
+			'timeout'   => 15,
+			'sslverify' => true,
+			'headers'   => [
+				'x-goog-api-key' => $api_key,
+			],
+		] );
+
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $res );
+		$body = wp_remote_retrieve_body( $res );
+
+		if ( $code < 200 || $code >= 300 ) {
+			return new WP_Error( 'GCA_GEMINI_API_ERROR', sprintf( __( 'Google API returned HTTP %d', 'gemini-chat-assistant' ), $code ) );
+		}
+
+		$json = json_decode( $body, true );
+		if ( ! is_array( $json ) || ! isset( $json['models'] ) || ! is_array( $json['models'] ) ) {
+			return new WP_Error( 'GCA_GEMINI_INVALID_RESPONSE', __( 'Invalid models response from Google API.', 'gemini-chat-assistant' ) );
+		}
+
+		$discovered = [];
+		foreach ( $json['models'] as $m_item ) {
+			$m_id    = str_replace( 'models/', '', (string) ( $m_item['name'] ?? '' ) );
+			$methods = $m_item['supportedGenerationMethods'] ?? [];
+			if ( is_array( $methods ) && in_array( 'generateContent', $methods, true ) ) {
+				$discovered[] = [
+					'id'                => $m_id,
+					'name'              => $m_item['displayName'] ?? $m_id,
+					'provider'          => 'gemini',
+					'context_window'    => absint( $m_item['inputTokenLimit'] ?? 1048576 ),
+					'max_output_tokens' => absint( $m_item['outputTokenLimit'] ?? 8192 ),
+					'description'       => (string) ( $m_item['description'] ?? '' ),
+					'recommended'       => ( 'gemini-2.5-flash' === $m_id ),
+				];
+			}
+		}
+
+		if ( ! empty( $discovered ) ) {
+			update_option( 'gca_discovered_models_gemini', $discovered, false );
+		}
+
+		return $discovered;
 	}
 
 	/**
@@ -197,7 +487,7 @@ class GeminiClient {
 		$model              = $this->get_model( $options['model'] ?? null );
 		$system_instruction = $this->get_system_instruction( $options['system_instruction'] ?? null );
 
-		$endpoint = self::API_BASE . '/' . rawurlencode( $model ) . ':generateContent';
+		$endpoint = self::API_BASE . '/' . rawurlencode( $model ) . ':generateContent?key=' . rawurlencode( $api_key );
 
 		$contents = [];
 		if ( ! empty( $options['history'] ) && is_array( $options['history'] ) ) {

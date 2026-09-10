@@ -364,7 +364,11 @@
 			if (shouldOpen) {
 				widgetElem.classList.add('gca-widget--open');
 				widgetElem.setAttribute('aria-hidden', 'false');
-				if (launcher) launcher.setAttribute('aria-expanded', 'true');
+				if (launcher) {
+					launcher.setAttribute('aria-expanded', 'true');
+					launcher.classList.add('gca-launcher--hidden');
+					launcher.style.display = 'none';
+				}
 
 				// Clear unread badge on open
 				state.unreadCount = 0;
@@ -383,6 +387,8 @@
 				widgetElem.setAttribute('aria-hidden', 'true');
 				if (launcher) {
 					launcher.setAttribute('aria-expanded', 'false');
+					launcher.classList.remove('gca-launcher--hidden');
+					launcher.style.display = '';
 					launcher.focus();
 				}
 				hideResetConfirmation();
