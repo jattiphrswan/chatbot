@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * WooCommerce Get Product Action.
  *

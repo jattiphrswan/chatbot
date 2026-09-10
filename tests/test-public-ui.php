@@ -7,6 +7,8 @@
 
 namespace SkyFish\GeminiChat\Tests;
 
+require_once __DIR__ . '/bootstrap.php';
+
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
 }
@@ -189,6 +191,12 @@ class PublicUITest {
 		$this->assert( false === strpos( $css_content, "\np {" ), 'No global p {} selector in chat.css' );
 		$this->assert( false !== strpos( $css_content, '.gca-widget' ), '.gca-widget class present' );
 		$this->assert( false !== strpos( $css_content, '.gca-launcher' ), '.gca-launcher class present' );
+
+		// UI Polish & Overflow Verification
+		$this->assert( false !== strpos( $css_content, '.gca-header__titles' ), '.gca-header__titles class present in CSS' );
+		$this->assert( false !== strpos( $css_content, 'overflow-x: hidden' ), 'overflow-x hidden applied to prevent horizontal scroll' );
+		$this->assert( false !== strpos( $css_content, '.gca-start-card__desc' ), '.gca-start-card__desc styled for multiline containment' );
+		$this->assert( false !== strpos( $css_content, '.gca-nav__btn--active::before' ), '.gca-nav active indicator styled' );
 	}
 
 	private function test_js_security_and_dom_safety(): void {

@@ -14,9 +14,9 @@ use SkyFish\GeminiChat\Admin\ProfileService;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\ChatService;
 
-// Prevent direct access.
+// Bootstrap if running standalone.
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	require_once __DIR__ . '/bootstrap.php';
 }
 
 /**
@@ -292,4 +292,21 @@ class TestAIProfiles {
 
 		return is_object( $chat_service );
 	}
+}
+
+// Auto-run if executed directly via CLI or test runner.
+if ( php_sapi_name() === 'cli' || defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
+	$results = TestAIProfiles::run_all();
+	$failed  = 0;
+	echo "Starting Node N15 AI Profiles Test Suite...\n\n";
+	foreach ( $results as $name => $passed ) {
+		if ( $passed ) {
+			echo "[PASS] {$name}\n";
+		} else {
+			echo "[FAIL] {$name}\n";
+			$failed++;
+		}
+	}
+	echo "\nResults: " . ( count( $results ) - $failed ) . " Passed, {$failed} Failed\n";
+	exit( $failed === 0 ? 0 : 1 );
 }

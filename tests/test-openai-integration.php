@@ -23,9 +23,9 @@ use SkyFish\GeminiChat\Providers\ClaudeProvider;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\ChatService;
 
-// Prevent direct access.
+// Bootstrap if running standalone.
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	require_once __DIR__ . '/bootstrap.php';
 }
 
 /**
@@ -35,27 +35,52 @@ class MockOpenAIClient extends OpenAIClient {
 
 	public array $last_url = [];
 	public array $last_args = [];
+	public array $last_payload = [];
+	public string $last_api_key = '';
+	public array $last_options = [];
 	public $next_response = null;
 
 	public function set_next_response( $response ): void {
 		$this->next_response = $response;
 	}
 
-	protected function execute_http_request( string $url, array $args ) {
-		$this->last_url  = [ $url ];
-		$this->last_args = $args;
+	protected function execute_http_request( array $payload, string $api_key, array $options = [] ): array {
+		$this->last_payload = $payload;
+		$this->last_api_key = $api_key;
+		$this->last_options = $options;
+		$this->last_url     = [ self::RESPONSES_ENDPOINT ];
+		$this->last_args    = [
+			'method'  => 'POST',
+			'headers' => [
+				'Authorization' => 'Bearer ' . $api_key,
+				'Content-Type'  => 'application/json',
+				'Accept'        => 'application/json',
+			],
+			'body'    => json_encode( $payload ),
+		];
 
 		if ( null !== $this->next_response ) {
+			if ( is_wp_error( $this->next_response ) ) {
+				$msg = $this->next_response->get_error_message();
+				throw new ProviderException( 'openai', 'connection_failed', $msg, 0 );
+			}
+			if ( is_array( $this->next_response ) && isset( $this->next_response['response']['code'] ) ) {
+				return [
+					'status_code' => (int) $this->next_response['response']['code'],
+					'request_id'  => $this->next_response['headers']['x-request-id'] ?? 'req_mock_test_123',
+					'body'        => $this->next_response['body'] ?? '',
+				];
+			}
 			return $this->next_response;
 		}
 
 		// Default successful mock response.
 		return [
-			'response' => [ 'code' => 200, 'message' => 'OK' ],
-			'headers'  => [ 'x-request-id' => 'req_mock_test_123' ],
-			'body'     => json_encode( [
+			'status_code' => 200,
+			'request_id'  => 'req_mock_test_123',
+			'body'        => json_encode( [
 				'id'     => 'resp_mock_test_123',
-				'model'  => 'gpt-4o-mini',
+				'model'  => $payload['model'] ?? 'gpt-4o-mini',
 				'output' => [
 					[
 						'type'    => 'message',
@@ -486,7 +511,7 @@ class TestOpenAIIntegration {
 }
 
 // Auto-run if executed directly via CLI or test runner.
-if ( defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
+if ( php_sapi_name() === 'cli' || defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
 	$suite = new TestOpenAIIntegration();
 	$suite->run();
 }

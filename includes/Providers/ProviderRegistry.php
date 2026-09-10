@@ -56,19 +56,13 @@ class ProviderRegistry {
 	 * Retrieves a registered provider by its unique identifier.
 	 *
 	 * @param string $provider_id Machine-readable provider ID.
-	 * @return ProviderInterface
-	 * @throws ProviderException If the requested provider is not found.
+	 * @return ProviderInterface|null Provider instance or null if not found.
 	 */
-	public function get( string $provider_id ): ProviderInterface {
+	public function get( string $provider_id ): ?ProviderInterface {
 		$id = trim( strtolower( $provider_id ) );
 
 		if ( ! $this->has( $id ) ) {
-			throw new ProviderException(
-				$id,
-				ProviderException::TYPE_PROVIDER_UNAVAILABLE,
-				sprintf( 'AI provider "%s" is not available or registered.', esc_html( $id ) ),
-				404
-			);
+			return null;
 		}
 
 		return $this->providers[ $id ];

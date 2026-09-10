@@ -26,20 +26,28 @@ class KnowledgeRepository {
 	public const TABLE_SOURCES = 'gca_knowledge_sources';
 	public const TABLE_CHUNKS  = 'gca_knowledge_chunks';
 
-	private wpdb $wpdb;
+	/**
+	 * @var object|null
+	 */
+	private $wpdb;
 	private string $sources_table;
 	private string $chunks_table;
 
 	/**
 	 * KnowledgeRepository constructor.
 	 *
-	 * @param wpdb|null $wpdb Optional WordPress database abstraction instance.
+	 * @param object|null $wpdb Optional WordPress database abstraction instance.
 	 */
-	public function __construct( ?wpdb $wpdb = null ) {
-		global $wpdb;
-		$this->wpdb          = $wpdb;
-		$this->sources_table = $this->wpdb->prefix . self::TABLE_SOURCES;
-		$this->chunks_table  = $this->wpdb->prefix . self::TABLE_CHUNKS;
+	public function __construct( $wpdb = null ) {
+		if ( null === $wpdb ) {
+			global $wpdb;
+			$this->wpdb = $wpdb;
+		} else {
+			$this->wpdb = $wpdb;
+		}
+		$prefix              = ( $this->wpdb && isset( $this->wpdb->prefix ) ) ? $this->wpdb->prefix : 'wp_';
+		$this->sources_table = $prefix . self::TABLE_SOURCES;
+		$this->chunks_table  = $prefix . self::TABLE_CHUNKS;
 	}
 
 	/**

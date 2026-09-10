@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Normalized Action Result Object.
  *

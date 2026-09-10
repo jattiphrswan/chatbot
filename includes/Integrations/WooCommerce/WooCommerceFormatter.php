@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * WooCommerce Product Normalization Formatter.
  *

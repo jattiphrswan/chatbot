@@ -132,7 +132,7 @@ $has_contact_channels = $contact_channels_enabled && ( $contact_phone_enabled ||
 					</svg>
 				<?php endif; ?>
 			</div>
-			<div>
+			<div class="gca-header__titles">
 				<h3 class="gca-header__title"><?php echo esc_html( $assistant_name ); ?></h3>
 				<span class="gca-header__status">
 					<span class="gca-header__status-dot" aria-hidden="true"></span>

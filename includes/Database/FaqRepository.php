@@ -25,18 +25,25 @@ class FaqRepository {
 
 	public const TABLE_NAME = 'gca_faqs';
 
-	private wpdb $wpdb;
+	/**
+	 * @var object|null
+	 */
+	private $wpdb;
 	private string $table_name;
 
 	/**
 	 * FaqRepository constructor.
 	 *
-	 * @param wpdb|null $wpdb Optional WordPress database abstraction instance.
+	 * @param object|null $wpdb Optional WordPress database abstraction instance.
 	 */
-	public function __construct( ?wpdb $wpdb = null ) {
-		global $wpdb;
-		$this->wpdb       = $wpdb;
-		$this->table_name = $this->wpdb->prefix . self::TABLE_NAME;
+	public function __construct( $wpdb = null ) {
+		if ( null === $wpdb ) {
+			global $wpdb;
+			$this->wpdb = $wpdb;
+		} else {
+			$this->wpdb = $wpdb;
+		}
+		$this->table_name = ( $this->wpdb && isset( $this->wpdb->prefix ) ) ? $this->wpdb->prefix . self::TABLE_NAME : 'wp_' . self::TABLE_NAME;
 	}
 
 	/**

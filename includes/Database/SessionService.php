@@ -113,13 +113,15 @@ class SessionService {
 		}
 
 		// Create new session token and hashed DB conversation.
-		$new_token    = self::generate_session_token();
-		$session_hash = self::hash_session_token( $new_token );
+		$token_to_use = ( ! empty( $session_token ) && self::is_valid_session_token( $session_token ) )
+			? $session_token
+			: self::generate_session_token();
+		$session_hash = self::hash_session_token( $token_to_use );
 		$public_id    = ConversationRepository::generate_public_id();
 		$conv_id      = $this->conversation_repo->create( $session_hash, $user_id, $title, null, $public_id );
 
 		return [
-			'session_token'   => $new_token,
+			'session_token'   => $token_to_use,
 			'conversation_id' => $conv_id,
 			'public_id'       => $public_id,
 			'is_new'          => true,

@@ -19,6 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MessageRepository {
 
+	public const TABLE_NAME = 'gca_messages';
 	public const ALLOWED_ROLES = [ 'user', 'assistant', 'system' ];
 
 	/**
@@ -28,7 +29,7 @@ class MessageRepository {
 	 */
 	public static function get_table_name(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'gca_messages';
+		return ( $wpdb && isset( $wpdb->prefix ) ) ? $wpdb->prefix . self::TABLE_NAME : 'wp_' . self::TABLE_NAME;
 	}
 
 	/**

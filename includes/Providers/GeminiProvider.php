@@ -94,11 +94,29 @@ class GeminiProvider extends AbstractProvider {
 	 * Tests connection to Google Gemini API.
 	 *
 	 * @return bool
-	 * @throws ProviderException If API key is unconfigured.
+	 * @throws ProviderException If API key is unconfigured or request fails.
 	 */
 	public function test_connection(): bool {
 		$this->validate_configuration();
+
+		$res = $this->gemini_client->test_connection();
+		if ( is_wp_error( $res ) ) {
+			throw $this->map_gemini_error( $res );
+		}
+
 		return true;
+	}
+
+	/**
+	 * Checks if Gemini is configured via GeminiClient or SettingsService.
+	 *
+	 * @return bool
+	 */
+	public function is_configured(): bool {
+		if ( isset( $this->gemini_client ) && $this->gemini_client->is_configured() ) {
+			return true;
+		}
+		return parent::is_configured();
 	}
 
 	public function get_client(): GeminiClient {

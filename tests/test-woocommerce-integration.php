@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Test Suite: Node N17.2 WooCommerce Read Integration.
  *
@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
+use SkyFish\GeminiChat\Integrations\ActionInterface;
 use SkyFish\GeminiChat\Integrations\ActionResult;
 use SkyFish\GeminiChat\Integrations\ActionValidator;
 use SkyFish\GeminiChat\Integrations\ActionExecutor;
@@ -211,7 +212,7 @@ class WooCommerceIntegrationTest {
 			$this->assert( ! $search_action->can_execute(), '5.8 can_execute() returns false when WooCommerce is inactive' );
 			$res = $search_action->execute( [ 'query' => 'test' ] );
 			$this->assert( ! $res->is_success(), '5.9 execute() returns failure ActionResult when WooCommerce is absent' );
-			$this->assert( 'WOOCOMMERCE_UNAVAILABLE' === $res->get_error()['code'], '5.10 Error code is WOOCOMMERCE_UNAVAILABLE' );
+			$this->assert( 'woocommerce_unavailable' === strtolower( (string) $res->get_error()['code'] ), '5.10 Error code is WOOCOMMERCE_UNAVAILABLE' );
 		}
 	}
 

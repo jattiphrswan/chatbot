@@ -20,6 +20,7 @@ New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
 $FilesToCopy = @(
     "gemini-chat-assistant.php",
     "uninstall.php",
+    "readme.txt",
     "README.md",
     "LICENSE"
 )
@@ -53,8 +54,20 @@ if (Test-Path (Join-Path $RootPath "languages")) {
 # Remove any accidental files
 Get-ChildItem -Path $StageDir -Include "*.DS_Store", "Thumbs.db" -Recurse -Force | Remove-Item -Force
 
-Write-Host ">>> Creating installable WordPress ZIP archive..."
-Compress-Archive -Path $StageDir -DestinationPath $ZipFile -Force
+Write-Host ">>> Creating installable WordPress ZIP archive with POSIX forward slashes..."
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+if (Test-Path $ZipFile) {
+    Remove-Item $ZipFile -Force
+}
+
+$zip = [System.IO.Compression.ZipFile]::Open($ZipFile, [System.IO.Compression.ZipArchiveMode]::Create)
+Get-ChildItem -Path $StageDir -Recurse -File | ForEach-Object {
+    $entryName = $_.FullName.Substring($DistDir.Length + 1).Replace('\', '/')
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+}
+$zip.Dispose()
 
 $ZipItem = Get-Item $ZipFile
 $SizeKB = [math]::Round($ZipItem.Length / 1KB, 2)

@@ -174,8 +174,12 @@ KEY idx_status (status),
 KEY idx_created_at (created_at)
 ) {$charset_collate};";
 
-		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-		dbDelta( $sql );
+		if ( ! function_exists( 'dbDelta' ) && file_exists( ABSPATH . 'wp-admin/includes/upgrade.php' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		}
+		if ( function_exists( 'dbDelta' ) ) {
+			dbDelta( $sql );
+		}
 
 		update_option( self::VERSION_OPTION, self::SCHEMA_VERSION );
 

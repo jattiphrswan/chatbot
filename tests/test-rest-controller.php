@@ -5,7 +5,7 @@
  * @package SkyFish\GeminiChat\Tests
  */
 
-namespace SkyFish\GeminiChat\Tests;
+require_once __DIR__ . '/bootstrap.php';
 
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
@@ -93,8 +93,8 @@ if ( ! class_exists( 'WP_REST_Server' ) ) {
 
 if ( ! class_exists( 'WP_REST_Controller' ) ) {
 	class WP_REST_Controller {
-		protected string $namespace;
-		protected string $rest_base;
+		protected $namespace;
+		protected $rest_base;
 	}
 }
 
@@ -254,7 +254,6 @@ use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\ChatService;
 use SkyFish\GeminiChat\GeminiClient;
 use SkyFish\GeminiChat\RestController;
-use WP_REST_Request;
 
 class RestControllerTest {
 
@@ -360,7 +359,7 @@ class RestControllerTest {
 
 		// Mock chat service
 		$chat_service = new class extends ChatService {
-			public function handle_chat( string $message, string $session_id, array $context = [], ?string $request_id = null ) {
+			public function handle_chat( string $message, string $session_id, array $context = [], ?string $request_id = null, ?string $requested_provider = null, ?string $requested_model = null ) {
 				return [
 					'message'         => 'Hello there! I am the Gemini assistant.',
 					'conversation_id' => '550e8400-e29b-41d4-a716-446655440000',

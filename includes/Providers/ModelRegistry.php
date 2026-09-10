@@ -27,8 +27,8 @@ class ModelRegistry {
 	public const MODELS = [
 		'gemini' => [
 			[
-				'id'                => 'gemini-3.8-flash',
-				'name'              => 'Gemini 3.8 Flash',
+				'id'                => 'gemini-2.5-flash',
+				'name'              => 'Gemini 2.5 Flash',
 				'provider'          => 'gemini',
 				'context_window'    => 1048576,
 				'max_output_tokens' => 8192,
@@ -36,21 +36,12 @@ class ModelRegistry {
 				'recommended'       => true,
 			],
 			[
-				'id'                => 'gemini-3.7-flash',
-				'name'              => 'Gemini 3.7 Flash',
+				'id'                => 'gemini-2.0-flash',
+				'name'              => 'Gemini 2.0 Flash',
 				'provider'          => 'gemini',
 				'context_window'    => 1048576,
 				'max_output_tokens' => 8192,
-				'description'       => 'Previous generation versatile fast model.',
-				'recommended'       => false,
-			],
-			[
-				'id'                => 'gemini-2.5-flash',
-				'name'              => 'Gemini 2.5 Flash',
-				'provider'          => 'gemini',
-				'context_window'    => 1048576,
-				'max_output_tokens' => 8192,
-				'description'       => 'Stable production model for conversational tasks.',
+				'description'       => 'Next-generation fast model optimized for chat and agentic workflows.',
 				'recommended'       => false,
 			],
 			[
@@ -60,6 +51,15 @@ class ModelRegistry {
 				'context_window'    => 1048576,
 				'max_output_tokens' => 8192,
 				'description'       => 'Advanced reasoning and complex problem-solving model.',
+				'recommended'       => false,
+			],
+			[
+				'id'                => 'gemini-3.8-flash',
+				'name'              => 'Gemini 3.8 Flash (Legacy)',
+				'provider'          => 'gemini',
+				'context_window'    => 1048576,
+				'max_output_tokens' => 8192,
+				'description'       => 'Legacy model identifier retained for backwards compatibility.',
 				'recommended'       => false,
 			],
 		],

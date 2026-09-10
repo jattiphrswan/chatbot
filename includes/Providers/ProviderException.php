@@ -286,7 +286,7 @@ class ProviderException extends \Exception {
 	 */
 	public static function strip_credentials( string $text ): string {
 		$patterns = [
-			'/AIza[a-zA-Z0-9_\-]{20,}/'    => '[REDACTED_API_KEY]',
+			'/AIza[a-zA-Z0-9_\-]{10,}/'    => '[REDACTED_API_KEY]',
 			'/sk-ant-[a-zA-Z0-9_\-]{10,}/' => '[REDACTED_API_KEY]',
 			'/sk-[a-zA-Z0-9_\-]{10,}/'     => '[REDACTED_API_KEY]',
 			'/Bearer\s+[^\s,]+/i'          => 'Bearer [REDACTED]',

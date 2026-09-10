@@ -5,7 +5,7 @@
  * @package SkyFish\GeminiChat\Tests
  */
 
-namespace SkyFish\GeminiChat\Tests;
+
 
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
@@ -22,6 +22,12 @@ if ( ! defined( 'GCA_PLUGIN_URL' ) ) {
 if ( ! function_exists( 'sanitize_text_field' ) ) {
 	function sanitize_text_field( $str ) {
 		return trim( strip_tags( (string) $str ) );
+	}
+}
+
+if ( ! function_exists( 'sanitize_email' ) ) {
+	function sanitize_email( $email ) {
+		return filter_var( $email, FILTER_SANITIZE_EMAIL );
 	}
 }
 
@@ -160,6 +166,7 @@ if ( ! function_exists( 'update_option' ) ) {
 }
 
 require_once __DIR__ . '/../includes/Admin/SettingsService.php';
+require_once __DIR__ . '/../includes/Admin/AppearanceService.php';
 require_once __DIR__ . '/../includes/class-assets.php';
 require_once __DIR__ . '/../includes/class-shortcode.php';
 

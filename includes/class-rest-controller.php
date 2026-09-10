@@ -31,6 +31,7 @@ class RestController extends WP_REST_Controller {
 	 */
 	public const REST_NAMESPACE = 'gca/v1';
 
+	protected $namespace = self::REST_NAMESPACE;
 	private SettingsService $settings_service;
 	private ChatService $chat_service;
 	private GeminiClient $gemini_client;

@@ -58,6 +58,10 @@ class ProviderResponse {
 		return $this->text;
 	}
 
+	public function get_content(): string {
+		return $this->text;
+	}
+
 	public function get_provider_id(): string {
 		return $this->provider_id;
 	}
@@ -117,5 +121,40 @@ class ProviderResponse {
 			'tokens'        => $this->get_tokens(),
 			'metadata'      => $this->metadata,
 		];
+	}
+
+	/**
+	 * Backward compatibility property accessor.
+	 *
+	 * @param string $name Property name.
+	 * @return mixed
+	 */
+	public function __get( string $name ) {
+		if ( 'content' === $name ) {
+			return $this->text;
+		}
+		if ( 'provider' === $name ) {
+			return $this->provider_id;
+		}
+		if ( 'model' === $name ) {
+			return $this->model_id;
+		}
+		if ( property_exists( $this, $name ) ) {
+			return $this->$name;
+		}
+		return null;
+	}
+
+	/**
+	 * Backward compatibility property check.
+	 *
+	 * @param string $name Property name.
+	 * @return bool
+	 */
+	public function __isset( string $name ): bool {
+		if ( 'content' === $name || 'provider' === $name || 'model' === $name ) {
+			return true;
+		}
+		return property_exists( $this, $name ) && null !== $this->$name;
 	}
 }

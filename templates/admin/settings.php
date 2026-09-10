@@ -28,9 +28,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="gca-status-info">
 			<h3><?php esc_html_e( 'Google Gemini API Status', 'gemini-chat-assistant' ); ?></h3>
 			<?php if ( $is_configured ) : ?>
-				<p><?php esc_html_e( 'API key detected and loaded securely from server-side environment / configuration.', 'gemini-chat-assistant' ); ?></p>
+				<p><?php esc_html_e( 'API key detected and loaded securely from server-side configuration / encrypted store.', 'gemini-chat-assistant' ); ?></p>
 			<?php else : ?>
-				<p><?php esc_html_e( 'No API key detected. Please define GEMINI_API_KEY environment variable or GCA_GEMINI_API_KEY constant in wp-config.php.', 'gemini-chat-assistant' ); ?></p>
+				<p><?php esc_html_e( 'No API key detected. You can easily enter your Gemini API key under the "AI Providers" tab below, or define GCA_GEMINI_API_KEY in wp-config.php.', 'gemini-chat-assistant' ); ?></p>
 			<?php endif; ?>
 		</div>
 		<div class="gca-status-badge <?php echo $is_configured ? 'is-configured' : ''; ?>">
@@ -41,10 +41,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<?php if ( ! $is_configured ) : ?>
 		<div class="gca-instructions-box">
-			<strong><?php esc_html_e( 'How to configure your Gemini API Key securely:', 'gemini-chat-assistant' ); ?></strong>
-			<p><?php esc_html_e( 'Add the following definition to your wp-config.php file (above the "stop editing" line):', 'gemini-chat-assistant' ); ?></p>
-			<code>define( 'GCA_GEMINI_API_KEY', 'your-gemini-api-key-here' );</code>
-			<p><?php esc_html_e( 'Or export the environment variable on your web server:', 'gemini-chat-assistant' ); ?> <code>GEMINI_API_KEY="your-gemini-api-key-here"</code></p>
+			<strong><?php esc_html_e( 'How to configure your Gemini API Key:', 'gemini-chat-assistant' ); ?></strong>
+			<p><?php esc_html_e( '1. Recommended: Go to the "AI Providers" tab below, enter your Gemini API key in the Google Gemini card, and click "Save All Settings".', 'gemini-chat-assistant' ); ?></p>
+			<p><?php esc_html_e( '2. Optional: Define GCA_GEMINI_API_KEY in wp-config.php, or export the GEMINI_API_KEY environment variable on your web server.', 'gemini-chat-assistant' ); ?></p>
 		</div>
 	<?php endif; ?>
 
@@ -62,6 +61,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="notice notice-error is-dismissible gca-admin-notice">
 			<p><?php esc_html_e( 'Test email could not be sent. WordPress wp_mail() returned false.', 'gemini-chat-assistant' ); ?></p>
 		</div>
+	<?php endif; ?>
+
+	<?php if ( ! empty( $_GET['gemini_test_status'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+		<?php if ( 'connected' === $_GET['gemini_test_status'] ) : ?>
+			<div class="notice notice-success is-dismissible gca-admin-notice">
+				<p><strong><?php esc_html_e( 'Google Gemini Connection Test:', 'gemini-chat-assistant' ); ?></strong> <?php esc_html_e( 'Connected successfully to Google Gemini API. API key and model verified.', 'gemini-chat-assistant' ); ?></p>
+			</div>
+		<?php else : ?>
+			<?php
+			$err_type = ! empty( $_GET['gemini_test_error'] ) ? sanitize_key( (string) $_GET['gemini_test_error'] ) : '';
+			$err_msg  = __( 'Unable to connect to Google Gemini API. Please check your API key and configuration.', 'gemini-chat-assistant' );
+			if ( 'auth_failed' === $err_type || 'authentication_error' === $err_type ) {
+				$err_msg = __( 'Authentication failed. Please verify your Google Gemini API key.', 'gemini-chat-assistant' );
+			} elseif ( 'model_unavailable' === $err_type ) {
+				$err_msg = __( 'Configured Gemini model is unavailable for your account or region.', 'gemini-chat-assistant' );
+			} elseif ( 'rate_limited' === $err_type || 'rate_limit' === $err_type ) {
+				$err_msg = __( 'Gemini rate limit or quota reached. Please check your Google AI Studio quota.', 'gemini-chat-assistant' );
+			} elseif ( 'timeout' === $err_type ) {
+				$err_msg = __( 'Connection to Google Gemini timed out.', 'gemini-chat-assistant' );
+			} elseif ( 'not_configured' === $err_type ) {
+				$err_msg = __( 'Google Gemini provider is disabled or no API key is configured.', 'gemini-chat-assistant' );
+			}
+			?>
+			<div class="notice notice-error is-dismissible gca-admin-notice">
+				<p><strong><?php esc_html_e( 'Google Gemini Connection Test Failed:', 'gemini-chat-assistant' ); ?></strong> <?php echo esc_html( $err_msg ); ?></p>
+			</div>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<?php if ( ! empty( $_GET['openai_test_status'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
@@ -179,6 +205,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 			$gemini_configured = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_configured( 'gemini' );
 			$gemini_source     = \SkyFish\GeminiChat\Admin\SettingsService::get_credential_source( 'gemini' );
 			$gemini_model      = \SkyFish\GeminiChat\Admin\SettingsService::get_provider_model( 'gemini' );
+			$gemini_info       = \SkyFish\GeminiChat\Admin\SettingsService::get_connection_status_info( 'gemini' );
+			$gemini_masked_key = \SkyFish\GeminiChat\Admin\SettingsService::get_masked_provider_api_key( 'gemini' );
 
 			$openai_enabled    = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_enabled( 'openai' );
 			$openai_configured = \SkyFish\GeminiChat\Admin\SettingsService::is_provider_configured( 'openai' );
@@ -238,8 +266,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div class="gca-section-card" style="margin-top: 16px;">
 				<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f1; padding-bottom: 10px; margin-bottom: 14px;">
 					<h3 style="margin: 0;"><?php esc_html_e( 'Google Gemini', 'gemini-chat-assistant' ); ?></h3>
-					<span class="gca-admin-pill <?php echo $gemini_configured ? 'gca-admin-pill--success' : 'gca-admin-pill--warning'; ?>">
-						<?php echo $gemini_configured ? esc_html__( 'Configured', 'gemini-chat-assistant' ) : esc_html__( 'Not Configured', 'gemini-chat-assistant' ); ?>
+					<?php
+					$pill_class = 'gca-admin-pill--warning';
+					$pill_label = __( 'Not Configured', 'gemini-chat-assistant' );
+					if ( 'verified' === $gemini_info['status'] ) {
+						$pill_class = 'gca-admin-pill--success';
+						$pill_label = __( 'Connection Verified', 'gemini-chat-assistant' );
+					} elseif ( 'failed' === $gemini_info['status'] ) {
+						$pill_class = 'gca-admin-pill--danger';
+						$pill_label = __( 'Connection Failed', 'gemini-chat-assistant' );
+					} elseif ( $gemini_configured ) {
+						$pill_class = 'gca-admin-pill--info';
+						$pill_label = __( 'Configured', 'gemini-chat-assistant' );
+					}
+					?>
+					<span class="gca-admin-pill <?php echo esc_attr( $pill_class ); ?>">
+						<?php echo esc_html( $pill_label ); ?>
 					</span>
 				</div>
 				<div class="gca-form-grid">
@@ -261,28 +303,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 					</div>
 					<div class="gca-field-row">
 						<label for="gca_api_key_gemini"><?php esc_html_e( 'API Key', 'gemini-chat-assistant' ); ?></label>
-						<input type="password" id="gca_api_key_gemini" name="gca_settings[api_key_gemini]" value="" autocomplete="new-password" class="regular-text" placeholder="<?php echo $gemini_configured ? esc_attr__( 'API key configured. Enter new key to update...', 'gemini-chat-assistant' ) : esc_attr__( 'Enter Gemini API key...', 'gemini-chat-assistant' ); ?>" />
-						<span class="description">
+						<div style="display: flex; gap: 8px; align-items: center; max-width: 550px;">
+							<input type="password" id="gca_api_key_gemini" name="gca_settings[api_key_gemini]" value="" autocomplete="new-password" class="regular-text gca-password-input" style="flex: 1;" placeholder="<?php echo ! empty( $gemini_masked_key ) ? esc_attr( $gemini_masked_key ) : esc_attr__( 'Enter Gemini API key (AIza...)', 'gemini-chat-assistant' ); ?>" />
+							<button type="button" class="button button-secondary gca-toggle-visibility-btn" data-target="gca_api_key_gemini" title="<?php esc_attr_e( 'Show/Hide typed key', 'gemini-chat-assistant' ); ?>">
+								<span class="dashicons dashicons-visibility"></span>
+							</button>
+						</div>
+						<span class="description" style="display: block; margin-top: 6px;">
 							<?php
 							if ( 'environment' === $gemini_source ) {
-								esc_html_e( 'Credentials loaded securely from GEMINI_API_KEY environment variable.', 'gemini-chat-assistant' );
+								esc_html_e( 'Credentials loaded securely from GEMINI_API_KEY environment variable (overrides database setting).', 'gemini-chat-assistant' );
 							} elseif ( 'constant' === $gemini_source ) {
-								esc_html_e( 'Credentials loaded securely from GCA_GEMINI_API_KEY constant in wp-config.php.', 'gemini-chat-assistant' );
+								esc_html_e( 'Credentials loaded securely from GCA_GEMINI_API_KEY constant in wp-config.php (overrides database setting).', 'gemini-chat-assistant' );
 							} elseif ( 'database' === $gemini_source ) {
 								esc_html_e( 'Credentials securely stored in database (encrypted AES-256).', 'gemini-chat-assistant' );
 							} else {
-								esc_html_e( 'No API key configured. API keys are never echoed back in HTML.', 'gemini-chat-assistant' );
+								esc_html_e( 'No API key configured. Enter your Google Gemini API key above and click Save All Settings.', 'gemini-chat-assistant' );
 							}
 							?>
 						</span>
-						<?php if ( 'database' === $gemini_source ) : ?>
-							<div style="margin-top: 8px;">
+						<p class="description" style="margin-top: 4px; color: #646970;">
+							<em><?php esc_html_e( 'Your API key is stored securely on your WordPress site and is never sent to website visitors.', 'gemini-chat-assistant' ); ?></em>
+						</p>
+						<div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+							<?php if ( $gemini_configured ) : ?>
+								<button type="submit" form="gca-test-gemini-form" class="button button-secondary">
+									<span class="dashicons dashicons-update" style="vertical-align: middle; margin-right: 2px;"></span>
+									<?php esc_html_e( 'Test Connection', 'gemini-chat-assistant' ); ?>
+								</button>
+							<?php endif; ?>
+							<?php if ( 'database' === $gemini_source ) : ?>
 								<button type="submit" form="gca-remove-key-form-gemini" class="button button-secondary button-small" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to remove the stored Gemini API key from database?', 'gemini-chat-assistant' ) ); ?>');">
 									<span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 2px;"></span>
 									<?php esc_html_e( 'Remove Stored API Key', 'gemini-chat-assistant' ); ?>
 								</button>
-							</div>
-						<?php endif; ?>
+							<?php endif; ?>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -753,6 +809,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</form>
 		<?php endif; ?>
 	<?php endforeach; ?>
+
+	<form id="gca-test-gemini-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display: none;">
+		<input type="hidden" name="action" value="gca_test_gemini_connection" />
+		<?php wp_nonce_field( 'gca_test_gemini_connection' ); ?>
+	</form>
 
 	<form id="gca-test-openai-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display: none;">
 		<input type="hidden" name="action" value="gca_test_openai_connection" />

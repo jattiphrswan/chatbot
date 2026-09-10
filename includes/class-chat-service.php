@@ -524,39 +524,45 @@ class ChatService {
 
 		switch ( $code ) {
 			case 'GCA_GEMINI_NOT_CONFIGURED':
-			case 'GCA_GEMINI_AUTH_ERROR':
-				$public_code    = 'AI_AUTH_ERROR';
-				$public_message = __( 'AI service authentication failed or is unconfigured.', 'gemini-chat-assistant' );
+				$public_code    = 'GEMINI_NOT_CONFIGURED';
+				$public_message = __( 'Chat is not configured yet.', 'gemini-chat-assistant' );
 				$status         = 500;
 				break;
 
-			case 'GCA_GEMINI_QUOTA_ERROR':
-				$public_code    = 'AI_QUOTA_ERROR';
-				$public_message = __( 'AI service quota exceeded. Please try again later.', 'gemini-chat-assistant' );
-				$status         = 429;
+			case 'GCA_GEMINI_AUTH_ERROR':
+				$public_code    = 'GEMINI_AUTH_FAILED';
+				$public_message = __( 'Assistant configuration error.', 'gemini-chat-assistant' );
+				$status         = 500;
 				break;
 
+			case 'GCA_GEMINI_MODEL_UNAVAILABLE':
+				$public_code    = 'GEMINI_MODEL_UNAVAILABLE';
+				$public_message = __( 'Assistant model is currently unavailable.', 'gemini-chat-assistant' );
+				$status         = 503;
+				break;
+
+			case 'GCA_GEMINI_QUOTA_ERROR':
 			case 'GCA_GEMINI_RATE_LIMITED':
-				$public_code    = 'AI_RATE_LIMITED';
-				$public_message = __( 'Too many requests. Please wait a moment before sending another message.', 'gemini-chat-assistant' );
+				$public_code    = 'RATE_LIMITED';
+				$public_message = __( 'Too many messages. Please try again shortly.', 'gemini-chat-assistant' );
 				$status         = 429;
 				break;
 
 			case 'GCA_GEMINI_TIMEOUT':
-				$public_code    = 'AI_TIMEOUT';
-				$public_message = __( 'The AI service timed out responding to your request.', 'gemini-chat-assistant' );
+				$public_code    = 'GEMINI_TIMEOUT';
+				$public_message = __( 'The assistant took too long to respond. Please try again.', 'gemini-chat-assistant' );
 				$status         = 504;
 				break;
 
 			case 'GCA_GEMINI_UNAVAILABLE':
-				$public_code    = 'AI_UNAVAILABLE';
-				$public_message = __( 'The AI service is temporarily unavailable. Please try again shortly.', 'gemini-chat-assistant' );
+				$public_code    = 'GEMINI_UNAVAILABLE';
+				$public_message = __( 'The assistant is temporarily unavailable. Please try again shortly.', 'gemini-chat-assistant' );
 				$status         = 503;
 				break;
 
 			case 'GCA_GEMINI_EMPTY_RESPONSE':
 			case 'GCA_GEMINI_INVALID_RESPONSE':
-				$public_code    = 'AI_INVALID_RESPONSE';
+				$public_code    = 'INTERNAL_ERROR';
 				$public_message = __( 'Received an invalid or empty response from the AI service.', 'gemini-chat-assistant' );
 				$status         = 502;
 				break;
@@ -591,38 +597,48 @@ class ChatService {
 		$message    = $e->get_safe_message();
 
 		switch ( $error_type ) {
-			case Providers\ProviderException::TYPE_AUTH_FAILED:
-			case Providers\ProviderException::TYPE_AUTHENTICATION_ERROR:
 			case Providers\ProviderException::TYPE_NOT_CONFIGURED:
 			case Providers\ProviderException::TYPE_CONFIGURATION_ERROR:
-				$public_code    = 'AI_AUTH_ERROR';
-				$public_message = __( 'AI service authentication failed or is unconfigured.', 'gemini-chat-assistant' );
+				$public_code    = 'GEMINI_NOT_CONFIGURED';
+				$public_message = __( 'Chat is not configured yet.', 'gemini-chat-assistant' );
 				$status         = 500;
+				break;
+
+			case Providers\ProviderException::TYPE_AUTH_FAILED:
+			case Providers\ProviderException::TYPE_AUTHENTICATION_ERROR:
+				$public_code    = 'GEMINI_AUTH_FAILED';
+				$public_message = __( 'Assistant configuration error.', 'gemini-chat-assistant' );
+				$status         = 500;
+				break;
+
+			case Providers\ProviderException::TYPE_MODEL_UNAVAILABLE:
+				$public_code    = 'GEMINI_MODEL_UNAVAILABLE';
+				$public_message = __( 'Assistant model is currently unavailable.', 'gemini-chat-assistant' );
+				$status         = 503;
 				break;
 
 			case Providers\ProviderException::TYPE_RATE_LIMITED:
 			case Providers\ProviderException::TYPE_RATE_LIMIT:
-				$public_code    = 'AI_RATE_LIMITED';
-				$public_message = __( 'Too many requests. Please wait a moment before sending another message.', 'gemini-chat-assistant' );
+				$public_code    = 'RATE_LIMITED';
+				$public_message = __( 'Too many messages. Please try again shortly.', 'gemini-chat-assistant' );
 				$status         = 429;
 				break;
 
 			case Providers\ProviderException::TYPE_TIMEOUT:
-				$public_code    = 'AI_TIMEOUT';
-				$public_message = __( 'The AI service timed out responding to your request.', 'gemini-chat-assistant' );
+				$public_code    = 'GEMINI_TIMEOUT';
+				$public_message = __( 'The assistant took too long to respond. Please try again.', 'gemini-chat-assistant' );
 				$status         = 504;
 				break;
 
-			case Providers\ProviderException::TYPE_MODEL_UNAVAILABLE:
 			case Providers\ProviderException::TYPE_PROVIDER_UNAVAILABLE:
-				$public_code    = 'AI_UNAVAILABLE';
-				$public_message = __( 'The AI service is temporarily unavailable. Please try again shortly.', 'gemini-chat-assistant' );
+				$public_code    = 'GEMINI_UNAVAILABLE';
+				$public_message = __( 'The assistant is temporarily unavailable. Please try again shortly.', 'gemini-chat-assistant' );
 				$status         = 503;
 				break;
 
 			case Providers\ProviderException::TYPE_MALFORMED_RESPONSE:
 			case Providers\ProviderException::TYPE_INVALID_RESPONSE:
-				$public_code    = 'AI_INVALID_RESPONSE';
+				$public_code    = 'INTERNAL_ERROR';
 				$public_message = __( 'Received an invalid or empty response from the AI service.', 'gemini-chat-assistant' );
 				$status         = 502;
 				break;

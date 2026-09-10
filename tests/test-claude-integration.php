@@ -25,9 +25,9 @@ use SkyFish\GeminiChat\Providers\GeminiProvider;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\ChatService;
 
-// Prevent direct access.
+// Bootstrap if running standalone.
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	require_once __DIR__ . '/bootstrap.php';
 }
 
 /**
@@ -459,4 +459,10 @@ class TestClaudeIntegration {
 		$this->assert( $registry->has( 'claude' ), '11.7 Registry contains claude' );
 		$this->assert( count( $registry->get_registered_ids() ) === 3, '11.8 Registry contains all 3 providers' );
 	}
+}
+
+// Auto-run if executed directly via CLI or test runner.
+if ( php_sapi_name() === 'cli' || defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
+	$suite = new TestClaudeIntegration();
+	$suite->run();
 }

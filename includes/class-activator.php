@@ -35,9 +35,9 @@ class Activator {
 
 			// AI & Providers (N18).
 			'default_provider'      => 'gemini',
-			'model'                 => 'gemini-3.8-flash',
+			'model'                 => 'gemini-2.5-flash',
 			'provider_gemini_enabled'       => true,
-			'provider_gemini_model'         => 'gemini-3.8-flash',
+			'provider_gemini_model'         => 'gemini-2.5-flash',
 			'provider_openai_enabled'       => false,
 			'provider_openai_model'         => 'gpt-4o-mini',
 			'provider_claude_enabled'       => false,

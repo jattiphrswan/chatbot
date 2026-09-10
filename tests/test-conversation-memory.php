@@ -5,7 +5,9 @@
  * @package SkyFish\GeminiChat\Tests
  */
 
-namespace SkyFish\GeminiChat\Tests;
+require_once __DIR__ . '/bootstrap.php';
+
+putenv( 'GEMINI_API_KEY=mock_gemini_key_123' );
 
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
@@ -159,7 +161,6 @@ use SkyFish\GeminiChat\Database\ConversationRepository;
 use SkyFish\GeminiChat\Database\MessageRepository;
 use SkyFish\GeminiChat\Database\SessionService;
 use SkyFish\GeminiChat\GeminiClient;
-use WP_Error;
 
 class MemoryMockConversationRepo extends ConversationRepository {
 	public array $conversations = [];
@@ -246,6 +247,10 @@ class MemoryMockMessageRepo extends MessageRepository {
 class MemoryMockGeminiClient extends GeminiClient {
 	public array $calls = [];
 	public $next_response_callback = null;
+
+	public function is_configured(): bool {
+		return true;
+	}
 
 	public function create_interaction( string $input, ?string $previous_interaction_id = null, array $options = [] ) {
 		$this->calls[] = [

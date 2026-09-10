@@ -23,14 +23,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 class GeminiClient {
 
 	/**
-	 * Production Google Gemini Interactions API Endpoint (v1).
+	 * Production Google Gemini API Base URL (v1beta).
 	 */
-	public const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1/interactions';
+	public const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+	/**
+	 * Legacy endpoint alias for backward compatibility.
+	 */
+	public const API_ENDPOINT = self::API_BASE;
 
 	/**
 	 * Default fallback model for interactions.
 	 */
-	public const DEFAULT_MODEL = 'gemini-3.8-flash';
+	public const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 	/**
 	 * Default HTTP request timeout in seconds.
@@ -134,6 +139,35 @@ class GeminiClient {
 	}
 
 	/**
+	 * Executes a lightweight connection test to Google Gemini API.
+	 *
+	 * Sends a minimal prompt ('ping') with maxOutputTokens: 1 to verify credentials
+	 * and model availability with minimal token consumption and no cost surprise.
+	 *
+	 * @param string|null $override_model Optional model override to test.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
+	 */
+	public function test_connection( ?string $override_model = null ) {
+		$result = $this->create_interaction(
+			'ping',
+			null,
+			[
+				'model'             => $this->get_model( $override_model ),
+				'generation_config' => [
+					'maxOutputTokens' => 1,
+				],
+				'timeout'           => 15,
+			]
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return ! empty( $result['text'] ) || isset( $result['id'] );
+	}
+
+	/**
 	 * Sends a message/input to the Gemini Interactions API.
 	 *
 	 * @param string      $input                  User text input.
@@ -163,13 +197,35 @@ class GeminiClient {
 		$model              = $this->get_model( $options['model'] ?? null );
 		$system_instruction = $this->get_system_instruction( $options['system_instruction'] ?? null );
 
+		$endpoint = self::API_BASE . '/' . rawurlencode( $model ) . ':generateContent';
+
+		$contents = [];
+		if ( ! empty( $options['history'] ) && is_array( $options['history'] ) ) {
+			foreach ( $options['history'] as $turn ) {
+				$turn_text = $turn['text'] ?? $turn['content'] ?? '';
+				if ( empty( $turn['role'] ) || '' === trim( (string) $turn_text ) ) {
+					continue;
+				}
+				$contents[] = [
+					'role'  => 'user' === $turn['role'] ? 'user' : 'model',
+					'parts' => [ [ 'text' => (string) $turn_text ] ],
+				];
+			}
+		}
+		$contents[] = [
+			'role'  => 'user',
+			'parts' => [ [ 'text' => $trimmed_input ] ],
+		];
+
 		$payload = [
-			'model' => $model,
-			'input' => $trimmed_input,
+			'contents' => $contents,
+			'model'    => $model,
 		];
 
 		if ( '' !== $system_instruction ) {
-			$payload['system_instruction'] = $system_instruction;
+			$payload['system_instruction'] = [
+				'parts' => [ [ 'text' => $system_instruction ] ],
+			];
 		}
 
 		if ( ! empty( $previous_interaction_id ) ) {
@@ -199,7 +255,7 @@ class GeminiClient {
 			'body'        => (string) wp_json_encode( $payload ),
 		];
 
-		$response = wp_remote_post( self::API_ENDPOINT, $request_args );
+		$response = wp_remote_post( $endpoint, $request_args );
 
 		if ( is_wp_error( $response ) ) {
 			return $this->handle_transport_error( $response );
@@ -265,25 +321,31 @@ class GeminiClient {
 		// Extract model name.
 		$model = ! empty( $data['model'] ) ? (string) $data['model'] : self::DEFAULT_MODEL;
 
-		// Extract text from steps[] or fallback.
+		// Extract text: primary candidates[].content.parts[].text (Gemini v1beta generateContent).
 		$text = '';
-		if ( isset( $data['steps'] ) && is_array( $data['steps'] ) ) {
-			$text = $this->extract_text_from_steps( $data['steps'] );
-		} elseif ( isset( $data['output'] ) && is_string( $data['output'] ) ) {
-			$text = $data['output'];
-		} elseif ( isset( $data['candidates'][0]['content']['parts'] ) && is_array( $data['candidates'][0]['content']['parts'] ) ) {
-			// Fallback compatibility with generateContent structure.
-			$parts = [];
-			foreach ( $data['candidates'][0]['content']['parts'] as $part ) {
-				if ( isset( $part['text'] ) ) {
-					$parts[] = $part['text'];
+		if ( isset( $data['candidates'] ) && is_array( $data['candidates'] ) ) {
+			$text_parts = [];
+			foreach ( $data['candidates'] as $candidate ) {
+				foreach ( $candidate['content']['parts'] ?? [] as $part ) {
+					if ( isset( $part['text'] ) && '' !== trim( (string) $part['text'] ) ) {
+						$text_parts[] = $part['text'];
+					}
 				}
 			}
-			$text = implode( "\n", $parts );
+			$text = implode( "\n", $text_parts );
 		}
 
-		// Extract usage metadata.
-		$usage = $this->parse_usage( $data['usage'] ?? $data['usage_metadata'] ?? [] );
+		// Fallback for legacy Interactions API steps[] or output string.
+		if ( '' === trim( $text ) ) {
+			if ( isset( $data['steps'] ) && is_array( $data['steps'] ) ) {
+				$text = $this->extract_text_from_steps( $data['steps'] );
+			} elseif ( isset( $data['output'] ) && is_string( $data['output'] ) ) {
+				$text = $data['output'];
+			}
+		}
+
+		// Extract usage metadata (Google API uses usageMetadata; fallback to usage_metadata or usage).
+		$usage = $this->parse_usage( $data['usageMetadata'] ?? $data['usage_metadata'] ?? $data['usage'] ?? [] );
 
 		if ( '' === trim( $text ) ) {
 			return new WP_Error(
@@ -355,21 +417,25 @@ class GeminiClient {
 	 */
 	public function parse_usage( array $raw_usage ): array {
 		$input_tokens = 0;
-		if ( isset( $raw_usage['total_input_tokens'] ) ) {
+		if ( isset( $raw_usage['promptTokenCount'] ) ) {
+			$input_tokens = absint( $raw_usage['promptTokenCount'] );
+		} elseif ( isset( $raw_usage['prompt_token_count'] ) ) {
+			$input_tokens = absint( $raw_usage['prompt_token_count'] );
+		} elseif ( isset( $raw_usage['total_input_tokens'] ) ) {
 			$input_tokens = absint( $raw_usage['total_input_tokens'] );
 		} elseif ( isset( $raw_usage['input_tokens'] ) ) {
 			$input_tokens = absint( $raw_usage['input_tokens'] );
-		} elseif ( isset( $raw_usage['prompt_token_count'] ) ) {
-			$input_tokens = absint( $raw_usage['prompt_token_count'] );
 		}
 
 		$output_tokens = 0;
-		if ( isset( $raw_usage['total_output_tokens'] ) ) {
+		if ( isset( $raw_usage['candidatesTokenCount'] ) ) {
+			$output_tokens = absint( $raw_usage['candidatesTokenCount'] );
+		} elseif ( isset( $raw_usage['candidates_token_count'] ) ) {
+			$output_tokens = absint( $raw_usage['candidates_token_count'] );
+		} elseif ( isset( $raw_usage['total_output_tokens'] ) ) {
 			$output_tokens = absint( $raw_usage['total_output_tokens'] );
 		} elseif ( isset( $raw_usage['output_tokens'] ) ) {
 			$output_tokens = absint( $raw_usage['output_tokens'] );
-		} elseif ( isset( $raw_usage['candidates_token_count'] ) ) {
-			$output_tokens = absint( $raw_usage['candidates_token_count'] );
 		}
 
 		$thought_tokens = 0;
@@ -380,10 +446,12 @@ class GeminiClient {
 		}
 
 		$total_tokens = 0;
-		if ( isset( $raw_usage['total_tokens'] ) ) {
-			$total_tokens = absint( $raw_usage['total_tokens'] );
+		if ( isset( $raw_usage['totalTokenCount'] ) ) {
+			$total_tokens = absint( $raw_usage['totalTokenCount'] );
 		} elseif ( isset( $raw_usage['total_token_count'] ) ) {
 			$total_tokens = absint( $raw_usage['total_token_count'] );
+		} elseif ( isset( $raw_usage['total_tokens'] ) ) {
+			$total_tokens = absint( $raw_usage['total_tokens'] );
 		} else {
 			$total_tokens = $input_tokens + $output_tokens + $thought_tokens;
 		}
@@ -454,6 +522,13 @@ class GeminiClient {
 				$msg  = ! empty( $error_message )
 					? $error_message
 					: __( 'Authentication failed with Gemini API. Check your API key.', 'gemini-chat-assistant' );
+				break;
+
+			case 404:
+				$code = 'GCA_GEMINI_MODEL_UNAVAILABLE';
+				$msg  = ! empty( $error_message )
+					? $error_message
+					: __( 'Configured Gemini model was not found or is unavailable.', 'gemini-chat-assistant' );
 				break;
 
 			case 429:

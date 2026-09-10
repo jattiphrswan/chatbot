@@ -5,15 +5,7 @@
  * @package SkyFish\GeminiChat\Tests
  */
 
-namespace SkyFish\GeminiChat\Tests;
-
-if ( ! defined( 'ABSPATH' ) ) {
-	define( 'ABSPATH', __DIR__ . '/../' );
-}
-
-if ( ! defined( 'GCA_PLUGIN_DIR' ) ) {
-	define( 'GCA_PLUGIN_DIR', __DIR__ . '/../' );
-}
+require_once __DIR__ . '/bootstrap.php';
 
 if ( ! defined( 'GCA_PLUGIN_URL' ) ) {
 	define( 'GCA_PLUGIN_URL', 'https://example.com/wp-content/plugins/gemini-chat-assistant/' );
@@ -25,6 +17,10 @@ if ( ! defined( 'GCA_VERSION' ) ) {
 
 if ( ! defined( 'GCA_DB_VERSION' ) ) {
 	define( 'GCA_DB_VERSION', '1.0.0' );
+}
+
+if ( ! defined( 'ARRAY_A' ) ) {
+	define( 'ARRAY_A', 'ARRAY_A' );
 }
 
 if ( ! function_exists( 'sanitize_text_field' ) ) {
@@ -134,6 +130,7 @@ require_once __DIR__ . '/../includes/Database/AnalyticsRepository.php';
 require_once __DIR__ . '/../includes/Admin/AnalyticsService.php';
 require_once __DIR__ . '/../includes/Database/ConversationRepository.php';
 require_once __DIR__ . '/../includes/Database/MessageRepository.php';
+require_once __DIR__ . '/../includes/Database/LeadRepository.php';
 require_once __DIR__ . '/../includes/Admin/SettingsService.php';
 require_once __DIR__ . '/../includes/Admin/AdminMenu.php';
 
@@ -375,8 +372,7 @@ class TestAnalytics {
 	}
 
 	private function test_admin_menu_registration(): void {
-		$settings_svc = new SettingsService();
-		$menu = new AdminMenu( $settings_svc );
+		$menu = new AdminMenu();
 
 		$this->assert( method_exists( $menu, 'render_analytics_page' ), 'AdminMenu has render_analytics_page method' );
 	}
@@ -385,8 +381,7 @@ class TestAnalytics {
 		global $test_current_user_can_result;
 		$test_current_user_can_result = false;
 
-		$settings_svc = new SettingsService();
-		$menu = new AdminMenu( $settings_svc );
+		$menu = new AdminMenu();
 
 		$exception_thrown = false;
 		try {

@@ -5,7 +5,7 @@
  * @package SkyFish\GeminiChat\Tests
  */
 
-namespace SkyFish\GeminiChat\Tests;
+require_once __DIR__ . '/bootstrap.php';
 
 // Define ABSPATH if running in standalone test mode.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -119,7 +119,6 @@ require_once __DIR__ . '/../includes/class-gemini-client.php';
 
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\GeminiClient;
-use WP_Error;
 
 class GeminiClientTest {
 
@@ -151,6 +150,7 @@ class GeminiClientTest {
 		$this->test_http_error_mapping();
 		$this->test_transport_timeout_error();
 		$this->test_empty_response_handling();
+		$this->test_connection_method();
 
 		echo "\n========================================\n";
 		echo "Results: {$this->passed} Passed, {$this->failed} Failed\n";
@@ -161,12 +161,12 @@ class GeminiClientTest {
 
 	private function test_endpoint_and_defaults(): void {
 		$this->assert(
-			'https://generativelanguage.googleapis.com/v1/interactions' === GeminiClient::API_ENDPOINT,
-			'Interactions API v1 endpoint constant is configured'
+			'https://generativelanguage.googleapis.com/v1beta/models' === GeminiClient::API_BASE,
+			'Gemini v1beta models base endpoint constant is configured'
 		);
 		$this->assert(
-			'gemini-3.8-flash' === GeminiClient::DEFAULT_MODEL,
-			'Default model is gemini-3.8-flash'
+			'gemini-2.5-flash' === GeminiClient::DEFAULT_MODEL,
+			'Default model is gemini-2.5-flash'
 		);
 	}
 
@@ -221,7 +221,7 @@ class GeminiClientTest {
 
 		$mock_body = json_encode( [
 			'id'    => 'inter_1234567890',
-			'model' => 'gemini-3.8-flash',
+			'model' => 'gemini-2.5-flash',
 			'steps' => [
 				[
 					'type'    => 'model_output',
@@ -261,9 +261,9 @@ class GeminiClientTest {
 		$this->assert( 'test_secret_key_abc' === $last_http_request['args']['headers']['x-goog-api-key'], 'API key sent in x-goog-api-key header' );
 
 		$payload = json_decode( $last_http_request['args']['body'], true );
-		$this->assert( 'gemini-3.8-flash' === $payload['model'], 'Payload includes configured model' );
+		$this->assert( 'gemini-2.5-flash' === $payload['model'], 'Payload includes configured model' );
 		$this->assert( 'prev_inter_999' === $payload['previous_interaction_id'], 'Payload includes previous_interaction_id' );
-		$this->assert( 'You are a helpful assistant.' === $payload['system_instruction'], 'Payload includes system_instruction' );
+		$this->assert( isset( $payload['system_instruction']['parts'][0]['text'] ) && 'You are a helpful assistant.' === $payload['system_instruction']['parts'][0]['text'], 'Payload includes system_instruction' );
 
 		putenv( 'GEMINI_API_KEY' );
 	}
@@ -360,6 +360,41 @@ class GeminiClientTest {
 
 		$res = $client->parse_response( $empty_body );
 		$this->assert( is_wp_error( $res ) && 'GCA_GEMINI_EMPTY_RESPONSE' === $res->get_error_code(), 'Empty step array maps to GCA_GEMINI_EMPTY_RESPONSE' );
+	}
+
+	private function test_connection_method(): void {
+		global $mock_http_response;
+		putenv( 'GEMINI_API_KEY=test_conn_key' );
+		$client = new GeminiClient();
+
+		// Success response
+		$mock_http_response = [
+			'response' => [ 'code' => 200 ],
+			'body'     => json_encode( [
+				'candidates' => [
+					[
+						'content' => [
+							'parts' => [ [ 'text' => 'pong' ] ],
+						],
+						'finishReason' => 'STOP',
+					],
+				],
+			] ),
+		];
+
+		$res = $client->test_connection();
+		$this->assert( true === $res, 'test_connection returns true on valid response' );
+
+		// Error response (e.g. 401 Auth Error)
+		$mock_http_response = [
+			'response' => [ 'code' => 401 ],
+			'body'     => json_encode( [ 'error' => [ 'message' => 'API key invalid' ] ] ),
+		];
+
+		$err = $client->test_connection();
+		$this->assert( is_wp_error( $err ) && 'GCA_GEMINI_AUTH_ERROR' === $err->get_error_code(), 'test_connection returns WP_Error on 401' );
+
+		putenv( 'GEMINI_API_KEY' );
 	}
 }
 

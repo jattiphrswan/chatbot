@@ -253,12 +253,12 @@ class IntegrationsFrameworkTest {
 		// 2. Unknown action ID
 		$res2 = $executor->execute( 'test_integration.does_not_exist' );
 		$this->assert( ! $res2->is_success(), '4.3 Unknown action ID returns failure' );
-		$this->assert( 'ACTION_NOT_FOUND' === $res2->get_error()['code'], '4.4 Error code is ACTION_NOT_FOUND' );
+		$this->assert( 'action_not_found' === strtolower( (string) $res2->get_error()['code'] ), '4.4 Error code is ACTION_NOT_FOUND' );
 
 		// 3. Malformed action ID
 		$res3 = $executor->execute( '../../evil/path' );
 		$this->assert( ! $res3->is_success(), '4.5 Malformed action ID returns failure' );
-		$this->assert( 'INVALID_ACTION_ID' === $res3->get_error()['code'], '4.6 Error code is INVALID_ACTION_ID' );
+		$this->assert( 'invalid_action_id' === strtolower( (string) $res3->get_error()['code'] ), '4.6 Error code is INVALID_ACTION_ID' );
 
 		// 4. Unavailable integration
 		$unavail_registry = new IntegrationRegistry();
@@ -266,7 +266,7 @@ class IntegrationsFrameworkTest {
 		$unavail_exec = new ActionExecutor( $unavail_registry );
 		$res4 = $unavail_exec->execute( 'test_integration.search_items', [ 'query' => 'test' ] );
 		$this->assert( ! $res4->is_success(), '4.7 Unavailable integration execution rejected' );
-		$this->assert( 'INTEGRATION_UNAVAILABLE' === $res4->get_error()['code'], '4.8 Error code is INTEGRATION_UNAVAILABLE' );
+		$this->assert( 'integration_unavailable' === strtolower( (string) $res4->get_error()['code'] ), '4.8 Error code is INTEGRATION_UNAVAILABLE' );
 
 		// 5. Disabled integration
 		$disabled_registry = new IntegrationRegistry();
@@ -274,17 +274,17 @@ class IntegrationsFrameworkTest {
 		$disabled_exec = new ActionExecutor( $disabled_registry );
 		$res5 = $disabled_exec->execute( 'test_integration.search_items', [ 'query' => 'test' ] );
 		$this->assert( ! $res5->is_success(), '4.9 Disabled integration execution rejected' );
-		$this->assert( 'INTEGRATION_DISABLED' === $res5->get_error()['code'], '4.10 Error code is INTEGRATION_DISABLED' );
+		$this->assert( 'integration_disabled' === strtolower( (string) $res5->get_error()['code'] ), '4.10 Error code is INTEGRATION_DISABLED' );
 
 		// 6. Argument validation failure
 		$res6 = $executor->execute( 'test_integration.search_items', [ 'query' => 'a' ] ); // min length is 2
 		$this->assert( ! $res6->is_success(), '4.11 Invalid arguments rejected' );
-		$this->assert( 'INVALID_ACTION_ARGUMENTS' === $res6->get_error()['code'], '4.12 Error code is INVALID_ACTION_ARGUMENTS' );
+		$this->assert( 'invalid_action_arguments' === strtolower( (string) $res6->get_error()['code'] ), '4.12 Error code is INVALID_ACTION_ARGUMENTS' );
 
 		// 7. Exception containment without raw trace leakage
 		$res7 = $executor->execute( 'test_integration.search_items', [ 'query' => 'trigger_exception' ] );
 		$this->assert( ! $res7->is_success(), '4.13 Thrown exception trapped safely' );
-		$this->assert( 'ACTION_FAILED' === $res7->get_error()['code'], '4.14 Error code is ACTION_FAILED' );
+		$this->assert( 'action_failed' === strtolower( (string) $res7->get_error()['code'] ), '4.14 Error code is ACTION_FAILED' );
 		$this->assert( false === strpos( $res7->get_error()['message'], 'Database connection dropped' ), '4.15 Raw exception message is NOT leaked' );
 	}
 

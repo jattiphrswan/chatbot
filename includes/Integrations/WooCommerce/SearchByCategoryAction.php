@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * WooCommerce Search By Category Action.
  *

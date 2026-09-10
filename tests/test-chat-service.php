@@ -5,15 +5,7 @@
  * @package SkyFish\GeminiChat\Tests
  */
 
-namespace SkyFish\GeminiChat\Tests;
-
-if ( ! defined( 'ABSPATH' ) ) {
-	define( 'ABSPATH', __DIR__ . '/../' );
-}
-
-if ( ! defined( 'GCA_PLUGIN_DIR' ) ) {
-	define( 'GCA_PLUGIN_DIR', __DIR__ . '/../' );
-}
+require_once __DIR__ . '/bootstrap.php';
 
 if ( ! function_exists( 'sanitize_text_field' ) ) {
 	function sanitize_text_field( $str ) {
@@ -160,7 +152,6 @@ use SkyFish\GeminiChat\Database\ConversationRepository;
 use SkyFish\GeminiChat\Database\MessageRepository;
 use SkyFish\GeminiChat\Database\SessionService;
 use SkyFish\GeminiChat\GeminiClient;
-use WP_Error;
 
 class MockConversationRepo extends ConversationRepository {
 	public array $conversations = [];
@@ -251,6 +242,8 @@ class ChatServiceTest {
 		echo "Running Node N5 ChatService Tests\n";
 		echo "========================================\n\n";
 
+		putenv( 'GEMINI_API_KEY=test_mock_key_123' );
+
 		$this->test_chat_disabled();
 		$this->test_successful_chat_turn();
 		$this->test_store_messages_disabled();
@@ -268,14 +261,13 @@ class ChatServiceTest {
 
 	private function test_chat_disabled(): void {
 		global $mock_options;
-		$mock_options['gca_settings'] = [ 'enabled' => false ];
+		$mock_options['gca_settings'] = [
+			'enabled' => false,
+		];
 
-		$conv_repo = new MockConversationRepo();
-		$msg_repo  = new MockMessageRepo();
-		$gemini    = new MockGeminiClient();
-		$service   = new ChatService( null, null, $conv_repo, $msg_repo, $gemini );
+		$service = new ChatService( null, null, new MockConversationRepo(), new MockMessageRepo(), new MockGeminiClient() );
+		$res     = $service->handle_chat( 'Hello', 'gca_sess_0123456789abcdef0123456789abcdef' );
 
-		$res = $service->handle_chat( 'Hello', 'gca_sess_0123456789abcdef0123456789abcdef' );
 		$this->assert( is_wp_error( $res ) && 'CHAT_DISABLED' === $res->get_error_code(), 'Disabled chatbot returns CHAT_DISABLED' );
 	}
 

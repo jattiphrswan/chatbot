@@ -8,10 +8,15 @@
 namespace SkyFish\GeminiChat\Admin;
 
 use SkyFish\GeminiChat\Activator;
+use SkyFish\GeminiChat\Security\SecretStore;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+
+if ( ! class_exists( 'SkyFish\\GeminiChat\\Activator' ) && file_exists( dirname( __DIR__ ) . '/class-activator.php' ) ) {
+	require_once dirname( __DIR__ ) . '/class-activator.php';
 }
 
 /**
@@ -22,6 +27,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SettingsService {
 
 	public const OPTION_KEY = 'gca_settings';
+
+	/**
+	 * Singleton instance.
+	 *
+	 * @var SettingsService|null
+	 */
+	private static ?SettingsService $instance = null;
+
+	/**
+	 * Gets singleton instance.
+	 *
+	 * @return self
+	 */
+	public static function get_instance(): self {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
 
 	/**
 	 * Retrieves all sanitized settings merged with defaults.
@@ -57,8 +81,8 @@ class SettingsService {
 	 * @return string
 	 */
 	public static function get_model(): string {
-		$model = (string) self::get( 'model', 'gemini-3.8-flash' );
-		return ! empty( $model ) ? sanitize_text_field( $model ) : 'gemini-3.8-flash';
+		$model = (string) self::get( 'model', 'gemini-2.5-flash' );
+		return ! empty( $model ) ? sanitize_text_field( $model ) : 'gemini-2.5-flash';
 	}
 
 	/**
@@ -183,9 +207,9 @@ class SettingsService {
 			default:
 				$val = (string) self::get( 'provider_gemini_model', '' );
 				if ( empty( $val ) ) {
-					$val = (string) self::get( 'model', 'gemini-3.8-flash' );
+					$val = (string) self::get( 'model', 'gemini-2.5-flash' );
 				}
-				return ! empty( $val ) ? sanitize_text_field( $val ) : 'gemini-3.8-flash';
+				return ! empty( $val ) ? sanitize_text_field( $val ) : 'gemini-2.5-flash';
 		}
 	}
 
@@ -274,7 +298,7 @@ class SettingsService {
 	}
 
 	/**
-	 * Updates a provider's API key securely.
+	 * Updates a provider's API key securely in SecretStore.
 	 *
 	 * Empty submissions are ignored by callers to prevent accidental deletion.
 	 *
@@ -290,13 +314,7 @@ class SettingsService {
 			return false;
 		}
 
-		$credentials = get_option( self::CREDENTIALS_OPTION_KEY, [] );
-		if ( ! is_array( $credentials ) ) {
-			$credentials = [];
-		}
-
-		$credentials[ $provider_id ] = self::encode_credential( $api_key );
-		return update_option( self::CREDENTIALS_OPTION_KEY, $credentials, 'no' );
+		return SecretStore::store( $provider_id, $api_key );
 	}
 
 	/**
@@ -311,17 +329,7 @@ class SettingsService {
 			return false;
 		}
 
-		$credentials = get_option( self::CREDENTIALS_OPTION_KEY, [] );
-		if ( ! is_array( $credentials ) ) {
-			$credentials = [];
-		}
-
-		if ( isset( $credentials[ $provider_id ] ) ) {
-			unset( $credentials[ $provider_id ] );
-			return update_option( self::CREDENTIALS_OPTION_KEY, $credentials, 'no' );
-		}
-
-		return true;
+		return SecretStore::delete( $provider_id );
 	}
 
 	/**
@@ -332,8 +340,74 @@ class SettingsService {
 	 */
 	public static function has_stored_credential( string $provider_id ): bool {
 		$provider_id = sanitize_key( $provider_id );
-		$credentials = get_option( self::CREDENTIALS_OPTION_KEY, [] );
-		return is_array( $credentials ) && ! empty( $credentials[ $provider_id ] );
+		return SecretStore::has( $provider_id );
+	}
+
+	/**
+	 * Retrieves a masked representation of the provider's API key.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @return string Masked key or empty string.
+	 */
+	public static function get_masked_provider_api_key( string $provider_id ): string {
+		$key = self::get_provider_api_key( $provider_id );
+		return ! empty( $key ) ? SecretStore::mask( $key ) : '';
+	}
+
+	/**
+	 * Option key prefix for connection verification status.
+	 */
+	public const CONNECTION_STATUS_OPTION_PREFIX = 'gca_connection_status_';
+
+	/**
+	 * Retrieves connection status info for a provider.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @return array{status: string, last_checked: int, message: string} Status details.
+	 */
+	public static function get_connection_status_info( string $provider_id ): array {
+		$provider_id = sanitize_key( $provider_id );
+		$default     = [
+			'status'       => self::is_provider_configured( $provider_id ) ? 'configured' : 'not_configured',
+			'last_checked' => 0,
+			'message'      => '',
+		];
+
+		$saved = get_option( self::CONNECTION_STATUS_OPTION_PREFIX . $provider_id, [] );
+		if ( ! is_array( $saved ) ) {
+			return $default;
+		}
+
+		$status = $saved['status'] ?? $default['status'];
+		// If recorded as verified/failed but credentials were removed, fall back to not_configured.
+		if ( ! self::is_provider_configured( $provider_id ) ) {
+			$status = 'not_configured';
+		}
+
+		return [
+			'status'       => $status,
+			'last_checked' => isset( $saved['last_checked'] ) ? absint( $saved['last_checked'] ) : 0,
+			'message'      => isset( $saved['message'] ) ? sanitize_text_field( (string) $saved['message'] ) : '',
+		];
+	}
+
+	/**
+	 * Updates connection verification status for a provider.
+	 *
+	 * @param string $provider_id Provider identifier.
+	 * @param string $status      'verified', 'failed', or 'configured'.
+	 * @param string $message     Optional error/info message.
+	 * @return bool
+	 */
+	public static function set_connection_status( string $provider_id, string $status, string $message = '' ): bool {
+		$provider_id = sanitize_key( $provider_id );
+		$data        = [
+			'status'       => sanitize_key( $status ),
+			'last_checked' => time(),
+			'message'      => sanitize_text_field( $message ),
+		];
+
+		return update_option( self::CONNECTION_STATUS_OPTION_PREFIX . $provider_id, $data, 'no' );
 	}
 
 	/**
@@ -395,87 +469,29 @@ class SettingsService {
 	 * @return string Decoded credential or empty string.
 	 */
 	private static function get_stored_credential( string $provider_id ): string {
-		$credentials = get_option( self::CREDENTIALS_OPTION_KEY, [] );
-		if ( ! is_array( $credentials ) || empty( $credentials[ $provider_id ] ) ) {
-			return '';
-		}
-
-		return self::decode_credential( (string) $credentials[ $provider_id ] );
+		return SecretStore::retrieve( $provider_id );
 	}
 
 	/**
 	 * Obfuscates/encodes credentials before storing in options.
 	 *
-	 * Uses OpenSSL AES-256-CBC if available with WordPress AUTH_KEY salt,
-	 * falling back to XOR base64 encoding.
-	 *
+	 * @deprecated Use SecretStore::encrypt()
 	 * @param string $plaintext Plain API key.
 	 * @return string Encrypted/encoded string.
 	 */
 	private static function encode_credential( string $plaintext ): string {
-		if ( empty( $plaintext ) ) {
-			return '';
-		}
-
-		$salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'gca_fallback_salt_key_18';
-
-		if ( function_exists( 'openssl_encrypt' ) ) {
-			$key = hash( 'sha256', $salt, true );
-			$iv  = openssl_random_pseudo_bytes( 16 );
-			$enc = openssl_encrypt( $plaintext, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
-			if ( false !== $enc ) {
-				return 'enc:' . base64_encode( $iv . $enc );
-			}
-		}
-
-		// Lightweight obfuscation fallback if OpenSSL is unavailable.
-		$out = '';
-		$len = strlen( $plaintext );
-		$slen = strlen( $salt );
-		for ( $i = 0; $i < $len; $i++ ) {
-			$out .= chr( ord( $plaintext[ $i ] ) ^ ord( $salt[ $i % $slen ] ) );
-		}
-		return 'obf:' . base64_encode( $out );
+		return SecretStore::encrypt( $plaintext );
 	}
 
 	/**
 	 * Decodes/decrypts stored credential string.
 	 *
+	 * @deprecated Use SecretStore::decrypt()
 	 * @param string $encoded Encoded string from database.
 	 * @return string Decoded plain API key.
 	 */
 	private static function decode_credential( string $encoded ): string {
-		if ( empty( $encoded ) ) {
-			return '';
-		}
-
-		$salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'gca_fallback_salt_key_18';
-
-		if ( 0 === strpos( $encoded, 'enc:' ) && function_exists( 'openssl_decrypt' ) ) {
-			$raw = base64_decode( substr( $encoded, 4 ) );
-			if ( strlen( $raw ) > 16 ) {
-				$iv  = substr( $raw, 0, 16 );
-				$enc = substr( $raw, 16 );
-				$key = hash( 'sha256', $salt, true );
-				$dec = openssl_decrypt( $enc, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
-				if ( false !== $dec ) {
-					return $dec;
-				}
-			}
-		}
-
-		if ( 0 === strpos( $encoded, 'obf:' ) ) {
-			$raw  = base64_decode( substr( $encoded, 4 ) );
-			$out  = '';
-			$len  = strlen( $raw );
-			$slen = strlen( $salt );
-			for ( $i = 0; $i < $len; $i++ ) {
-				$out .= chr( ord( $raw[ $i ] ) ^ ord( $salt[ $i % $slen ] ) );
-			}
-			return $out;
-		}
-
-		return '';
+		return SecretStore::decrypt( $encoded );
 	}
 
 	/**
@@ -503,8 +519,8 @@ class SettingsService {
 
 		// Provider: Gemini.
 		$sanitized['provider_gemini_enabled'] = ! empty( $input['provider_gemini_enabled'] );
-		$raw_gemini_model                     = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-3.8-flash' );
-		$sanitized['provider_gemini_model']   = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', $raw_gemini_model ) ? $raw_gemini_model : 'gemini-3.8-flash';
+		$raw_gemini_model                     = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-2.5-flash' );
+		$sanitized['provider_gemini_model']   = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', $raw_gemini_model ) ? $raw_gemini_model : 'gemini-2.5-flash';
 		$sanitized['model']                   = $sanitized['provider_gemini_model']; // Backward compatibility.
 
 		// Provider: OpenAI.

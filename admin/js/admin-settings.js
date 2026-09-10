@@ -31,4 +31,35 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		});
 	});
+
+	// Show/Hide password toggle for typed inputs.
+	var toggleBtns = document.querySelectorAll('.gca-toggle-visibility-btn');
+	toggleBtns.forEach(function (btn) {
+		btn.addEventListener('click', function (e) {
+			e.preventDefault();
+			var targetId = this.getAttribute('data-target');
+			if (!targetId) {
+				return;
+			}
+			var input = document.getElementById(targetId);
+			var icon = this.querySelector('.dashicons');
+			if (!input) {
+				return;
+			}
+
+			if (input.type === 'password') {
+				input.type = 'text';
+				if (icon) {
+					icon.classList.remove('dashicons-visibility');
+					icon.classList.add('dashicons-hidden');
+				}
+			} else {
+				input.type = 'password';
+				if (icon) {
+					icon.classList.remove('dashicons-hidden');
+					icon.classList.add('dashicons-visibility');
+				}
+			}
+		});
+	});
 });

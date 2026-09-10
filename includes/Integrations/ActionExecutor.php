@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Safe Action Executor Pipeline.
  *

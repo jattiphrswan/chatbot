@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Runtime Bootstrap Test for WordPress Plugin Startup & Class Resolution.
  *
@@ -14,7 +14,6 @@
  * @package SkyFish\GeminiChat\Tests
  */
 
-namespace SkyFish\GeminiChat\Tests;
 
 // Mock environment
 if ( ! defined( 'ABSPATH' ) ) {
@@ -74,12 +73,28 @@ if ( ! function_exists( 'add_filter' ) ) {
 	}
 }
 
+if ( ! function_exists( 'do_action' ) ) {
+	function do_action( $tag, ...$args ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'apply_filters' ) ) {
+	function apply_filters( $tag, $value, ...$args ) {
+		return $value;
+	}
+}
+
 if ( ! function_exists( 'register_activation_hook' ) ) {
 	function register_activation_hook( $file, $callback ) {}
 }
 
 if ( ! function_exists( 'register_deactivation_hook' ) ) {
 	function register_deactivation_hook( $file, $callback ) {}
+}
+
+if ( ! function_exists( 'add_shortcode' ) ) {
+	function add_shortcode( $tag, $callback ) {}
 }
 
 if ( ! function_exists( 'plugin_dir_path' ) ) {

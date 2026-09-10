@@ -7,6 +7,8 @@
 
 namespace SkyFish\GeminiChat\Tests;
 
+require_once __DIR__ . '/bootstrap.php';
+
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
 }

@@ -23,13 +23,65 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'GCA_VERSION', '1.0.1' );
-define( 'GCA_PLUGIN_FILE', __FILE__ );
-define( 'GCA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'GCA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'GCA_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-define( 'GCA_REST_NAMESPACE', 'gca/v1' );
-define( 'GCA_SHORTCODE', 'gemini_chat' );
+if ( ! defined( 'GCA_VERSION' ) ) {
+	define( 'GCA_VERSION', '1.0.1' );
+}
+if ( ! defined( 'GCA_PLUGIN_FILE' ) ) {
+	define( 'GCA_PLUGIN_FILE', __FILE__ );
+}
+if ( ! defined( 'GCA_PLUGIN_DIR' ) ) {
+	define( 'GCA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+}
+if ( ! defined( 'GCA_PLUGIN_URL' ) ) {
+	define( 'GCA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+}
+if ( ! defined( 'GCA_PLUGIN_BASENAME' ) ) {
+	define( 'GCA_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+}
+if ( ! defined( 'GCA_REST_NAMESPACE' ) ) {
+	define( 'GCA_REST_NAMESPACE', 'gca/v1' );
+}
+if ( ! defined( 'GCA_SHORTCODE' ) ) {
+	define( 'GCA_SHORTCODE', 'gemini_chat' );
+}
+
+// Register PSR-4 / class autoloader for SkyFish\GeminiChat namespace.
+spl_autoload_register( function ( string $class ): void {
+	$prefix = 'SkyFish\\GeminiChat\\';
+	$base_dir = GCA_PLUGIN_DIR . 'includes/';
+
+	$len = strlen( $prefix );
+	if ( strncmp( $prefix, $class, $len ) !== 0 ) {
+		return;
+	}
+
+	$relative_class = substr( $class, $len );
+
+	// 1. Direct path matching subnamespaces (e.g. Database\ConversationRepository -> includes/Database/ConversationRepository.php).
+	$file = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+	if ( file_exists( $file ) ) {
+		require_once $file;
+		return;
+	}
+
+	// 2. Class prefixed files in subdirectories (e.g. Security\SecretStore -> includes/security/class-secret-store.php).
+	$parts      = explode( '\\', $relative_class );
+	$class_name = array_pop( $parts );
+	$kebab      = strtolower( (string) preg_replace( '/([a-zA-Z])(?=[A-Z])/', '$1-', $class_name ) );
+	$sub_dir    = ! empty( $parts ) ? strtolower( implode( '/', $parts ) ) . '/' : '';
+	$prefixed   = $base_dir . $sub_dir . 'class-' . $kebab . '.php';
+	if ( file_exists( $prefixed ) ) {
+		require_once $prefixed;
+		return;
+	}
+
+	// 3. Legacy root classes (e.g. ChatService -> includes/class-chat-service.php).
+	$legacy = $base_dir . 'class-' . $kebab . '.php';
+	if ( file_exists( $legacy ) ) {
+		require_once $legacy;
+		return;
+	}
+} );
 
 // Require core class files.
 require_once GCA_PLUGIN_DIR . 'includes/class-activator.php';

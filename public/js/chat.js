@@ -190,7 +190,7 @@
 
 		function populateModelSelect(providerId, selectedModel) {
 			if (!modelSelect) return;
-			modelSelect.innerHTML = '';
+			modelSelect.textContent = '';
 			const providerObj = getProviderObj(providerId);
 			if (!providerObj || !Array.isArray(providerObj.models)) return;
 
@@ -234,7 +234,7 @@
 			currentModelId = activeProviderObj ? activeProviderObj.default_model : '';
 
 			if (allowProviderSelect && providerSelect && providerGroup) {
-				providerSelect.innerHTML = '';
+				providerSelect.textContent = '';
 				usableProviders.forEach(function (p) {
 					const opt = document.createElement('option');
 					opt.value = p.id;
@@ -467,7 +467,26 @@
 				const avatar = document.createElement('div');
 				avatar.className = 'gca-message__avatar';
 				avatar.setAttribute('aria-hidden', 'true');
-				avatar.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M12 2v6"></path></svg>';
+				const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+				svg.setAttribute('width', '14');
+				svg.setAttribute('height', '14');
+				svg.setAttribute('viewBox', '0 0 24 24');
+				svg.setAttribute('fill', 'none');
+				svg.setAttribute('stroke', 'currentColor');
+				svg.setAttribute('stroke-width', '2');
+				svg.setAttribute('stroke-linecap', 'round');
+				svg.setAttribute('stroke-linejoin', 'round');
+				const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+				rect.setAttribute('x', '3');
+				rect.setAttribute('y', '8');
+				rect.setAttribute('width', '18');
+				rect.setAttribute('height', '12');
+				rect.setAttribute('rx', '2');
+				const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+				path.setAttribute('d', 'M12 2v6');
+				svg.appendChild(rect);
+				svg.appendChild(path);
+				avatar.appendChild(svg);
 				msgElem.appendChild(avatar);
 			}
 
@@ -582,17 +601,26 @@
 			if (code === 'INVALID_INPUT') {
 				return i18n.errorTooLong || 'Please check your message and try again.';
 			}
-			if (code === 'AI_TIMEOUT') {
+			if (code === 'AI_TIMEOUT' || code === 'GEMINI_TIMEOUT') {
 				return i18n.errorTimeout || 'The assistant took too long to respond. Please try again.';
 			}
-			if (code === 'AI_UNAVAILABLE') {
+			if (code === 'AI_UNAVAILABLE' || code === 'GEMINI_UNAVAILABLE') {
 				return i18n.errorUnavailable || 'The assistant is temporarily unavailable.';
+			}
+			if (code === 'GEMINI_NOT_CONFIGURED') {
+				return i18n.errorNotConfigured || 'The AI assistant is not configured yet. Please configure the API key in settings.';
+			}
+			if (code === 'GEMINI_AUTH_FAILED') {
+				return i18n.errorAuthFailed || 'AI authentication failed. Please verify the API key in admin settings.';
+			}
+			if (code === 'GEMINI_MODEL_UNAVAILABLE') {
+				return i18n.errorModelUnavailable || 'The selected AI model is currently unavailable.';
 			}
 			if (code === 'ACCESS_DENIED') {
 				return i18n.errorDenied || 'Chat is currently unavailable.';
 			}
 
-			return (data && data.error && data.error.message) || i18n.errorGeneric || 'Something went wrong. Please try again.';
+			return (data && data.error && data.error.message) || (data && data.message) || i18n.errorGeneric || 'Something went wrong. Please try again.';
 		}
 
 		/**
@@ -992,7 +1020,9 @@
 				website_url: websiteUrl,
 			};
 
-			fetch(config.restUrl + '/prechat', {
+			const restUrl = (config.restUrl || '/wp-json/gca/v1').replace(/\/$/, '') + '/prechat';
+
+			fetch(restUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -1000,12 +1030,15 @@
 				body: JSON.stringify(payload),
 			})
 			.then(function (response) {
-				return response.json();
+				return response.json().then(function (json) {
+					return { ok: response.ok, status: response.status, data: json };
+				});
 			})
-			.then(function (data) {
+			.then(function (res) {
 				setPrechatSubmitting(false);
+				const data = res.data;
 
-				if (data && data.success) {
+				if (res.ok && data && data.success) {
 					state.prechatCompleted = true;
 					try {
 						sessionStorage.setItem('gca_prechat_' + sessionToken, '1');
@@ -1021,6 +1054,8 @@
 						} else {
 							showPrechatErrorBanner(data.error.message || i18n.errorGeneric || 'Something went wrong.');
 						}
+					} else if (data && data.message) {
+						showPrechatErrorBanner(data.message);
 					} else {
 						showPrechatErrorBanner(i18n.errorGeneric || 'Something went wrong.');
 					}
@@ -1065,7 +1100,7 @@
 			trigger.addEventListener('click', function () {
 				const question = trigger.dataset.question || (trigger.querySelector('.gca-faq-trigger__text') ? trigger.querySelector('.gca-faq-trigger__text').textContent : '');
 				const template = trigger.parentElement ? trigger.parentElement.querySelector('.gca-faq-template-answer') : null;
-				const rawAnswer = template ? (template.textContent || template.innerHTML || '') : '';
+				const rawAnswer = template ? (template.textContent || '') : '';
 
 				if (faqQuestionElem) {
 					faqQuestionElem.textContent = question;

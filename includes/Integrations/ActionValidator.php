@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Integration Action Argument Validator.
  *

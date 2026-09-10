@@ -147,6 +147,9 @@ class AdminMenu {
 		// Admin post action hooks for Provider Credentials (N18)
 		add_action( 'admin_post_gca_remove_provider_key', [ $this, 'handle_remove_provider_key' ] );
 
+		// Admin post action hooks for Gemini Connection Test
+		add_action( 'admin_post_gca_test_gemini_connection', [ $this, 'handle_test_gemini_connection' ] );
+
 		// Admin post action hooks for OpenAI Connection Test (N19)
 		add_action( 'admin_post_gca_test_openai_connection', [ $this, 'handle_test_openai_connection' ] );
 
@@ -1059,6 +1062,39 @@ class AdminMenu {
 		}
 
 		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, [ 'key_removed' => $provider ] );
+	}
+
+	/**
+	 * Handles POST action to test connection to Google Gemini API.
+	 */
+	public function handle_test_gemini_connection(): void {
+		$this->verify_admin_action( 'gca_test_gemini_connection' );
+
+		$status_param = 'connected';
+		$error_param  = '';
+
+		try {
+			$provider = new \SkyFish\GeminiChat\Providers\GeminiProvider();
+			$provider->test_connection();
+			SettingsService::set_connection_status( 'gemini', 'verified' );
+		} catch ( \SkyFish\GeminiChat\Providers\ProviderException $e ) {
+			$status_param = 'failed';
+			$error_param  = $e->get_error_type();
+			SettingsService::set_connection_status( 'gemini', 'failed', $e->getMessage() );
+		} catch ( \Throwable $t ) {
+			$status_param = 'failed';
+			$error_param  = 'generic_error';
+			SettingsService::set_connection_status( 'gemini', 'failed', $t->getMessage() );
+		}
+
+		$redirect_args = [
+			'gemini_test_status' => $status_param,
+		];
+		if ( ! empty( $error_param ) ) {
+			$redirect_args['gemini_test_error'] = $error_param;
+		}
+
+		$this->redirect_to_page( self::SETTINGS_MENU_SLUG, $redirect_args );
 	}
 
 	/**

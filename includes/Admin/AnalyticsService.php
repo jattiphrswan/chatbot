@@ -178,7 +178,7 @@ class AnalyticsService {
 		$formatted_latency = __( 'Not enough data', 'gemini-chat-assistant' );
 		if ( $avg_latency > 0 ) {
 			if ( $avg_latency >= 1000 ) {
-				$formatted_latency = sprintf( __( '%1.1fs', 'gemini-chat-assistant' ), $avg_latency / 1000 );
+				$formatted_latency = sprintf( __( '%1.1fs', 'gemini-chat-assistant' ), round( $avg_latency / 1000, 1, PHP_ROUND_HALF_UP ) );
 			} else {
 				$formatted_latency = sprintf( __( '%dms', 'gemini-chat-assistant' ), (int) $avg_latency );
 			}
@@ -187,14 +187,14 @@ class AnalyticsService {
 		// Status breakdown percentages
 		$active_conv = $kpis['active_conversations'];
 		$closed_conv = $kpis['closed_conversations'];
-		$active_pct  = $total_conv > 0 ? round( ( $active_conv / $total_conv ) * 100 ) : 0;
-		$closed_pct  = $total_conv > 0 ? round( ( $closed_conv / $total_conv ) * 100 ) : 0;
+		$active_pct  = $total_conv > 0 ? (int) round( ( $active_conv / $total_conv ) * 100 ) : 0;
+		$closed_pct  = $total_conv > 0 ? (int) round( ( $closed_conv / $total_conv ) * 100 ) : 0;
 
 		// Audience breakdown percentages
 		$guest_conv = $kpis['guest_conversations'];
 		$user_conv  = $kpis['user_conversations'];
-		$guest_pct  = $total_conv > 0 ? round( ( $guest_conv / $total_conv ) * 100 ) : 0;
-		$user_pct   = $total_conv > 0 ? round( ( $user_conv / $total_conv ) * 100 ) : 0;
+		$guest_pct  = $total_conv > 0 ? (int) round( ( $guest_conv / $total_conv ) * 100 ) : 0;
+		$user_pct   = $total_conv > 0 ? (int) round( ( $user_conv / $total_conv ) * 100 ) : 0;
 
 		// Model usage distribution
 		$raw_models = $this->repository->get_model_usage( $start_utc, $end_utc );

@@ -117,6 +117,8 @@ class HandoffService {
 			'need a person',
 			'contact support',
 			'contact a representative',
+			'connect me to a representative',
+			'connect to a representative',
 			'talk to representative',
 			'customer service representative',
 			'call me',
@@ -134,7 +136,7 @@ class HandoffService {
 		// Regex patterns for flexible phrasing
 		$regex_patterns = [
 			'/\b(want|need|like)\s+(to\s+)?(speak|talk)\s+(with|to)\s+(a\s+)?(human|person|agent|rep|representative|operator)\b/i',
-			'/\b(connect|transfer)\s+(me\s+)?(to\s+)?(a\s+)?(human|person|agent|rep|support|operator)\b/i',
+			'/\b(connect|transfer)\s+(me\s+)?(to\s+)?(a\s+)?(human|person|agent|rep|representative|support|operator)\b/i',
 			'/\b(can|could)\s+someone\s+call\s+me\b/i',
 			'/\b(can|could)\s+i\s+(speak|talk)\s+(to|with)\s+(someone|a\s+person|human)\b/i',
 		];
@@ -169,15 +171,6 @@ class HandoffService {
 			);
 		}
 
-		$conversation = $this->conversation_repo->get_by_id( $conversation_id );
-		if ( ! $conversation ) {
-			return new WP_Error(
-				'CONVERSATION_NOT_FOUND',
-				__( 'Conversation record does not exist.', 'gemini-chat-assistant' ),
-				[ 'status' => 404 ]
-			);
-		}
-
 		// 2. Validate reason.
 		if ( ! in_array( $reason, self::ALLOWED_REASONS, true ) ) {
 			return new WP_Error(
@@ -188,6 +181,15 @@ class HandoffService {
 					implode( ', ', self::ALLOWED_REASONS )
 				),
 				[ 'status' => 400 ]
+			);
+		}
+
+		$conversation = $this->conversation_repo->get_by_id( $conversation_id );
+		if ( ! $conversation ) {
+			return new WP_Error(
+				'CONVERSATION_NOT_FOUND',
+				__( 'Conversation record does not exist.', 'gemini-chat-assistant' ),
+				[ 'status' => 404 ]
 			);
 		}
 

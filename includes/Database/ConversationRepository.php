@@ -19,6 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ConversationRepository {
 
+	public const TABLE_NAME = 'gca_conversations';
+
 	/**
 	 * Returns the table name with dynamic WordPress prefix.
 	 *
@@ -26,7 +28,7 @@ class ConversationRepository {
 	 */
 	public static function get_table_name(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'gca_conversations';
+		return ( $wpdb && isset( $wpdb->prefix ) ) ? $wpdb->prefix . self::TABLE_NAME : 'wp_' . self::TABLE_NAME;
 	}
 
 	/**
@@ -274,7 +276,12 @@ class ConversationRepository {
 	/**
 	 * Whitelisted orderby columns for admin queries.
 	 */
-	public const ALLOWED_ORDERBY = [ 'updated_at', 'created_at', 'message_count', 'title', 'status' ];
+	public const ALLOWED_ORDERBY = [ 'updated_at', 'created_at', 'last_message_at', 'message_count', 'title', 'status' ];
+
+	/**
+	 * Whitelisted status values.
+	 */
+	public const ALLOWED_STATUSES = [ 'active', 'closed' ];
 
 	/**
 	 * Retrieves paginated, filtered conversations for admin view.
@@ -389,6 +396,10 @@ class ConversationRepository {
 	 * @return bool
 	 */
 	public function update_status_by_public_id( string $public_id, string $status ): bool {
+		if ( ! in_array( $status, self::ALLOWED_STATUSES, true ) ) {
+			return false;
+		}
+
 		global $wpdb;
 
 		$table  = self::get_table_name();

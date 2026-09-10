@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Test Suite: Multi-Provider Credentials & Admin Settings (Node N18)
  *
@@ -20,10 +20,11 @@ use SkyFish\GeminiChat\Providers\GeminiProvider;
 use SkyFish\GeminiChat\Providers\OpenAIProvider;
 use SkyFish\GeminiChat\Providers\ClaudeProvider;
 use SkyFish\GeminiChat\Admin\SettingsService;
+use SkyFish\GeminiChat\Security\SecretStore;
 
-// Prevent direct access.
+// Bootstrap if running standalone.
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	require_once __DIR__ . '/bootstrap.php';
 }
 
 /**
@@ -49,6 +50,7 @@ class TestProviderCredentials {
 		$this->test_settings_sanitization_and_isolation();
 		$this->test_placeholder_adapters_and_zero_outbound_http();
 		$this->test_credential_masking_in_exceptions();
+		$this->test_secret_store_and_gemini_dashboard();
 
 		echo "\n--------------------------------------------------\n";
 		echo sprintf( "Results: %d Passed, %d Failed\n", $this->passed, $this->failed );
@@ -324,10 +326,58 @@ class TestProviderCredentials {
 		$this->assert( strpos( $sanitized, 'AIzaSyAbc' ) === false, '8.3 Google AIza* key masked' );
 		$this->assert( strpos( $sanitized, '[REDACTED_API_KEY]' ) !== false, '8.4 Redaction marker present' );
 	}
+
+	/**
+	 * 9. Test SecretStore encryption, masking, and Gemini Dashboard configuration.
+	 */
+	public function test_secret_store_and_gemini_dashboard(): void {
+		echo "\n--- Section 9: SecretStore & Gemini Dashboard Configuration ---\n";
+
+		// Test SecretStore masking
+		$raw_gemini_key = 'AIzaSyA1234567890abcdefghijklmnopqrstuv';
+		$masked = SecretStore::mask( $raw_gemini_key );
+		$this->assert( 0 === strpos( $masked, 'AIza' ), '9.1 Masked key preserves prefix' );
+		$this->assert( substr( $masked, -4 ) === 'stuv', '9.2 Masked key preserves suffix' );
+		$this->assert( strpos( $masked, '••••••••' ) !== false, '9.3 Masked key has bullet masking in center' );
+		$this->assert( strpos( $masked, '1234567890abcdef' ) === false, '9.4 Sensitive core is completely concealed' );
+
+		// Short key masking
+		$this->assert( SecretStore::mask( 'short' ) === '••••••••', '9.5 Short keys masked with fixed bullets' );
+
+		// Store Gemini key in SecretStore
+		$stored = SettingsService::update_provider_api_key( 'gemini', $raw_gemini_key );
+		$this->assert( $stored, '9.6 Gemini key stored via SettingsService/SecretStore' );
+		$this->assert( SettingsService::has_stored_credential( 'gemini' ), '9.7 has_stored_credential returns true for Gemini' );
+		$this->assert( SettingsService::get_credential_source( 'gemini' ) === 'database', '9.8 Credential source detected as database' );
+
+		// Retrieve masked key via SettingsService
+		$retrieved_masked = SettingsService::get_masked_provider_api_key( 'gemini' );
+		$this->assert( $retrieved_masked === $masked, '9.9 get_masked_provider_api_key matches SecretStore::mask' );
+
+		// Retrieve decrypted key via SettingsService
+		$retrieved_plain = SettingsService::get_provider_api_key( 'gemini' );
+		$this->assert( $retrieved_plain === $raw_gemini_key, '9.10 Decrypted Gemini key matches raw key' );
+
+		// Connection status tracking
+		$status_before = SettingsService::get_connection_status_info( 'gemini' );
+		$this->assert( in_array( $status_before['status'], [ 'configured', 'verified', 'not_configured' ], true ), '9.11 Initial connection status info retrieved' );
+
+		SettingsService::set_connection_status( 'gemini', 'verified' );
+		$status_verified = SettingsService::get_connection_status_info( 'gemini' );
+		$this->assert( $status_verified['status'] === 'verified', '9.12 set_connection_status verified successfully stored' );
+
+		SettingsService::set_connection_status( 'gemini', 'failed', 'Invalid API key' );
+		$status_failed = SettingsService::get_connection_status_info( 'gemini' );
+		$this->assert( $status_failed['status'] === 'failed' && $status_failed['message'] === 'Invalid API key', '9.13 set_connection_status failed and message stored' );
+
+		// Clean up stored key
+		SettingsService::remove_provider_api_key( 'gemini' );
+		$this->assert( ! SettingsService::has_stored_credential( 'gemini' ), '9.14 remove_provider_api_key cleanly removes Gemini key' );
+	}
 }
 
 // Auto-run if executed directly via CLI or test runner.
-if ( defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
+if ( php_sapi_name() === 'cli' || defined( 'PHPUNIT_RUNNER' ) || ( defined( 'DOING_TESTS' ) && DOING_TESTS ) ) {
 	$suite = new TestProviderCredentials();
 	$suite->run();
 }

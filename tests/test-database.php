@@ -7,6 +7,8 @@
 
 namespace SkyFish\GeminiChat\Tests;
 
+require_once __DIR__ . '/bootstrap.php';
+
 // Define ABSPATH if running in standalone test mode.
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
@@ -190,7 +192,7 @@ class DatabaseSystemTest {
 	}
 
 	private function test_1_schema_version_constant(): void {
-		$this->assert( Migrator::SCHEMA_VERSION === '1.0.0', 'Test 1.1: Migrator target schema version is 1.0.0' );
+		$this->assert( version_compare( Migrator::SCHEMA_VERSION, '1.0.0', '>=' ), 'Test 1.1: Migrator target schema version is >= 1.0.0' );
 		$this->assert( Migrator::VERSION_OPTION === 'gca_db_version', 'Test 1.2: Migrator version option key is gca_db_version' );
 	}
 

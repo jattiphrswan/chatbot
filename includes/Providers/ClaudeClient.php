@@ -318,9 +318,8 @@ class ClaudeClient {
 				case 400:
 					throw ProviderException::invalid_request( 'claude', $error_msg );
 				case 401:
-					throw ProviderException::authentication_failed( 'claude', $error_msg );
 				case 403:
-					throw ProviderException::authentication_failed( 'claude', $error_msg );
+					throw new ProviderException( 'claude', 'authentication_failed', $error_msg, $status_code );
 				case 404:
 					throw ProviderException::model_unavailable( 'claude', $error_msg );
 				case 408:

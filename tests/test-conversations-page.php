@@ -7,6 +7,8 @@
 
 namespace SkyFish\GeminiChat\Tests;
 
+require_once __DIR__ . '/bootstrap.php';
+
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
 }
@@ -436,8 +438,7 @@ class TestConversationsPage {
 	}
 
 	private function test_admin_menu_registration(): void {
-		$settings_svc = new SettingsService();
-		$menu = new AdminMenu( $settings_svc );
+		$menu = new AdminMenu();
 
 		$this->assert( method_exists( $menu, 'render_conversations_page' ), 'AdminMenu has render_conversations_page method' );
 		$this->assert( method_exists( $menu, 'handle_close_conversation' ), 'AdminMenu has handle_close_conversation method' );
@@ -450,8 +451,7 @@ class TestConversationsPage {
 		$mock_db = new MockWPDBConversations();
 		$wpdb = $mock_db;
 
-		$settings_svc = new SettingsService();
-		$menu = new AdminMenu( $settings_svc );
+		$menu = new AdminMenu();
 
 		// 1. Unauthorized user test.
 		$test_current_user_can_result = false;

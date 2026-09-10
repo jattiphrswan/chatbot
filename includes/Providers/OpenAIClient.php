@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * OpenAI HTTP Client for Responses API.
  *
@@ -24,23 +24,63 @@ if ( ! defined( 'ABSPATH' ) ) {
 class OpenAIClient {
 
 	public const RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
+	public const ENDPOINT           = self::RESPONSES_ENDPOINT;
 	public const DEFAULT_TIMEOUT    = 30;
+
+	/**
+	 * Optional API key override (for testing or direct injection).
+	 */
+	private ?string $api_key;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param string|null $api_key Optional API key override.
+	 */
+	public function __construct( ?string $api_key = null ) {
+		$this->api_key = $api_key;
+	}
+
+	/**
+	 * Resolves the plaintext API key securely server-side.
+	 *
+	 * Priority: Injected key -> Environment variable -> wp-config constant -> Encrypted DB.
+	 *
+	 * @return string Plaintext key or empty string.
+	 */
+	public function get_api_key(): string {
+		if ( ! empty( $this->api_key ) ) {
+			return $this->api_key;
+		}
+		return SettingsService::get_provider_api_key( 'openai' );
+	}
 
 	/**
 	 * Creates a response interaction with the OpenAI Responses API.
 	 *
-	 * @param array<int, array{role: string, content: string}> $messages Normalized message array.
-	 * @param array<string, mixed>                            $options  Request options.
+	 * Supports both create_response($messages, $options) and legacy create_response($model, $messages, $options).
+	 *
+	 * @param array<int, array{role: string, content: string}>|string $messages_or_model Normalized message array or model slug.
+	 * @param array<string, mixed>|array<int, array{role: string, content: string}> $options_or_messages Options array or message array.
+	 * @param array<string, mixed> $options Optional options when model is first param.
 	 * @return ProviderResponse
 	 * @throws ProviderException
 	 */
-	public function create_response( array $messages, array $options = [] ): ProviderResponse {
-		$api_key = SettingsService::get_provider_api_key( 'openai' );
+	public function create_response( $messages_or_model, $options_or_messages = [], array $options = [] ): ProviderResponse {
+		$api_key = $this->get_api_key();
 		if ( empty( $api_key ) ) {
 			throw ProviderException::not_configured(
 				'openai',
 				__( 'OpenAI API key is missing or not configured on the server.', 'gemini-chat-assistant' )
 			);
+		}
+
+		if ( is_string( $messages_or_model ) ) {
+			$options['model'] = $messages_or_model;
+			$messages         = is_array( $options_or_messages ) ? $options_or_messages : [];
+		} else {
+			$messages = is_array( $messages_or_model ) ? $messages_or_model : [];
+			$options  = is_array( $options_or_messages ) ? $options_or_messages : [];
 		}
 
 		$payload  = $this->build_payload( $messages, $options );
@@ -63,7 +103,7 @@ class OpenAIClient {
 	 * @return bool
 	 * @throws ProviderException
 	 */
-	public function test_connection(): bool {
+	public function test_connection( string $model = 'gpt-4o-mini' ): bool {
 		$response = $this->create_response(
 			[
 				[
@@ -72,12 +112,13 @@ class OpenAIClient {
 				],
 			],
 			[
+				'model'             => $model,
 				'max_output_tokens' => 1,
 				'timeout'           => 15,
 			]
 		);
 
-		return ! empty( $response->get_content() );
+		return ! empty( $response->get_text() );
 	}
 
 	/**
@@ -147,7 +188,12 @@ class OpenAIClient {
 			'store' => false,
 		];
 
-		$instructions = ! empty( $options['system_instruction'] ) ? trim( (string) $options['system_instruction'] ) : '';
+		$instructions = '';
+		if ( ! empty( $options['system_instruction'] ) ) {
+			$instructions = trim( (string) $options['system_instruction'] );
+		} elseif ( ! empty( $options['instructions'] ) ) {
+			$instructions = trim( (string) $options['instructions'] );
+		}
 		if ( '' !== $instructions ) {
 			$payload['instructions'] = $instructions;
 		}
@@ -203,10 +249,7 @@ class OpenAIClient {
 
 		if ( is_wp_error( $response ) ) {
 			$msg = $response->get_error_message();
-			if ( false !== stripos( $msg, 'timed out' ) || false !== stripos( $msg, 'timeout' ) ) {
-				throw ProviderException::timeout( 'openai', $msg );
-			}
-			throw ProviderException::provider_unavailable( 'openai', $msg );
+			throw new ProviderException( 'openai', 'connection_failed', $msg, 0 );
 		}
 
 		$status_code = (int) wp_remote_retrieve_response_code( $response );
@@ -265,9 +308,8 @@ class OpenAIClient {
 				case 400:
 					throw ProviderException::invalid_request( 'openai', $error_msg );
 				case 401:
-					throw ProviderException::authentication_failed( 'openai', $error_msg );
 				case 403:
-					throw ProviderException::authentication_failed( 'openai', $error_msg );
+					throw new ProviderException( 'openai', 'authentication_error', $error_msg, $status_code );
 				case 404:
 					throw ProviderException::model_unavailable( 'openai', $error_msg );
 				case 408:
@@ -275,12 +317,13 @@ class OpenAIClient {
 				case 429:
 					throw ProviderException::rate_limited( 'openai', $error_msg );
 				case 500:
+					throw new ProviderException( 'openai', 'server_error', $error_msg, 500 );
 				case 502:
 				case 503:
 				case 504:
 					throw ProviderException::provider_unavailable( 'openai', $error_msg );
 				default:
-					throw new ProviderException( 'openai', ProviderException::TYPE_GENERIC, '', $status_code, $error_msg );
+					throw new ProviderException( 'openai', ProviderException::TYPE_GENERIC, $error_msg, $status_code );
 			}
 		}
 

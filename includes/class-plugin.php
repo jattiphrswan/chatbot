@@ -121,6 +121,9 @@ class Plugin {
 		require_once GCA_PLUGIN_DIR . 'includes/Knowledge/KnowledgeRetriever.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Knowledge/KnowledgeContextBuilder.php';
 
+		// Security & Secret Store.
+		require_once GCA_PLUGIN_DIR . 'includes/security/class-secret-store.php';
+
 		// Admin & Settings Services.
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/SettingsService.php';
 		require_once GCA_PLUGIN_DIR . 'includes/Admin/ProfileService.php';
@@ -596,6 +599,8 @@ class Plugin {
 		$this->get_integration_registry()->init();
 
 		if ( is_admin() ) {
+			\SkyFish\GeminiChat\Database\Migrator::check_updates();
+
 			$this->admin_menu = new AdminMenu(
 				$this->get_conversation_repository(),
 				$this->get_message_repository(),

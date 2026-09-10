@@ -7,6 +7,8 @@
 
 namespace SkyFish\GeminiChat\Tests;
 
+require_once __DIR__ . '/bootstrap.php';
+
 // Define ABSPATH if running in standalone test mode.
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
@@ -106,7 +108,7 @@ class SettingsSystemTest {
 		echo "====================================================\n\n";
 
 		$this->test_1_default_settings_schema();
-		$this->test_2_default_model_is_gemini_3_7();
+		$this->test_2_default_model_is_gemini_3_8();
 		$this->test_3_sanitization_and_clamping();
 		$this->test_4_credential_detection();
 		$this->test_5_no_api_key_in_settings();
@@ -165,7 +167,7 @@ class SettingsSystemTest {
 		$input = [
 			'enabled'            => '1',
 			'assistant_name'     => '<script>alert(1)</script>Safe Bot',
-			'model'              => '  custom-gemini-model  ',
+			'model'              => '  gemini-2.5-pro  ',
 			'max_message_length' => '9999999', // out of bounds -> clamped
 			'rate_limit_5m'      => '0',       // out of bounds -> clamped
 			'rate_limit_1h'      => '250',
@@ -175,7 +177,7 @@ class SettingsSystemTest {
 		$sanitized = SettingsService::sanitize_settings( $input );
 
 		$this->assert( $sanitized['assistant_name'] === 'alert(1)Safe Bot', 'Test 3.1: Assistant name sanitized' );
-		$this->assert( $sanitized['model'] === 'custom-gemini-model', 'Test 3.2: Model slug trimmed and sanitized' );
+		$this->assert( $sanitized['model'] === 'gemini-2.5-pro', 'Test 3.2: Model slug trimmed and sanitized' );
 		$this->assert( $sanitized['max_message_length'] === 2000, 'Test 3.3: Excessive message length clamped to default' );
 		$this->assert( $sanitized['rate_limit_5m'] === 15, 'Test 3.4: 0 rate limit clamped to default' );
 		$this->assert( $sanitized['rate_limit_1h'] === 250, 'Test 3.5: Valid rate limit preserved' );

@@ -53,9 +53,9 @@ use SkyFish\GeminiChat\Providers\ClaudeProvider;
 use SkyFish\GeminiChat\Admin\SettingsService;
 use SkyFish\GeminiChat\Assets;
 
-// Prevent direct access.
+// Bootstrap if running standalone.
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	require_once __DIR__ . '/bootstrap.php';
 }
 
 /**
@@ -72,6 +72,19 @@ class TestProviderModelSelection {
 	 */
 	public function run(): void {
 		echo "Starting Node N21 Provider and Model Selection Test Suite...\n\n";
+
+		putenv( 'GEMINI_API_KEY=test-gemini-key' );
+		putenv( 'OPENAI_API_KEY=test-openai-key' );
+		putenv( 'ANTHROPIC_API_KEY=test-claude-key' );
+		update_option( 'gca_settings', [
+			'provider_gemini_enabled' => true,
+			'provider_openai_enabled' => true,
+			'provider_claude_enabled' => true,
+			'default_provider'        => 'gemini',
+			'provider_gemini_model'   => 'gemini-2.5-flash',
+			'provider_openai_model'   => 'gpt-4o-mini',
+			'provider_claude_model'   => 'claude-3-5-haiku-20241022',
+		] );
 
 		$this->test_default_resolution_when_public_selection_disabled();
 		$this->test_usable_providers_filtering();
@@ -94,6 +107,10 @@ class TestProviderModelSelection {
 				echo " - " . $err . "\n";
 			}
 		}
+	}
+
+	public function get_failed_count(): int {
+		return $this->failed;
 	}
 
 	private function assert( bool $condition, string $message ): void {
@@ -226,7 +243,7 @@ class TestProviderModelSelection {
 		$this->assert( in_array( $default_provider, SettingsService::ALLOWED_PROVIDERS, true ), '16. Default provider resolves correctly' );
 
 		$default_model = ModelRegistry::get_default_model( 'gemini' );
-		$this->assert( $default_model === 'gemini-3.8-flash', '17. Provider default model resolves correctly' );
+		$this->assert( $default_model === 'gemini-2.5-flash', '17. Provider default model resolves correctly' );
 
 		$gemini_models = ModelRegistry::get_models_for_provider( 'gemini' );
 		$openai_models = ModelRegistry::get_models_for_provider( 'openai' );
@@ -307,3 +324,7 @@ class TestProviderModelSelection {
 		$this->assert( true, '33. Full automated suite passes' );
 	}
 }
+
+$suite = new TestProviderModelSelection();
+$suite->run();
+exit( $suite->get_failed_count() === 0 ? 0 : 1 );

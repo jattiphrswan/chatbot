@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Business Integration Action Interface.
  *
