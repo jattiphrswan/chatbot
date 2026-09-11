@@ -27,13 +27,32 @@ class ModelRegistry {
 	public const MODELS = [
 		'gemini' => [
 			[
+				'id'                => 'gemini-3.5-flash-lite',
+				'name'              => 'Gemini 3.5 Flash Lite',
+				'provider'          => 'gemini',
+				'context_window'    => 1048576,
+				'max_output_tokens' => 8192,
+				'description'       => 'High-efficiency, lightweight multimodal model optimized for low-latency chat.',
+				'recommended'       => true,
+			],
+			[ 'id' => 'gemini-3.7-flash', 'name' => 'Gemini 3.7 Flash', 'provider' => 'gemini', 'context_window' => 1048576, 'max_output_tokens' => 8192, 'description' => 'Gemini Flash model available for optional fallback.', 'recommended' => false ],
+			[
+				'id'                => 'gemini-3.8-flash',
+				'name'              => 'Gemini 3.8 Flash',
+				'provider'          => 'gemini',
+				'context_window'    => 1048576,
+				'max_output_tokens' => 8192,
+				'description'       => 'Fast multimodal model for conversational interactions.',
+				'recommended'       => false,
+			],
+			[
 				'id'                => 'gemini-2.5-flash',
 				'name'              => 'Gemini 2.5 Flash',
 				'provider'          => 'gemini',
 				'context_window'    => 1048576,
 				'max_output_tokens' => 8192,
 				'description'       => 'High-speed, cost-effective multimodal model for real-time chat interactions.',
-				'recommended'       => true,
+				'recommended'       => false,
 			],
 			[
 				'id'                => 'gemini-2.0-flash',
@@ -51,15 +70,6 @@ class ModelRegistry {
 				'context_window'    => 1048576,
 				'max_output_tokens' => 8192,
 				'description'       => 'Advanced reasoning and complex problem-solving model.',
-				'recommended'       => false,
-			],
-			[
-				'id'                => 'gemini-3.8-flash',
-				'name'              => 'Gemini 3.8 Flash',
-				'provider'          => 'gemini',
-				'context_window'    => 1048576,
-				'max_output_tokens' => 8192,
-				'description'       => 'Fast multimodal model for conversational interactions.',
 				'recommended'       => false,
 			],
 		],
@@ -171,7 +181,16 @@ class ModelRegistry {
 		if ( 'gemini' === $provider_id ) {
 			$discovered = get_option( 'gca_discovered_models_gemini', [] );
 			if ( is_array( $discovered ) && ! empty( $discovered ) ) {
-				return $discovered;
+				// Always preserve core static models at the top with Gemini 3.5 Flash Lite recommended.
+				$static_ids = array_column( $static_models, 'id' );
+				$merged     = $static_models;
+				foreach ( $discovered as $dm ) {
+					if ( isset( $dm['id'] ) && ! in_array( $dm['id'], $static_ids, true ) ) {
+						$dm['recommended'] = false;
+						$merged[]          = $dm;
+					}
+				}
+				return $merged;
 			}
 		}
 
@@ -196,6 +215,14 @@ class ModelRegistry {
 			}
 		}
 
+		// Also check static catalog in case discovered cache is incomplete or outdated.
+		$static = self::MODELS[ $provider_id ] ?? [];
+		foreach ( $static as $sm ) {
+			if ( $sm['id'] === $model_id ) {
+				return true;
+			}
+		}
+
 		return false;
 	}
 
@@ -214,6 +241,13 @@ class ModelRegistry {
 		foreach ( $models as $m ) {
 			if ( $m['id'] === $model_id ) {
 				return $m;
+			}
+		}
+
+		$static = self::MODELS[ $provider_id ] ?? [];
+		foreach ( $static as $sm ) {
+			if ( $sm['id'] === $model_id ) {
+				return $sm;
 			}
 		}
 

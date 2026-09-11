@@ -1,7 +1,7 @@
 {
   "name": "gemini-chat-assistant",
   "slug": "gemini-chat-assistant",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Enterprise-grade WordPress AI Chat Assistant powered by Google Gemini API.",
   "author": "SkyFish",
   "php_namespace": "SkyFish\\GeminiChat",

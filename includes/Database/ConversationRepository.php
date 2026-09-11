@@ -237,25 +237,81 @@ class ConversationRepository {
 	}
 
 	/**
-	 * Increments message count and updates last_message_at timestamp.
+	 * Updates the last active timestamp for a conversation.
 	 *
 	 * @param int $id Conversation ID.
-	 * @return bool
+	 * @return bool True on success or unchanged, false on database failure or missing conversation.
 	 */
-	public function increment_message_count( int $id ): bool {
+	public function update_last_active( int $id ): bool {
 		global $wpdb;
+
+		if ( $id <= 0 ) {
+			return false;
+		}
 
 		$table   = self::get_table_name();
 		$utc_now = gmdate( 'Y-m-d H:i:s' );
+		$result  = $wpdb->update(
+			$table,
+			[
+				'updated_at'      => $utc_now,
+				'last_message_at' => $utc_now,
+			],
+			[ 'id' => absint( $id ) ],
+			[ '%s', '%s' ],
+			[ '%d' ]
+		);
+
+		if ( false === $result ) {
+			if ( ! empty( $wpdb->last_error ) && function_exists( 'error_log' ) ) {
+				error_log( 'GCA ConversationRepository::update_last_active error: ' . $wpdb->last_error );
+			}
+			return false;
+		}
+
+		if ( 0 === $result ) {
+			$exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE id = %d LIMIT 1", absint( $id ) ) );
+			return ! empty( $exists );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Increments message count and updates last_message_at timestamp.
+	 *
+	 * @param int $id    Conversation ID.
+	 * @param int $count Number of messages to increment by (default 1).
+	 * @return bool True on success, false on database failure or missing conversation.
+	 */
+	public function increment_message_count( int $id, int $count = 1 ): bool {
+		global $wpdb;
+
+		if ( $id <= 0 ) {
+			return false;
+		}
+
+		$table   = self::get_table_name();
+		$utc_now = gmdate( 'Y-m-d H:i:s' );
+		$step    = max( 1, absint( $count ) );
 		$query   = $wpdb->prepare(
-			"UPDATE {$table} SET message_count = message_count + 1, updated_at = %s, last_message_at = %s WHERE id = %d",
+			"UPDATE {$table} SET message_count = message_count + %d, updated_at = %s, last_message_at = %s WHERE id = %d",
+			$step,
 			$utc_now,
 			$utc_now,
 			absint( $id )
 		);
 
 		$result = $wpdb->query( $query );
-		return false !== $result;
+
+		if ( false === $result ) {
+			if ( ! empty( $wpdb->last_error ) && function_exists( 'error_log' ) ) {
+				error_log( 'GCA ConversationRepository::increment_message_count error: ' . $wpdb->last_error );
+			}
+			return false;
+		}
+
+		return $result > 0;
 	}
 
 	/**

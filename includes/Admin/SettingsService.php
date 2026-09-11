@@ -27,6 +27,60 @@ if ( ! class_exists( 'SkyFish\\GeminiChat\\Activator' ) && file_exists( dirname(
 class SettingsService {
 
 	public const OPTION_KEY = 'gca_settings';
+	public const MIGRATION_FLAG_35 = 'gca_migrated_model_to_35_flash_lite';
+
+	/**
+	 * Safe one-time migration: If saved primary model is the old default 'gemini-3.8-flash',
+	 * migrate it once to 'gemini-3.5-flash-lite'.
+	 * Runs strictly once via a persistent WordPress option flag so future admin selections are preserved.
+	 */
+	public static function maybe_migrate_old_default_model(): void {
+		static $checked_this_request = false;
+		if ( $checked_this_request ) {
+			return;
+		}
+		$checked_this_request = true;
+
+		$already_migrated = get_option( self::MIGRATION_FLAG_35, false );
+		if ( ! empty( $already_migrated ) ) {
+			return;
+		}
+
+		// Mark migration flag immediately so it never runs again.
+		update_option( self::MIGRATION_FLAG_35, '1', false );
+
+		$saved = get_option( self::OPTION_KEY, [] );
+		$needs_update = false;
+
+		if ( is_array( $saved ) && ! empty( $saved ) ) {
+			if ( isset( $saved['provider_gemini_model'] ) && 'gemini-3.8-flash' === $saved['provider_gemini_model'] ) {
+				$saved['provider_gemini_model'] = 'gemini-3.5-flash-lite';
+				$needs_update = true;
+			}
+			if ( isset( $saved['model'] ) && 'gemini-3.8-flash' === $saved['model'] ) {
+				$saved['model'] = 'gemini-3.5-flash-lite';
+				$needs_update = true;
+			}
+			if ( $needs_update ) {
+				update_option( self::OPTION_KEY, $saved );
+			}
+		}
+
+		// Clean up any legacy individual options in wp_options.
+		if ( 'gemini-3.8-flash' === get_option( 'gca_provider_gemini_model' ) ) {
+			update_option( 'gca_provider_gemini_model', 'gemini-3.5-flash-lite' );
+		}
+		if ( 'gemini-3.8-flash' === get_option( 'gca_model' ) ) {
+			update_option( 'gca_model', 'gemini-3.5-flash-lite' );
+		}
+
+		// Reset stale discovered models cache so 3.5-flash-lite takes precedence.
+		if ( function_exists( 'delete_option' ) ) {
+			delete_option( 'gca_discovered_models_gemini' );
+		} else {
+			update_option( 'gca_discovered_models_gemini', [] );
+		}
+	}
 
 	/**
 	 * Singleton instance.
@@ -53,6 +107,8 @@ class SettingsService {
 	 * @return array<string, mixed>
 	 */
 	public static function get_all(): array {
+		self::maybe_migrate_old_default_model();
+
 		$defaults = Activator::get_default_settings();
 		$saved    = get_option( self::OPTION_KEY, [] );
 
@@ -62,11 +118,13 @@ class SettingsService {
 
 		$settings = wp_parse_args( $saved, $defaults );
 
-		// Allow individual gca_* options to override or populate settings.
+		// Allow individual legacy gca_* options to populate settings only if not explicitly defined in saved settings.
 		foreach ( array_keys( $defaults ) as $k ) {
-			$indiv = get_option( "gca_{$k}", null );
-			if ( null !== $indiv ) {
-				$settings[ $k ] = $indiv;
+			if ( ! array_key_exists( $k, $saved ) ) {
+				$indiv = get_option( "gca_{$k}", null );
+				if ( null !== $indiv ) {
+					$settings[ $k ] = $indiv;
+				}
 			}
 		}
 
@@ -91,8 +149,8 @@ class SettingsService {
 	 * @return string
 	 */
 	public static function get_model(): string {
-		$model = (string) self::get( 'model', 'gemini-2.5-flash' );
-		return ! empty( $model ) ? sanitize_text_field( $model ) : 'gemini-2.5-flash';
+		$model = (string) self::get( 'model', 'gemini-3.5-flash-lite' );
+		return ! empty( $model ) ? sanitize_text_field( $model ) : 'gemini-3.5-flash-lite';
 	}
 
 	/**
@@ -234,9 +292,9 @@ class SettingsService {
 			default:
 				$val = (string) self::get( 'provider_gemini_model', '' );
 				if ( empty( $val ) ) {
-					$val = (string) self::get( 'model', 'gemini-2.5-flash' );
+					$val = (string) self::get( 'model', 'gemini-3.5-flash-lite' );
 				}
-				return ! empty( $val ) ? sanitize_text_field( $val ) : 'gemini-2.5-flash';
+				return ! empty( $val ) ? sanitize_text_field( $val ) : 'gemini-3.5-flash-lite';
 		}
 	}
 
@@ -572,9 +630,24 @@ class SettingsService {
 		$sanitized['provider_gemini_enabled']           = ! empty( $input['provider_gemini_enabled'] );
 		$gemini_source_input                           = isset( $input['provider_gemini_credential_source'] ) ? sanitize_key( $input['provider_gemini_credential_source'] ) : 'dashboard';
 		$sanitized['provider_gemini_credential_source'] = in_array( $gemini_source_input, [ 'dashboard', 'server' ], true ) ? $gemini_source_input : 'dashboard';
-		$raw_gemini_model                               = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-2.5-flash' );
-		$sanitized['provider_gemini_model']             = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', $raw_gemini_model ) ? $raw_gemini_model : 'gemini-2.5-flash';
+		$raw_gemini_model                               = isset( $input['provider_gemini_model'] ) ? sanitize_text_field( trim( (string) $input['provider_gemini_model'] ) ) : ( isset( $input['model'] ) ? sanitize_text_field( trim( (string) $input['model'] ) ) : 'gemini-3.5-flash-lite' );
+		$sanitized['provider_gemini_model']             = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', $raw_gemini_model ) ? $raw_gemini_model : 'gemini-3.5-flash-lite';
+		$sanitized['provider_gemini_fallback_enabled'] = ! empty( $input['provider_gemini_fallback_enabled'] );
+		$fallback_model = sanitize_text_field( trim( (string) ( $input['provider_gemini_fallback_model'] ?? 'gemini-3.8-flash' ) ) );
+		$sanitized['provider_gemini_fallback_model'] = \SkyFish\GeminiChat\Providers\ModelRegistry::has_model( 'gemini', $fallback_model ) ? $fallback_model : 'gemini-3.8-flash';
+		$thinking_level = isset( $input['provider_gemini_thinking_level'] ) ? sanitize_key( $input['provider_gemini_thinking_level'] ) : 'low';
+		$sanitized['provider_gemini_thinking_level'] = in_array( $thinking_level, [ 'none', 'low', 'medium', 'high' ], true ) ? $thinking_level : 'low';
+		$raw_max_tokens = isset( $input['provider_gemini_max_tokens'] ) ? absint( $input['provider_gemini_max_tokens'] ) : 1000;
+		$sanitized['provider_gemini_max_tokens']     = ( $raw_max_tokens >= 50 && $raw_max_tokens <= 8192 ) ? $raw_max_tokens : 1000;
 		$sanitized['model']                             = $sanitized['provider_gemini_model']; // Backward compatibility.
+
+		// Sync legacy individual options in wp_options so they never conflict.
+		if ( false !== get_option( 'gca_model', false ) ) {
+			update_option( 'gca_model', $sanitized['provider_gemini_model'] );
+		}
+		if ( false !== get_option( 'gca_provider_gemini_model', false ) ) {
+			update_option( 'gca_provider_gemini_model', $sanitized['provider_gemini_model'] );
+		}
 
 		// Provider: OpenAI.
 		$sanitized['provider_openai_enabled'] = ! empty( $input['provider_openai_enabled'] );
@@ -687,11 +760,17 @@ class SettingsService {
 		$max_len = isset( $input['max_message_length'] ) ? absint( $input['max_message_length'] ) : $defaults['max_message_length'];
 		$sanitized['max_message_length'] = ( $max_len >= 100 && $max_len <= 10000 ) ? $max_len : 2000;
 
+		$rate_min_int = isset( $input['rate_limit_min_interval'] ) ? absint( $input['rate_limit_min_interval'] ) : ( $defaults['rate_limit_min_interval'] ?? 2 );
+		$sanitized['rate_limit_min_interval'] = ( $rate_min_int >= 0 && $rate_min_int <= 60 ) ? $rate_min_int : 2;
+
+		$rate_1m = isset( $input['rate_limit_1m'] ) ? absint( $input['rate_limit_1m'] ) : ( $defaults['rate_limit_1m'] ?? 10 );
+		$sanitized['rate_limit_1m'] = ( $rate_1m >= 1 && $rate_1m <= 200 ) ? $rate_1m : 10;
+
 		$rate_5m = isset( $input['rate_limit_5m'] ) ? absint( $input['rate_limit_5m'] ) : $defaults['rate_limit_5m'];
 		$sanitized['rate_limit_5m'] = ( $rate_5m >= 1 && $rate_5m <= 500 ) ? $rate_5m : 15;
 
 		$rate_1h = isset( $input['rate_limit_1h'] ) ? absint( $input['rate_limit_1h'] ) : $defaults['rate_limit_1h'];
-		$sanitized['rate_limit_1h'] = ( $rate_1h >= 5 && $rate_1h <= 5000 ) ? $rate_1h : 100;
+		$sanitized['rate_limit_1h'] = ( $rate_1h >= 5 && $rate_1h <= 5000 ) ? $rate_1h : 60;
 
 		// Privacy.
 		$sanitized['store_messages'] = ! empty( $input['store_messages'] );

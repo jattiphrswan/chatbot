@@ -567,7 +567,7 @@
 			}
 
 			state.rateLimitRemaining = seconds;
-			const template = i18n.rateLimited || 'Too many messages. Please try again in {seconds}s.';
+			const template = i18n.chatRateLimited || i18n.rateLimited || "You're sending messages too quickly. Please try again in {seconds}s.";
 
 			function tick() {
 				if (state.rateLimitRemaining <= 0) {
@@ -604,8 +604,11 @@
 				return i18n.errorGeneric || 'The website encountered an error. Please try again later.';
 			}
 
-			if (code === 'RATE_LIMITED') {
-				return i18n.rateLimited || 'Too many requests. Please wait a moment.';
+			if (code === 'GEMINI_RATE_LIMITED') {
+				return i18n.geminiRateLimited || 'The assistant is temporarily busy. Please try again shortly.';
+			}
+			if (code === 'CHAT_RATE_LIMITED' || code === 'RATE_LIMITED') {
+				return i18n.chatRateLimited || i18n.rateLimited || "You're sending messages too quickly. Please wait a moment.";
 			}
 			if (code === 'INVALID_INPUT') {
 				return i18n.errorTooLong || 'Please check your message and try again.';
@@ -613,14 +616,14 @@
 			if (code === 'AI_TIMEOUT' || code === 'GEMINI_TIMEOUT') {
 				return i18n.errorTimeout || 'The assistant took too long to respond. Please try again.';
 			}
-			if (code === 'AI_UNAVAILABLE' || code === 'GEMINI_UNAVAILABLE') {
-				return i18n.errorUnavailable || 'The assistant is temporarily unavailable.';
+			if (code === 'AI_UNAVAILABLE' || code === 'GEMINI_UNAVAILABLE' || code === 'GEMINI_SERVICE_UNAVAILABLE') {
+				return i18n.errorUnavailable || 'The assistant is temporarily unavailable. Please try again.';
 			}
 			if (code === 'GEMINI_NOT_CONFIGURED') {
 				return i18n.errorNotConfigured || 'The AI assistant is not configured yet. Please configure the API key in settings.';
 			}
 			if (code === 'GEMINI_AUTH_FAILED') {
-				return i18n.errorAuthFailed || 'AI authentication failed. Please verify the API key in admin settings.';
+				return i18n.errorAuthFailed || 'The assistant is not configured correctly.';
 			}
 			if (code === 'GEMINI_MODEL_UNAVAILABLE') {
 				return i18n.errorModelUnavailable || 'The selected AI model is currently unavailable.';
@@ -691,10 +694,13 @@
 				payload.model = currentModelId;
 			}
 
+			const requestId = 'gca_' + (window.crypto && typeof window.crypto.randomUUID === 'function'
+				? window.crypto.randomUUID() : Date.now().toString(16) + Math.random().toString(16).slice(2));
 			fetch(restUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
+					'X-GCA-Request-ID': requestId,
 				},
 				body: JSON.stringify(payload),
 			})
@@ -715,8 +721,18 @@
 					if (res.is429) {
 						if (providerSelect) providerSelect.disabled = false;
 						if (modelSelect) modelSelect.disabled = false;
-						const retryAfter = (res.data && res.data.error && res.data.error.retry_after) || 30;
-						startRateLimitCountdown(retryAfter);
+						const errCode = (res.data && res.data.error && res.data.error.code) || (res.data && res.data.code);
+						if (errCode === 'CHAT_RATE_LIMITED' || errCode === 'RATE_LIMITED') {
+							const retryAfter = (res.data && res.data.error && res.data.error.retry_after) || 2;
+							startRateLimitCountdown(retryAfter);
+							return;
+						}
+						// Upstream / Google Gemini 429 quota: do not trigger countdown.
+						if (composerInput) composerInput.disabled = false;
+						if (sendButton) sendButton.disabled = false;
+						if (composerInput) composerInput.focus();
+						const errMessage = resolveErrorMessage(res.data);
+						showError(errMessage, true);
 						return;
 					}
 

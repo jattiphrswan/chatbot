@@ -35,9 +35,13 @@ class Activator {
 
 			// AI & Providers (N18).
 			'default_provider'      => 'gemini',
-			'model'                 => 'gemini-2.5-flash',
+			'model'                 => 'gemini-3.5-flash-lite',
 			'provider_gemini_enabled'       => true,
-			'provider_gemini_model'         => 'gemini-2.5-flash',
+			'provider_gemini_fallback_enabled' => false,
+			'provider_gemini_fallback_model' => 'gemini-3.8-flash',
+			'provider_gemini_model'         => 'gemini-3.5-flash-lite',
+			'provider_gemini_thinking_level' => 'low',
+			'provider_gemini_max_tokens'     => 1000,
 			'provider_openai_enabled'       => false,
 			'provider_openai_model'         => 'gpt-4o-mini',
 			'provider_claude_enabled'       => false,
@@ -100,8 +104,10 @@ class Activator {
 
 			// Limits.
 			'max_message_length'    => 2000,
+			'rate_limit_min_interval' => 2,
+			'rate_limit_1m'         => 10,
 			'rate_limit_5m'         => 15,
-			'rate_limit_1h'         => 100,
+			'rate_limit_1h'         => 60,
 
 			// Appearance & Branding (N13).
 			'avatar_id'               => 0,

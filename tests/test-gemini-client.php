@@ -7,6 +7,10 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
+if ( ! defined( 'GCA_TESTING_NO_SLEEP' ) ) {
+	define( 'GCA_TESTING_NO_SLEEP', true );
+}
+
 // Define ABSPATH if running in standalone test mode.
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
@@ -91,6 +95,11 @@ if ( ! function_exists( 'wp_remote_post' ) ) {
 			'url'  => $url,
 			'args' => $args,
 		];
+		$GLOBALS['retry_requests'][] = $last_http_request;
+		if ( isset( $GLOBALS['retry_on_post'] ) ) { ( $GLOBALS['retry_on_post'] )(); }
+		if ( ! empty( $GLOBALS['retry_responses'] ) ) {
+			return array_shift( $GLOBALS['retry_responses'] );
+		}
 		return $mock_http_response;
 	}
 }
@@ -172,12 +181,51 @@ class GeminiClientTest {
 		$this->test_empty_response_handling();
 		$this->test_connection_method();
 		$this->test_generation_diagnostics();
+		$this->test_transient_recovery();
+		$this->test_503_retry_and_fallback_resilience();
 
 		echo "\n========================================\n";
 		echo "Results: {$this->passed} Passed, {$this->failed} Failed\n";
 		echo "========================================\n";
 
 		return 0 === $this->failed;
+	}
+
+	private function test_transient_recovery(): void {
+		putenv( 'GEMINI_API_KEY=retry_test_key' );
+		$client = new GeminiClient();
+		$ok = [ 'response' => [ 'code' => 200 ], 'body' => '{"candidates":[{"content":{"parts":[{"text":"OK"}]}}]}' ];
+		foreach ( [ 'cURL error 6: Could not resolve host' => 'DNS', 'cURL error 60: SSL certificate problem' => 'TLS', 'cURL error 28: timed out retry_test_key' => 'NETWORK' ] as $message => $layer ) {
+			$GLOBALS['node24_models_response'] = new WP_Error( 'http_request_failed', $message );
+			$GLOBALS['retry_requests'] = [];
+			$diag = $client->run_connection_diagnostic( 'gemini-3.8-flash' );
+			$this->assert( $layer === $diag['failure_layer'] && 'Not Tested' === $diag['authentication'] && [] === $GLOBALS['retry_requests'], 'Models transport failure stops generation: ' . $layer );
+			$this->assert( is_numeric( $diag['models_elapsed_seconds'] ) && null === $diag['models_http_status'] && ! str_contains( json_encode( $diag ), 'retry_test_key' ), 'Models timing and redacted transport details recorded' );
+		}
+		foreach ( [ 401 => 'AUTH', 403 => 'AUTH', 429 => 'QUOTA', 503 => 'GOOGLE SERVER' ] as $status => $layer ) {
+			$GLOBALS['node24_models_response'] = [ 'response' => [ 'code' => $status ], 'body' => '{}' ];
+			$GLOBALS['retry_requests'] = [];
+			$diag = $client->run_connection_diagnostic( 'gemini-3.8-flash' );
+			$this->assert( $layer === $diag['failure_layer'] && $status === $diag['models_http_status'] && [] === $GLOBALS['retry_requests'], 'Models HTTP failure classified without generation: ' . $status );
+		}
+		$GLOBALS['node24_models_response'] = [ 'response' => [ 'code' => 200 ], 'body' => '{"models":[]}' ];
+		$GLOBALS['retry_responses'] = [ $ok ];
+		$diag = $client->run_connection_diagnostic( 'gemini-3.8-flash' );
+		$request = $GLOBALS['last_http_request'];
+		$payload = json_decode( $request['args']['body'], true );
+		$this->assert( $diag['success'] && $request['args']['timeout'] <= 45 && $request['args']['timeout'] > 44 && 'low' === $payload['generationConfig']['thinkingConfig']['thinkingLevel'], 'Explicit generation uses 45 seconds and low thinking' );
+		$this->assert( is_numeric( $diag['generation_elapsed_seconds'] ) && 'NONE' === $diag['failure_layer'], 'Separate successful generation timing recorded' );
+		$GLOBALS['retry_responses'] = [ $ok ];
+		$client->create_interaction( 'hi', null, [ 'model' => 'gemini-3.8-flash' ] );
+		$normal_request = $GLOBALS['last_http_request'];
+		$normal_payload = json_decode( $normal_request['args']['body'], true );
+		$this->assert( $normal_request['args']['timeout'] <= 45 && $normal_request['args']['timeout'] > 44 && 'low' === $normal_payload['generationConfig']['thinkingConfig']['thinkingLevel'], 'Normal generation defaults to 45 seconds and low thinking too' );
+		$GLOBALS['retry_requests'] = [];
+		$GLOBALS['retry_responses'] = [ new WP_Error( 'http_request_failed', 'cURL error 28: timed out' ), $ok ];
+		$result = $client->create_interaction( 'hi' );
+		$this->assert( 'GCA_GEMINI_TIMEOUT' === $result->get_error_code() && 504 === $result->get_error_data()['status'] && 1 === count( $GLOBALS['retry_requests'] ), 'Timeout is 504 and is never automatically resent' );
+		unset( $GLOBALS['retry_responses'], $GLOBALS['retry_requests'], $GLOBALS['node24_models_response'] );
+		putenv( 'GEMINI_API_KEY' );
 	}
 
 	private function test_endpoint_and_defaults(): void {
@@ -401,7 +449,7 @@ class GeminiClientTest {
 		$mock_http_response = [ 'response' => [ 'code' => 200 ], 'body' => json_encode( [ 'candidates' => [ [ 'content' => [ 'parts' => [ [ 'text' => 'OK' ] ] ] ] ] ] ) ];
 		$diag = $client->run_connection_diagnostic( 'dynamic-test-model' );
 		$payload = json_decode( $last_http_request['args']['body'], true );
-		$this->assert( $diag['success'] && str_ends_with( $diag['endpoint'], '/dynamic-test-model:generateContent' ) && 'Reply only with OK' === $payload['contents'][0]['parts'][0]['text'], 'Successful minimal generation uses exact dynamic model' );
+		$this->assert( $diag['success'] && str_ends_with( $diag['endpoint'], '/dynamic-test-model:generateContent' ) && 'Reply with OK.' === $payload['contents'][0]['parts'][0]['text'], 'Successful minimal generation uses exact dynamic model' );
 		$this->assert( ! isset( $payload['generationConfig']['maxOutputTokens'] ), 'Diagnostic does not impose a one-token output limit' );
 		$saved_settings = get_option( SettingsService::OPTION_KEY, [] );
 		update_option( SettingsService::OPTION_KEY, [ 'provider_gemini_model' => 'dynamic-test-model', 'model' => 'legacy-model' ] );
@@ -459,10 +507,81 @@ class GeminiClientTest {
 
 		putenv( 'GEMINI_API_KEY' );
 	}
+
+	private function test_503_retry_and_fallback_resilience(): void {
+		putenv( 'GEMINI_API_KEY=resilience_test_key' );
+		$client   = new GeminiClient();
+		$ok       = [ 'response' => [ 'code' => 200 ], 'body' => '{"candidates":[{"content":{"parts":[{"text":"Hello response"}]}}]}' ];
+		$err_503  = [ 'response' => [ 'code' => 503 ], 'body' => '{"error":{"code":503,"status":"UNAVAILABLE","message":"The service is overloaded"}}' ];
+		$err_429  = [ 'response' => [ 'code' => 429 ], 'body' => '{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Rate limit exceeded"}}' ];
+		$err_401  = [ 'response' => [ 'code' => 401 ], 'body' => '{"error":{"code":401,"status":"UNAUTHENTICATED","message":"Invalid key"}}' ];
+
+		// 1. Persistent 503 without fallback -> 3 attempts on primary model, fails with GCA_GEMINI_UNAVAILABLE
+		$saved_settings = get_option( SettingsService::OPTION_KEY, [] );
+		update_option( SettingsService::OPTION_KEY, [
+			'provider_gemini_model'            => 'gemini-3.8-flash',
+			'provider_gemini_fallback_enabled' => false,
+			'provider_gemini_fallback_model'   => 'gemini-3.7-flash',
+		] );
+
+		$GLOBALS['retry_requests']  = [];
+		$GLOBALS['retry_responses'] = [ $err_503, $err_503, $err_503 ];
+		$res = $client->create_interaction( 'test 503' );
+		$this->assert( is_wp_error( $res ) && 'GCA_GEMINI_UNAVAILABLE' === $res->get_error_code(), 'Persistent 503 returns GCA_GEMINI_UNAVAILABLE' );
+		$this->assert( 3 === count( $GLOBALS['retry_requests'] ), 'Persistent 503 retries up to 3 total attempts' );
+		foreach ( $GLOBALS['retry_requests'] as $req ) {
+			$this->assert( false !== strpos( $req['url'], 'gemini-3.8-flash' ), 'All 3 attempts use primary model when fallback disabled' );
+		}
+		$diag = get_option( 'gca_gemini_last_chat', [] );
+		$this->assert( 3 === $diag['attempt_count'] && 'NO' === $diag['fallback_used'] && 'FAIL' === $diag['final_result'] && 'gemini-3.8-flash' === $diag['final_model'], 'Diagnostic records 3 attempts, no fallback, and FAIL' );
+
+		// 2. 503 with fallback enabled -> attempt 1 & 2 on primary, attempt 3 on fallback (succeeds)
+		update_option( SettingsService::OPTION_KEY, [
+			'provider_gemini_model'            => 'gemini-3.8-flash',
+			'provider_gemini_fallback_enabled' => true,
+			'provider_gemini_fallback_model'   => 'gemini-3.7-flash',
+		] );
+
+		$GLOBALS['retry_requests']  = [];
+		$GLOBALS['retry_responses'] = [ $err_503, $err_503, $ok ];
+		$res2 = $client->create_interaction( 'test fallback' );
+		$this->assert( ! is_wp_error( $res2 ) && 'Hello response' === $res2['text'], 'Fallback attempt succeeds with text' );
+		$this->assert( 3 === count( $GLOBALS['retry_requests'] ), 'Fallback engages on attempt 3 after 2 primary failures' );
+		$this->assert( false !== strpos( $GLOBALS['retry_requests'][0]['url'], 'gemini-3.8-flash' ), 'Attempt 1 uses primary model' );
+		$this->assert( false !== strpos( $GLOBALS['retry_requests'][1]['url'], 'gemini-3.8-flash' ), 'Attempt 2 uses primary model' );
+		$this->assert( false !== strpos( $GLOBALS['retry_requests'][2]['url'], 'gemini-3.7-flash' ), 'Attempt 3 uses fallback model' );
+		$diag2 = get_option( 'gca_gemini_last_chat', [] );
+		$this->assert( 'YES' === $diag2['fallback_used'] && 'PASS' === $diag2['final_result'] && 'gemini-3.7-flash' === $diag2['final_model'], 'Diagnostic records fallback used, final model fallback, and PASS' );
+
+		// 3. 429 transient retry -> recovers on attempt 2
+		$GLOBALS['retry_requests']  = [];
+		$GLOBALS['retry_responses'] = [ $err_429, $ok ];
+		$res3 = $client->create_interaction( 'test 429' );
+		$this->assert( ! is_wp_error( $res3 ) && 2 === count( $GLOBALS['retry_requests'] ), '429 rate limit retries and recovers on attempt 2' );
+
+		// 4. 401 unauthenticated -> NO retry, exactly 1 request
+		$GLOBALS['retry_requests']  = [];
+		$GLOBALS['retry_responses'] = [ $err_401, $ok ];
+		$res4 = $client->create_interaction( 'test 401' );
+		$this->assert( is_wp_error( $res4 ) && 'GCA_GEMINI_AUTH_ERROR' === $res4->get_error_code(), '401 returns GCA_GEMINI_AUTH_ERROR' );
+		$this->assert( 1 === count( $GLOBALS['retry_requests'] ), '401 is NOT retried (exactly 1 request executed)' );
+
+		// 5. cURL 28 timeout -> NO retry, exactly 1 request
+		$GLOBALS['retry_requests']  = [];
+		$GLOBALS['retry_responses'] = [ new WP_Error( 'http_request_failed', 'cURL error 28: Operation timed out' ), $ok ];
+		$res5 = $client->create_interaction( 'test timeout' );
+		$this->assert( is_wp_error( $res5 ) && 'GCA_GEMINI_TIMEOUT' === $res5->get_error_code() && 504 === $res5->get_error_data()['status'], 'Timeout returns GCA_GEMINI_TIMEOUT 504' );
+		$this->assert( 1 === count( $GLOBALS['retry_requests'] ), 'Timeout is NOT automatically retried (exactly 1 request executed)' );
+
+		// Restore settings
+		update_option( SettingsService::OPTION_KEY, $saved_settings );
+		unset( $GLOBALS['retry_requests'], $GLOBALS['retry_responses'] );
+		putenv( 'GEMINI_API_KEY' );
+	}
 }
 
 // Execute if run directly via PHP CLI.
-if ( 'cli' === php_sapi_name() || ! defined( 'WPINC' ) ) {
+if ( ! defined( 'GCA_GEMINI_TEST_HELPERS_ONLY' ) && ( 'cli' === php_sapi_name() || ! defined( 'WPINC' ) ) ) {
 	$suite = new GeminiClientTest();
 	$exit_code = $suite->run_all() ? 0 : 1;
 	// Don't exit if included.

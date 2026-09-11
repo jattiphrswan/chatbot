@@ -77,7 +77,7 @@ class GeminiProvider extends AbstractProvider {
 		return new ProviderResponse(
 			$text,
 			self::PROVIDER_ID,
-			$model_id,
+			$result['model'] ?? $model_id,
 			$input_tokens,
 			$output_tokens,
 			$total_tokens,
@@ -161,6 +161,8 @@ class GeminiProvider extends AbstractProvider {
 			case 'GCA_GEMINI_QUOTA_ERROR':
 			case 'GCA_GEMINI_RATE_LIMITED':
 				return new ProviderException( self::PROVIDER_ID, ProviderException::TYPE_RATE_LIMITED, $msg, 429, $code );
+			case 'GCA_GEMINI_MODEL_UNAVAILABLE':
+				return new ProviderException( self::PROVIDER_ID, ProviderException::TYPE_MODEL_UNAVAILABLE, $msg, 503, $code );
 			case 'GCA_GEMINI_TIMEOUT':
 				return new ProviderException( self::PROVIDER_ID, ProviderException::TYPE_TIMEOUT, $msg, 504, $code );
 			case 'GCA_GEMINI_UNAVAILABLE':

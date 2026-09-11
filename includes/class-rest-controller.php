@@ -254,7 +254,43 @@ class RestController extends WP_REST_Controller {
 	 * @return WP_REST_Response
 	 */
 	public function handle_chat( WP_REST_Request $request ): WP_REST_Response {
-		$request_id = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : uniqid( 'req_', true );
+		$request_id = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : uniqid( 'gca_', true );
+		$client_id = method_exists( $request, 'get_header' ) ? (string) $request->get_header( 'X-GCA-Request-ID' ) : '';
+		if ( preg_match( '/^gca_[a-f0-9-]{16,64}$/D', $client_id ) ) { $request_id = $client_id; }
+		$this->chat_service->begin_pipeline( $request_id );
+		$status = 500;
+		try {
+			$response = $this->execute_chat_request( $request, $request_id );
+			$status = $response->get_status();
+			if ( method_exists( $response, 'header' ) ) { $response->header( 'X-GCA-Request-ID', $request_id ); }
+			return $response;
+		} catch ( \Throwable $error ) {
+			$this->chat_service->pipeline_failure( get_class( $error ) );
+			$pipeline     = method_exists( $this->chat_service, 'get_pipeline' ) ? $this->chat_service->get_pipeline() : [];
+			$file         = str_replace( '\\', '/', $error->getFile() );
+			$root         = rtrim( str_replace( '\\', '/', GCA_PLUGIN_DIR ), '/' ) . '/';
+			$safe_file    = 0 === strpos( $file, $root ) ? substr( $file, strlen( $root ) ) : basename( $file );
+			$safe_message = $this->sanitize_safe_error_message( $error->getMessage() );
+			if ( method_exists( $this->chat_service, 'pipeline_error_details' ) ) {
+				$this->chat_service->pipeline_error_details( get_class( $error ), $safe_message, $safe_file, $error->getLine() );
+			}
+			update_option( 'gca_chat_server_error', [
+				'checked_at'   => gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+				'request_id'   => $request_id,
+				'error_class'  => get_class( $error ),
+				'safe_message' => $safe_message,
+				'file'         => $safe_file,
+				'line'         => $error->getLine(),
+				'failed_stage' => $pipeline['failure_stage'] ?? 'DATABASE',
+				'failed_step'  => $pipeline['failure_step'] ?? 'CONVERSATION_UPDATE',
+			], false );
+			return $this->format_error_response( new WP_Error( 'CHAT_SERVER_ERROR', __( 'The website encountered an error while processing your message. Please try again later.', 'gemini-chat-assistant' ), [ 'status' => 500 ] ), $request_id );
+		} finally {
+			$this->chat_service->finish_pipeline( $status );
+		}
+	}
+
+	private function execute_chat_request( WP_REST_Request $request, string $request_id ): WP_REST_Response {
 
 		// 1. Extract and validate message.
 		$raw_message = $request->get_param( 'message' );
@@ -278,11 +314,14 @@ class RestController extends WP_REST_Controller {
 		$context     = Validator::validate_context( $raw_context );
 
 		// 4. Rate limiting check & consume before executing expensive LLM transport.
-		$rate_check = $this->rate_limiter->check_and_consume( $session_id );
+		$this->chat_service->pipeline_stage( 'rate_limit' );
+		$is_fast_path = method_exists( $this->chat_service, 'get_fast_path_response' ) && null !== $this->chat_service->get_fast_path_response( $message );
+		$rate_check   = $this->rate_limiter->check_and_consume( $session_id, null, $is_fast_path );
 		if ( is_wp_error( $rate_check ) ) {
 			return $this->format_error_response( $rate_check, $request_id );
 		}
 
+		$this->chat_service->pipeline_stage( 'validation' );
 		// 5. Extract optional provider and model overrides (N21).
 		$raw_provider = $request->get_param( 'provider' );
 		$provider     = ! empty( $raw_provider ) && is_string( $raw_provider ) ? sanitize_key( $raw_provider ) : null;
@@ -294,15 +333,23 @@ class RestController extends WP_REST_Controller {
 		try {
 			$result = $this->chat_service->handle_chat( $message, $session_id, $context, $request_id, $provider, $model );
 		} catch ( \Throwable $error ) {
-			// Do not store exception messages or traces: they can contain credentials or prompts.
-			$file = str_replace( '\\', '/', $error->getFile() );
-			$root = rtrim( str_replace( '\\', '/', GCA_PLUGIN_DIR ), '/' ) . '/';
+			$pipeline     = method_exists( $this->chat_service, 'get_pipeline' ) ? $this->chat_service->get_pipeline() : [];
+			$file         = str_replace( '\\', '/', $error->getFile() );
+			$root         = rtrim( str_replace( '\\', '/', GCA_PLUGIN_DIR ), '/' ) . '/';
+			$safe_file    = 0 === strpos( $file, $root ) ? substr( $file, strlen( $root ) ) : basename( $file );
+			$safe_message = $this->sanitize_safe_error_message( $error->getMessage() );
+			if ( method_exists( $this->chat_service, 'pipeline_error_details' ) ) {
+				$this->chat_service->pipeline_error_details( get_class( $error ), $safe_message, $safe_file, $error->getLine() );
+			}
 			update_option( 'gca_chat_server_error', [
-				'checked_at' => gmdate( 'Y-m-d H:i:s' ) . ' UTC',
-				'request_id' => $request_id,
-				'error_class' => get_class( $error ),
-				'file' => 0 === strpos( $file, $root ) ? substr( $file, strlen( $root ) ) : basename( $file ),
-				'line' => $error->getLine(),
+				'checked_at'   => gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+				'request_id'   => $request_id,
+				'error_class'  => get_class( $error ),
+				'safe_message' => $safe_message,
+				'file'         => $safe_file,
+				'line'         => $error->getLine(),
+				'failed_stage' => $pipeline['failure_stage'] ?? 'DATABASE',
+				'failed_step'  => $pipeline['failure_step'] ?? 'CONVERSATION_UPDATE',
 			], false );
 			return $this->format_error_response( new WP_Error(
 				'CHAT_SERVER_ERROR',
@@ -315,6 +362,7 @@ class RestController extends WP_REST_Controller {
 			return $this->format_error_response( $result, $request_id );
 		}
 
+		$this->chat_service->pipeline_stage( 'rest_response' );
 		return new WP_REST_Response(
 			[
 				'success' => true,
@@ -487,5 +535,23 @@ class RestController extends WP_REST_Controller {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Sanitizes PHP error messages to prevent exposing credentials, keys, or private prompts.
+	 *
+	 * @param string $raw_message Raw exception or error message.
+	 * @return string Safe, redacted error message for administrative display.
+	 */
+	private function sanitize_safe_error_message( string $raw_message ): string {
+		// Redact secrets, keys, passwords, credentials, tokens, or prompt content.
+		$sanitized = preg_replace( '/\b(api_key|api_secret|secret|password|passwd|token|bearer|prompt|auth)[\w\-]*\b/i', '[REDACTED]', $raw_message );
+		$sanitized = preg_replace( '/(AIza[a-zA-Z0-9_\-]{15,}|sk-[a-zA-Z0-9_\-]{15,}|gca_sess_[a-f0-9]{20,})/i', '[REDACTED]', $sanitized );
+		// Redact absolute file paths
+		$sanitized = preg_replace( '/[A-Za-z]:\\\\[^\s:;,"]+/', '[PATH]', $sanitized );
+		$sanitized = preg_replace( '/\/(?:home|var|www|tmp|Users)\/[^\s:;,"]+/', '[PATH]', $sanitized );
+		// Redact URLs with query parameters
+		$sanitized = preg_replace( '/https?:\/\/[^\s\?]+\?[^\s"]+/', '[REDACTED_URL]', $sanitized );
+		return sanitize_text_field( trim( substr( $sanitized, 0, 300 ) ) );
 	}
 }

@@ -482,9 +482,9 @@ class ConversationMemoryTest {
 
 		$res = $chat->handle_chat( 'Message after expiration', $sess );
 
-		$this->assert( ! is_wp_error( $res ), 'Stale interaction safely recovered' );
-		$this->assert( 2 === $attempts, 'Gemini retried exactly ONCE without previous_interaction_id' );
-		$this->assert( 'inter_fresh_100' === $session->get_interaction_id( $sess ), 'New fresh interaction_id stored after recovery' );
+		$this->assert( is_wp_error( $res ), 'Legacy interaction error is returned without resubmission' );
+		$this->assert( 1 === $attempts, 'generateContent is sent once even for a legacy interaction error' );
+		$this->assert( 'inter_stale_999' === $session->get_interaction_id( $sess ), 'Failed call does not fabricate a new interaction ID' );
 	}
 
 	private function test_reset_isolation(): void {

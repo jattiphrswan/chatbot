@@ -1,5 +1,11 @@
 # Testing Strategy & Quality Assurance: Gemini Chat Assistant
 
+Normal-chat pipeline regression: php tests/test-chat-pipeline.php checks greeting bypass, 45s dispatch, correlation, history budget, prompt/secret exclusion, successful upstream response followed by database failure, oversized first RAG chunk, and recent chronological history. Client suite 71/71; service 14/14; REST 32/32; conversation memory 22/22; frontend 7/7. Removed obsolete legacy-interaction retry expectations because generateContent does not send interaction IDs. Three live staging requests remain NOT TESTED: no authenticated runtime connection is available.
+
+Timeout investigation supersedes retry expectations: Gemini 70/70, ChatService 14/14, frontend error mapping checks pass. ChatService fixtures now assert the current provider model and required GEMINI_* codes; timeout explicitly asserts HTTP 504. DNS/TLS/models timeout stop generation; timings, redaction, 45s/low-thinking payload and no timeout resubmission are covered. Live staging acceptance remains unperformed because no authenticated runtime connection is available.
+
+September 11 overload regression: Gemini client 65/65 and REST controller 30/30 assertions pass; client PHP lint passes. Covers recovery after two 503s, unchanged history, shared timeout, retry cap, no auth/quota retries and insufficient budget. ChatService reports four failures in mocked model metadata/error mapping (10/14 passing); its mock overrides the changed method. No live WordPress/Google verification performed.
+
 Critical-error regression: `php tests/test-rest-controller.php` passes 30 assertions including structured responses for PHP Error and exclusion of exception secrets. `node tests/test-chat-error-messages.cjs` passes five checks covering WordPress fatal HTML, internal details, plain validation messages and timeout text.
 
 Follow-up regression: the Gemini client suite now has 57 passing assertions, including redacted frontend failure/request ID storage and proof that a successful admin test cannot overwrite the last frontend failure.

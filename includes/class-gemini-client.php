@@ -15,6 +15,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! class_exists( 'SkyFish\\GeminiChat\\Providers\\ModelRegistry' ) && file_exists( __DIR__ . '/Providers/ModelRegistry.php' ) ) {
+	require_once __DIR__ . '/Providers/ModelRegistry.php';
+}
+
 /**
  * Class GeminiClient
  *
@@ -35,20 +39,24 @@ class GeminiClient {
 	/**
 	 * Default fallback model for interactions.
 	 */
-	public const DEFAULT_MODEL = 'gemini-2.5-flash';
+	public const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 
 	/**
 	 * Default HTTP request timeout in seconds.
 	 */
-	public const DEFAULT_TIMEOUT = 30;
+	public const DEFAULT_TIMEOUT = 45;
 
 	/** Safe metadata only: never persist request headers, prompts or raw responses. */
 	private array $last_request_diagnostic = [];
 
 	/** Keep frontend evidence separate so a successful admin test cannot replace it. */
 	private function record_generation_result( $result, array $options ): void {
+		if ( ! isset( $this->last_request_diagnostic['failure_layer'] ) ) {
+			$this->last_request_diagnostic['failure_layer'] = ! is_wp_error( $result ) ? 'NONE' : $this->http_failure_layer( (int) ( $this->last_request_diagnostic['http_status'] ?? 0 ) );
+		}
 		$this->last_request_diagnostic['checked_at'] = gmdate( 'Y-m-d H:i:s' ) . ' UTC';
 		$this->last_request_diagnostic['generation_result'] = is_wp_error( $result ) ? 'Failed' : 'Passed';
+		$this->last_request_diagnostic['final_result'] = is_wp_error( $result ) ? 'FAIL' : 'PASS';
 		$this->last_request_diagnostic['error_type'] = is_wp_error( $result ) ? $result->get_error_code() : '';
 		$this->last_request_diagnostic['last_error'] = is_wp_error( $result ) ? $this->safe_error_text( $result->get_error_message() ) : '';
 		$this->last_request_diagnostic['request_id'] = sanitize_text_field( (string) ( $options['request_id'] ?? '' ) );
@@ -56,6 +64,47 @@ class GeminiClient {
 		if ( empty( $options['diagnostic_test'] ) ) {
 			update_option( 'gca_gemini_last_chat', $this->last_request_diagnostic, false );
 		}
+	}
+
+	/** A transport timeout alone cannot prove a firewall or slow generation. */
+	private function transport_layer( WP_Error $error ): string {
+		$message = $error->get_error_message();
+		if ( preg_match( '/cURL error (5|6)\b|could not resolve|couldn.t resolve/i', $message ) ) {
+			return 'DNS';
+		}
+		if ( preg_match( '/cURL error (35|51|58|60|77)\b|SSL|TLS|certificate/i', $message ) ) {
+			return 'TLS';
+		}
+		return 'NETWORK';
+	}
+
+	/** Report timings through the existing admin diagnostic text, without UI changes. */
+	private function summarize_diagnostic( array $report ): array {
+		$report['last_error'] .= sprintf(
+			' Models: %s s; HTTP: %s; WP_Error: %s %s. Generation: %s s; timeout: %s s; thinking: %s; failure layer: %s. %s',
+			$report['models_elapsed_seconds'] ?? 'not tested',
+			$report['models_http_status'] ?? 'not received',
+			$report['models_wp_error_code'] ?? 'none',
+			$report['models_wp_error_message'] ?? '',
+			$report['generation_elapsed_seconds'] ?? 'not tested',
+			$report['generation_timeout_seconds'] ?? 45,
+			$report['thinking_level'] ?? 'not tested',
+			$report['failure_layer'] ?? 'NOT TESTED',
+			( $report['generation_wp_error_code'] ?? '' ) . ' ' . ( $report['generation_wp_error_message'] ?? '' )
+		);
+		return $report;
+	}
+
+	private function http_failure_layer( int $status ): string {
+		return in_array( $status, [ 401, 403 ], true ) ? 'AUTH' : ( 429 === $status ? 'QUOTA' : ( 404 === $status ? 'MODEL' : 'GOOGLE SERVER' ) );
+	}
+
+	protected function request_now(): float { return microtime( true ); }
+	protected function retry_sleep( float $seconds ): void {
+		if ( defined( 'GCA_TESTING_NO_SLEEP' ) && GCA_TESTING_NO_SLEEP ) {
+			return;
+		}
+		usleep( (int) round( $seconds * 1000000 ) );
 	}
 
 	private function safe_error_text( string $text ): string {
@@ -68,14 +117,21 @@ class GeminiClient {
 	}
 
 	private function safe_response_details( int $status, string $body, string $model, string $endpoint ): array {
-		$data = json_decode( $body, true );
+		$data       = json_decode( $body, true );
+		$err_code   = $this->safe_error_text( (string) ( $data['error']['code'] ?? '' ) );
+		$err_status = $this->safe_error_text( (string) ( $data['error']['status'] ?? '' ) );
+		$err_msg    = $this->safe_error_text( (string) ( $data['error']['message'] ?? '' ) );
 		return [
-			'http_status' => $status ?: null,
-			'google_error_code' => $this->safe_error_text( (string) ( $data['error']['code'] ?? '' ) ),
-			'google_error_status' => $this->safe_error_text( (string) ( $data['error']['status'] ?? '' ) ),
-			'google_error_message' => $this->safe_error_text( (string) ( $data['error']['message'] ?? '' ) ),
-			'selected_model' => $model,
-			'endpoint' => $endpoint,
+			'http_status'              => $status ?: null,
+			'google_http_status'       => $status ?: null,
+			'google_error_code'        => $err_code,
+			'google_error_status'      => $err_status,
+			'google_error_message'     => $err_msg,
+			'google_api_error_code'    => $err_code,
+			'google_api_error_status'  => $err_status,
+			'google_api_error_message' => $err_msg,
+			'selected_model'           => $model,
+			'endpoint'                 => $endpoint,
 		];
 	}
 
@@ -222,6 +278,11 @@ class GeminiClient {
 			'generation_test'     => 'Not Tested',
 			'error_type'          => '',
 			'last_error'          => '',
+			'models_elapsed_seconds' => null,
+			'generation_elapsed_seconds' => null,
+			'failure_layer' => 'NOT TESTED',
+			'models_timeout_seconds' => 20,
+			'generation_timeout_seconds' => 45,
 		];
 
 		if ( empty( $api_key ) ) {
@@ -229,30 +290,12 @@ class GeminiClient {
 			$report['last_error'] = ( 'server' === $source )
 				? __( 'Server API key is not configured.', 'gemini-chat-assistant' )
 				: __( 'No API key configured. Enter your Google Gemini API key above and click Save All Settings.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
+			$report = $this->summarize_diagnostic( $report );
+		update_option( 'gca_gemini_diagnostics', $report, false );
 			return $report;
 		}
 
-		// STEP 1: Reachability check to Google Gemini base URL.
-		$step1 = wp_remote_get( 'https://generativelanguage.googleapis.com/', [
-			'timeout'   => 15,
-			'sslverify' => true,
-		] );
-
-		if ( is_wp_error( $step1 ) ) {
-			$err_msg    = $step1->get_error_message();
-			$is_timeout = ( false !== stripos( $err_msg, 'timed out' ) || false !== stripos( $err_msg, 'cURL error 28' ) );
-			$report['api_reachable'] = 'No';
-			$report['error_type']    = $is_timeout ? 'TIMEOUT' : 'NETWORK';
-			$report['last_error']    = $is_timeout
-				? __( 'Your server connected too slowly to Google Gemini and the request timed out.', 'gemini-chat-assistant' )
-				: __( 'Your WordPress server could not reach Google Gemini.', 'gemini-chat-assistant' );
-			update_option( 'gca_gemini_diagnostics', $report, false );
-			return $report;
-		}
-
-		$report['api_reachable'] = 'Yes';
-
+		$models_started = microtime( true );
 		// STEP 2: Call GET /v1beta/models with configured API key.
 		$models_url = self::API_BASE;
 		$step2      = wp_remote_get( $models_url, [
@@ -263,14 +306,16 @@ class GeminiClient {
 			],
 		] );
 
+		$report['models_elapsed_seconds'] = round( microtime( true ) - $models_started, 3 );
+		$report['models_http_status'] = is_wp_error( $step2 ) ? null : (int) wp_remote_retrieve_response_code( $step2 );
+		$report['models_wp_error_code'] = is_wp_error( $step2 ) ? $this->safe_error_text( $step2->get_error_code() ) : '';
+		$report['models_wp_error_message'] = is_wp_error( $step2 ) ? $this->safe_error_text( $step2->get_error_message() ) : '';
+		$report['api_reachable'] = is_wp_error( $step2 ) ? 'No' : 'Yes';
 		if ( is_wp_error( $step2 ) ) {
-			$err_msg    = $step2->get_error_message();
-			$is_timeout = ( false !== stripos( $err_msg, 'timed out' ) || false !== stripos( $err_msg, 'cURL error 28' ) );
-			$report['authentication'] = 'Not Tested';
-			$report['error_type']     = $is_timeout ? 'TIMEOUT' : 'NETWORK';
-			$report['last_error']     = $is_timeout
-				? __( 'Your server connected too slowly to Google Gemini and the request timed out.', 'gemini-chat-assistant' )
-				: __( 'Your WordPress server could not reach Google Gemini.', 'gemini-chat-assistant' );
+			$report['failure_layer'] = $this->transport_layer( $step2 );
+			$report['error_type'] = 'NETWORK';
+			$report['last_error'] = 'Hosting / network connectivity failure: ' . $report['models_wp_error_message'];
+			$report = $this->summarize_diagnostic( $report );
 			update_option( 'gca_gemini_diagnostics', $report, false );
 			return $report;
 		}
@@ -284,6 +329,8 @@ class GeminiClient {
 			$report['authentication'] = in_array( $code2, [ 401, 403 ], true ) ? 'Failed' : 'Not Tested';
 			$report['error_type'] = str_replace( 'GCA_GEMINI_', '', $error->get_error_code() );
 			$report['last_error'] = $error->get_error_message();
+			$report['failure_layer'] = $this->http_failure_layer( $code2 );
+			$report = $this->summarize_diagnostic( $report );
 			update_option( 'gca_gemini_diagnostics', $report, false );
 			return $report;
 		}
@@ -306,7 +353,7 @@ class GeminiClient {
 						'context_window'    => absint( $m_item['inputTokenLimit'] ?? 1048576 ),
 						'max_output_tokens' => absint( $m_item['outputTokenLimit'] ?? 8192 ),
 						'description'       => (string) ( $m_item['description'] ?? '' ),
-						'recommended'       => ( 'gemini-2.5-flash' === $m_id ),
+						'recommended'       => ( 'gemini-3.5-flash-lite' === $m_id ),
 					];
 					if ( $m_id === $model ) {
 						$model_found = true;
@@ -321,10 +368,11 @@ class GeminiClient {
 		$report['model_available'] = $model_found ? 'Yes' : ( empty( $discovered_models ) ? 'Not Tested' : 'No' );
 
 		// Use the same transport, payload builder and response validation as frontend chat.
-		$result = $this->create_interaction( 'Reply only with OK', null, [
+		$result = $this->create_interaction( 'Reply with OK.', null, [
 			'model' => $model,
 			'system_instruction' => '',
 			'diagnostic_test' => true,
+			'timeout' => 45,
 		] );
 		$report = array_merge( $report, $this->last_request_diagnostic );
 		$report['generation_test'] = is_wp_error( $result ) ? 'Failed' : 'Passed';
@@ -334,7 +382,8 @@ class GeminiClient {
 			$report['error_type'] = 'NETWORK';
 		}
 		$report['last_error'] = is_wp_error( $result ) ? $result->get_error_message() : __( 'Connection verified successfully.', 'gemini-chat-assistant' );
-		update_option( 'gca_gemini_diagnostics', $report, false );
+		$report = $this->summarize_diagnostic( $report );
+			update_option( 'gca_gemini_diagnostics', $report, false );
 
 		return $report;
 	}
@@ -387,7 +436,7 @@ class GeminiClient {
 					'context_window'    => absint( $m_item['inputTokenLimit'] ?? 1048576 ),
 					'max_output_tokens' => absint( $m_item['outputTokenLimit'] ?? 8192 ),
 					'description'       => (string) ( $m_item['description'] ?? '' ),
-					'recommended'       => ( 'gemini-2.5-flash' === $m_id ),
+					'recommended'       => ( 'gemini-3.5-flash-lite' === $m_id ),
 				];
 			}
 		}
@@ -466,10 +515,24 @@ class GeminiClient {
 			$payload['generationConfig'] = $options['generation_config'];
 		}
 
+		$thinking_level = (string) SettingsService::get( 'provider_gemini_thinking_level', 'low' );
+		if ( ( str_contains( $model, 'flash' ) || in_array( $model, [ 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash' ], true ) ) && ! isset( $payload['generationConfig']['thinkingConfig'] ) ) {
+			$payload['generationConfig']['thinkingConfig'] = [ 'thinkingLevel' => $thinking_level ];
+		}
+
+		$max_output_tokens = absint( SettingsService::get( 'provider_gemini_max_tokens', 1000 ) );
+		if ( $max_output_tokens <= 0 ) {
+			$max_output_tokens = 1000;
+		}
+		if ( ! isset( $payload['generationConfig']['maxOutputTokens'] ) ) {
+			$payload['generationConfig']['maxOutputTokens'] = $max_output_tokens;
+		}
+
 		$timeout = isset( $options['timeout'] ) && is_numeric( $options['timeout'] )
 			? absint( $options['timeout'] )
 			: self::DEFAULT_TIMEOUT;
 
+		$timeout = max( 1, min( 45, $timeout ) );
 		$request_args = [
 			'method'      => 'POST',
 			'timeout'     => $timeout,
@@ -484,12 +547,257 @@ class GeminiClient {
 			'body'        => (string) wp_json_encode( $payload ),
 		];
 
+		$req_id = sanitize_text_field( (string) ( $options['request_id'] ?? '' ) );
+		if ( empty( $req_id ) ) {
+			$req_id = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : uniqid( 'gca_', true );
+		}
+		$options['request_id'] = $req_id;
+
 		$this->last_request_diagnostic = $this->safe_response_details( 0, '', $model, $endpoint );
-		$response = wp_remote_post( $endpoint, $request_args );
+		if ( empty( $options['diagnostic_test'] ) ) {
+			update_option( 'gca_gemini_last_chat', array_merge( $this->last_request_diagnostic, [
+				'checked_at'                 => gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+				'request_id'                 => $req_id,
+				'generation_result'          => 'In progress',
+				'generation_timeout_seconds' => $timeout,
+				'thinking_level'             => $payload['generationConfig']['thinkingConfig']['thinkingLevel'] ?? 'default',
+				'final_request_characters'   => mb_strlen( $request_args['body'], 'UTF-8' ),
+			] ), false );
+		}
+
+		$generation_started = $this->request_now();
+		// Overall request budget: approximately 40-45s lifecycle across all attempts and sleeps.
+		$overall_budget = min( 45.0, max( 5.0, (float) ( $options['timeout'] ?? 45.0 ) ) );
+		$deadline       = min( $generation_started + $overall_budget, (float) ( $options['deadline'] ?? ( $generation_started + $overall_budget ) ) );
+		$primary_model    = $model;
+		$fallback         = (string) SettingsService::get( 'provider_gemini_fallback_model', 'gemini-3.8-flash' );
+		$fallback_enabled = empty( $options['diagnostic_test'] ) && (bool) SettingsService::get( 'provider_gemini_fallback_enabled', false )
+			&& $fallback !== $primary_model && Providers\ModelRegistry::has_model( 'gemini', $fallback );
+		$fallback_used    = false;
+		$all_unavailable  = true;
+
+		$attempts = [];
+		for ( $attempt = 0; $attempt < 3; ++$attempt ) {
+			$remaining_budget = $deadline - $this->request_now();
+			if ( $remaining_budget < 1.0 ) {
+				if ( ! isset( $response ) ) {
+					$response = new WP_Error( 'gca_request_deadline', __( 'Chat request deadline exhausted before generation.', 'gemini-chat-assistant' ) );
+				}
+				break;
+			}
+
+			$attempt_timeout = min( (float) $timeout, $remaining_budget );
+			$request_args['timeout'] = $attempt_timeout;
+			$attempt_num = $attempt + 1;
+			$request_args['headers']['X-GCA-Attempt']    = (string) $attempt_num;
+			$request_args['headers']['X-GCA-Request-ID'] = $req_id;
+
+			$endpoint = self::API_BASE . '/' . rawurlencode( $model ) . ':generateContent';
+			$attempt_started = $this->request_now();
+			$response = wp_remote_post( $endpoint, $request_args );
+			$attempt_elapsed = $this->request_now() - $attempt_started;
+
+			$is_transport = is_wp_error( $response );
+			$status       = $is_transport ? null : (int) wp_remote_retrieve_response_code( $response );
+			$resp_body    = $is_transport ? '' : (string) wp_remote_retrieve_body( $response );
+			$decoded_json = ( ! $is_transport && '' !== $resp_body ) ? json_decode( $resp_body, true ) : null;
+
+			$wp_err_code = $is_transport ? $this->safe_error_text( $response->get_error_code() ) : '';
+			$wp_err_msg  = $is_transport ? $this->safe_error_text( $response->get_error_message() ) : '';
+			$g_status    = ( is_array( $decoded_json ) && isset( $decoded_json['error']['status'] ) ) ? $this->safe_error_text( (string) $decoded_json['error']['status'] ) : '';
+			$g_code      = ( is_array( $decoded_json ) && isset( $decoded_json['error']['code'] ) ) ? $this->safe_error_text( (string) $decoded_json['error']['code'] ) : '';
+			$g_msg       = ( is_array( $decoded_json ) && isset( $decoded_json['error']['message'] ) ) ? $this->safe_error_text( (string) $decoded_json['error']['message'] ) : '';
+
+			if ( $is_transport ) {
+				$is_timeout = ( 'gca_request_deadline' === $response->get_error_code() || false !== stripos( $wp_err_msg, 'timed out' ) || false !== stripos( $wp_err_msg, 'cURL error 28' ) );
+				$classification = $is_timeout ? 'TRANSPORT_TIMEOUT' : 'TRANSPORT_ERROR';
+			} elseif ( $status >= 200 && $status < 300 ) {
+				$classification = 'SUCCESS';
+			} elseif ( 503 === $status ) {
+				$classification = 'UPSTREAM_503';
+			} elseif ( 429 === $status ) {
+				$classification = ( false !== stripos( $g_msg, 'quota' ) ) ? 'UPSTREAM_429_QUOTA' : 'UPSTREAM_429_RATE_LIMIT';
+			} elseif ( 401 === $status || 403 === $status ) {
+				$classification = 'UPSTREAM_AUTH_ERROR';
+			} elseif ( 404 === $status ) {
+				$classification = 'UPSTREAM_MODEL_UNAVAILABLE';
+			} elseif ( 504 === $status ) {
+				$classification = 'UPSTREAM_504_GATEWAY_TIMEOUT';
+			} else {
+				$classification = 'UPSTREAM_HTTP_' . $status;
+			}
+
+			$attempts[] = [
+				'attempt'                  => $attempt_num,
+				'request_id'               => $req_id,
+				'model'                    => $model,
+				'http_status'              => $status,
+				'google_http_status'       => $status,
+				'elapsed_ms'               => round( $attempt_elapsed * 1000, 3 ),
+				'elapsed_seconds'          => round( $attempt_elapsed, 2 ),
+				'is_transport_error'       => $is_transport,
+				'wp_error_code'            => $wp_err_code,
+				'wp_error_message'         => $wp_err_msg,
+				'google_api_error_status'  => $g_status,
+				'google_api_error_code'    => $g_code,
+				'google_api_error_message' => $g_msg,
+				'classification'           => $classification,
+			];
+
+			// Never automatically retry transport failures (including timeouts).
+			if ( $is_transport ) {
+				break;
+			}
+
+			// Safe thinking fallback: If model rejects thinking configuration with 400 Bad Request,
+			// safely omit thinkingConfig and retry immediately without failing the request.
+			if ( 400 === $status && false !== stripos( $g_msg, 'thinking' ) && isset( $payload['generationConfig']['thinkingConfig'] ) ) {
+				unset( $payload['generationConfig']['thinkingConfig'] );
+				$request_args['body'] = (string) wp_json_encode( $payload );
+				continue;
+			}
+
+			// Only retry transient 503 or 429. Never retry 400, 401, 403, 404, 500, etc.
+			if ( ! in_array( $status, [ 503, 429 ], true ) || 2 === $attempt || $fallback_used ) {
+				break;
+			}
+
+			// For Google 429 RESOURCE_EXHAUSTED: perform at most ONE bounded retry.
+			if ( 429 === $status && $attempt >= 1 ) {
+				break;
+			}
+
+			$all_unavailable = $all_unavailable && ( 503 === $status );
+
+			// Bounded jittered delays:
+			// Retry 1: about 750-1250 ms jittered delay (~1.0s to 1.2s)
+			// Retry 2: about 1500-2500 ms jittered delay (~2.0s to 2.2s)
+			if ( 0 === $attempt ) {
+				$delay = 1.0 + ( random_int( 0, 200 ) / 1000 );
+			} else {
+				$delay = 2.0 + ( random_int( 0, 200 ) / 1000 );
+			}
+
+			// Respect Retry-After or body retryDelay for 429
+			if ( 429 === $status ) {
+				$parsed_delay = null;
+				if ( function_exists( 'wp_remote_retrieve_header' ) ) {
+					$retry_after = (string) wp_remote_retrieve_header( $response, 'retry-after' );
+					if ( '' !== $retry_after ) {
+						$parsed_delay = is_numeric( $retry_after ) ? (float) $retry_after : max( 0, ( strtotime( $retry_after ) ?: time() ) - time() );
+					}
+				}
+				// Also inspect body for retryDelay in error.details
+				if ( null === $parsed_delay && is_array( $decoded_json ) && ! empty( $decoded_json['error']['details'] ) ) {
+					foreach ( $decoded_json['error']['details'] as $detail ) {
+						if ( isset( $detail['retryDelay'] ) ) {
+							$raw_rd       = (string) $detail['retryDelay'];
+							$parsed_delay = (float) rtrim( $raw_rd, 's' );
+							break;
+						}
+					}
+				}
+				if ( null !== $parsed_delay ) {
+					// If Google explicitly supplies a delay > 2.5s, quota cannot be resolved inside current request -> do not retry.
+					if ( $parsed_delay > 2.5 ) {
+						break;
+					}
+					$delay = max( $delay, $parsed_delay );
+				}
+			}
+
+			// Never shorten a server Retry-After or exceed the shared deadline to retry.
+			if ( $delay > 3.0 || $this->request_now() + $delay + 1.0 >= $deadline ) {
+				break;
+			}
+
+			$this->retry_sleep( $delay );
+
+			// If fallback is enabled and persistent 503 occurred, switch to fallback on attempt 3
+			if ( 1 === $attempt && $all_unavailable && $fallback_enabled ) {
+				$model         = $fallback;
+				$fallback_used = true;
+				if ( ! isset( $options['generation_config']['thinkingConfig'] ) ) {
+					unset( $payload['generationConfig']['thinkingConfig'] );
+					if ( str_contains( $model, 'flash' ) || in_array( $model, [ 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite' ], true ) ) {
+						$payload['generationConfig']['thinkingConfig'] = [ 'thinkingLevel' => $thinking_level ];
+					}
+					if ( empty( $payload['generationConfig'] ) ) {
+						unset( $payload['generationConfig'] );
+					}
+					$request_args['body'] = (string) wp_json_encode( $payload );
+				}
+			}
+		}
+
+		$this->last_request_diagnostic = $this->safe_response_details( 0, '', $model, $endpoint );
+
+		$last_attempt          = ! empty( $attempts ) ? end( $attempts ) : null;
+		$final_status          = $last_attempt ? $last_attempt['http_status'] : null;
+		$final_classification  = $last_attempt ? $last_attempt['classification'] : 'UNKNOWN';
+		$final_result          = ( ! is_wp_error( $response ) && (int) wp_remote_retrieve_response_code( $response ) >= 200 && (int) wp_remote_retrieve_response_code( $response ) < 300 ) ? 'PASS' : 'FAIL';
+
+		$formatted_attempts = [];
+		foreach ( $attempts as $idx => $att ) {
+			$num      = $idx + 1;
+			$st       = null !== $att['http_status'] ? (string) $att['http_status'] : ( ! empty( $att['wp_error_code'] ) ? $att['wp_error_code'] : 'TIMEOUT' );
+			$time_sec = number_format( (float) ( $att['elapsed_seconds'] ?? ( ( $att['elapsed_ms'] ?? 0 ) / 1000 ) ), 1 ) . 's';
+			$formatted_attempts[] = "Attempt {$num}:\n{$att['model']}\n{$st}\n{$time_sec}";
+		}
+		$formatted_attempts[] = "Final:\n{$final_result}";
+		$attempt_breakdown_str = implode( "\n\n", $formatted_attempts );
+
+		$attempt_summary_items = [];
+		foreach ( $attempts as $idx => $att ) {
+			$num = $idx + 1;
+			$st  = null !== $att['http_status'] ? (string) $att['http_status'] : ( ! empty( $att['wp_error_code'] ) ? $att['wp_error_code'] : 'TIMEOUT' );
+			$attempt_summary_items[] = sprintf( 'Attempt %d: %s (%s)', $num, $att['model'], $st );
+		}
+		$attempt_summary_str = implode( '; ', $attempt_summary_items );
+
+		$generation_metadata = [
+			'attempt_count'                   => count( $attempts ),
+			'provider_attempt_count'          => count( $attempts ),
+			'retry_count'                     => max( 0, count( $attempts ) - 1 ),
+			'provider_retry_count'            => max( 0, count( $attempts ) - 1 ),
+			'primary_model'                   => $primary_model,
+			'primary_attempts'                => count( array_filter( $attempts, static fn( $a ) => $a['model'] === $primary_model ) ),
+			'attempts'                        => $attempts,
+			'attempt_summary'                 => $attempt_summary_str,
+			'attempts_breakdown'              => $attempt_breakdown_str,
+			'fallback_used'                   => $fallback_used ? 'YES' : 'NO',
+			'final_model'                     => $model,
+			'final_result'                    => $final_result,
+			'final_provider_status'           => null !== $final_status ? (string) $final_status : $final_classification,
+			'provider_status'                 => null !== $final_status ? (string) $final_status : $final_classification,
+			'provider_quota'                  => ( 429 === $final_status ) ? ( ! empty( $last_attempt['google_api_error_status'] ) ? $last_attempt['google_api_error_status'] : 'RESOURCE_EXHAUSTED' ) : 'Not applicable',
+			'provider_retry_after'            => ( 429 === $final_status && isset( $parsed_delay ) && $parsed_delay > 0 ) ? (int) ceil( $parsed_delay ) : 0,
+			'model'                           => $model,
+			'total_gemini_time'               => round( $this->request_now() - $generation_started, 3 ),
+			'total_provider_time'             => round( $this->request_now() - $generation_started, 3 ),
+			'generation_elapsed_seconds'      => round( $this->request_now() - $generation_started, 3 ),
+			'generation_timeout_seconds'      => $request_args['timeout'],
+			'overall_budget_seconds'          => $overall_budget,
+			'thinking_level'                  => $payload['generationConfig']['thinkingConfig']['thinkingLevel'] ?? 'default',
+			'final_request_characters'        => mb_strlen( $request_args['body'], 'UTF-8' ),
+			'system_prompt_characters'        => mb_strlen( $system_instruction, 'UTF-8' ),
+			'google_http_status'              => $last_attempt['http_status'] ?? null,
+			'is_transport_error'              => ! empty( $last_attempt['is_transport_error'] ) ? 'YES' : 'NO',
+			'wp_error_code'                   => $last_attempt['wp_error_code'] ?? '',
+			'wp_error_message'                => $last_attempt['wp_error_message'] ?? '',
+			'google_api_error_status'         => $last_attempt['google_api_error_status'] ?? '',
+			'google_api_error_code'           => $last_attempt['google_api_error_code'] ?? '',
+			'google_api_error_message'        => $last_attempt['google_api_error_message'] ?? '',
+			'provider_failure_classification' => $last_attempt['classification'] ?? '',
+		];
+		$this->last_request_diagnostic = array_merge( $this->last_request_diagnostic, $generation_metadata );
 
 		if ( is_wp_error( $response ) ) {
 			$error = $this->handle_transport_error( $response );
 			$this->last_request_diagnostic['connection_error'] = $error->get_error_message();
+			$this->last_request_diagnostic['generation_wp_error_code'] = $this->safe_error_text( $response->get_error_code() );
+			$this->last_request_diagnostic['generation_wp_error_message'] = $this->safe_error_text( $response->get_error_message() );
+			$this->last_request_diagnostic['failure_layer'] = $this->transport_layer( $response );
 			$this->record_generation_result( $error, $options );
 			return $error;
 		}
@@ -497,9 +805,12 @@ class GeminiClient {
 		$status_code   = (int) wp_remote_retrieve_response_code( $response );
 		$response_body = wp_remote_retrieve_body( $response );
 		$this->last_request_diagnostic = $this->safe_response_details( $status_code, $response_body, $model, $endpoint );
+		$this->last_request_diagnostic = array_merge( $this->last_request_diagnostic, $generation_metadata );
 
 		if ( $status_code >= 200 && $status_code < 300 ) {
+			$parse_started = microtime( true );
 			$parsed = $this->parse_response( $response_body );
+			$this->last_request_diagnostic['response_parsing_ms'] = round( ( microtime( true ) - $parse_started ) * 1000, 3 );
 			if ( ! is_wp_error( $parsed ) ) {
 				$parsed['model'] = $model;
 			}
@@ -715,7 +1026,7 @@ class GeminiClient {
 		$error_message = $error->get_error_message();
 
 		// Detect timeout (e.g. cURL error 28 / Operation timed out).
-		if ( false !== stripos( $error_message, 'timed out' ) || false !== stripos( $error_message, 'cURL error 28' ) ) {
+		if ( 'gca_request_deadline' === $error->get_error_code() || false !== stripos( $error_message, 'timed out' ) || false !== stripos( $error_message, 'cURL error 28' ) ) {
 			return new WP_Error(
 				'GCA_GEMINI_TIMEOUT',
 				__( 'The request to Gemini API timed out.', 'gemini-chat-assistant' ),
@@ -765,6 +1076,8 @@ class GeminiClient {
 					: __( 'Authentication failed with Gemini API. Check your API key.', 'gemini-chat-assistant' );
 				break;
 
+			case 504:
+				return new WP_Error( 'GCA_GEMINI_TIMEOUT', __( 'The request to Gemini API timed out.', 'gemini-chat-assistant' ), [ 'status' => 504 ] );
 			case 404:
 				$code = 'GCA_GEMINI_MODEL_UNAVAILABLE';
 				$msg  = ! empty( $error_message )
@@ -789,7 +1102,6 @@ class GeminiClient {
 			case 500:
 			case 502:
 			case 503:
-			case 504:
 				$code = 'GCA_GEMINI_UNAVAILABLE';
 				$msg  = ! empty( $error_message )
 					? $error_message

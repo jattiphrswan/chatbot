@@ -413,6 +413,9 @@ if ( ! class_exists( 'WP_REST_Server' ) ) {
 if ( ! class_exists( 'WP_REST_Request' ) ) {
 	class WP_REST_Request {
 		private array $params = [];
+		private array $headers = [];
+		public function set_header( string $key, string $value ): void { $this->headers[ strtolower( $key ) ] = $value; }
+		public function get_header( string $key ): string { return $this->headers[ strtolower( $key ) ] ?? ''; }
 		public function set_param( $k, $v ) { $this->params[ $k ] = $v; }
 		public function get_param( $k ) { return $this->params[ $k ] ?? null; }
 		public function get_params() { return $this->params; }

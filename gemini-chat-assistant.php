@@ -3,7 +3,7 @@
  * Plugin Name:       Gemini Chat Assistant
  * Plugin URI:        https://github.com/SkyFish/gemini-chat-assistant
  * Description:       Enterprise-grade WordPress AI Chat Assistant powered by Google Gemini API.
- * Version:           1.0.1
+ * Version:           1.0.3
  * Requires at least: 6.2
  * Requires PHP:      8.0
  * Author:            SkyFish
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Define plugin constants.
 if ( ! defined( 'GCA_VERSION' ) ) {
-	define( 'GCA_VERSION', '1.0.1' );
+	define( 'GCA_VERSION', '1.0.3' );
 }
 if ( ! defined( 'GCA_PLUGIN_FILE' ) ) {
 	define( 'GCA_PLUGIN_FILE', __FILE__ );

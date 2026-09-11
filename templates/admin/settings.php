@@ -370,7 +370,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 					<!-- Model Selection & Dynamic Refresh -->
 					<div class="gca-field-row">
-						<label for="gca_provider_gemini_model"><?php esc_html_e( 'Model', 'gemini-chat-assistant' ); ?></label>
+						<label for="gca_provider_gemini_model"><?php esc_html_e( 'Primary Model', 'gemini-chat-assistant' ); ?></label>
 						<div style="display: flex; gap: 8px; align-items: center; max-width: 550px; flex-wrap: wrap;">
 							<select id="gca_provider_gemini_model" name="gca_settings[provider_gemini_model]" style="flex: 1; min-width: 250px;">
 								<?php foreach ( \SkyFish\GeminiChat\Providers\ModelRegistry::get_models_for_provider( 'gemini' ) as $m ) : ?>
@@ -391,6 +391,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 						</span>
 					</div>
 
+					<div class="gca-field-row">
+						<label><input type="checkbox" name="gca_settings[provider_gemini_fallback_enabled]" value="1" <?php checked( (bool) \SkyFish\GeminiChat\Admin\SettingsService::get( 'provider_gemini_fallback_enabled', false ) ); ?>> <?php esc_html_e( 'Enable fallback model', 'gemini-chat-assistant' ); ?></label>
+						<label for="gca_gemini_fallback_model"><?php esc_html_e( 'Fallback Model', 'gemini-chat-assistant' ); ?></label>
+						<select id="gca_gemini_fallback_model" name="gca_settings[provider_gemini_fallback_model]">
+						<?php foreach ( \SkyFish\GeminiChat\Providers\ModelRegistry::get_models_for_provider( 'gemini' ) as $fallback_option ) : ?>
+						<option value="<?php echo esc_attr( $fallback_option['id'] ); ?>" <?php selected( \SkyFish\GeminiChat\Admin\SettingsService::get( 'provider_gemini_fallback_model', 'gemini-3.8-flash' ), $fallback_option['id'] ); ?>><?php echo esc_html( $fallback_option['name'] ); ?></option>
+						<?php endforeach; ?>
+						</select>
+						<p class="description"><?php esc_html_e( 'When enabled, two primary-model 503 responses allow one fallback attempt within the same request deadline. Three attempts maximum. Test Connection checks the primary model only.', 'gemini-chat-assistant' ); ?></p>
+					</div>
 					<!-- Connection Actions & Diagnostic Panel -->
 					<div class="gca-field-row" style="border-top: 1px solid #f0f0f1; padding-top: 14px;">
 						<div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -460,12 +470,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<h4><?php esc_html_e( 'Last Chat Server Error', 'gemini-chat-assistant' ); ?></h4>
 							<p class="description"><?php esc_html_e( 'Recorded PHP exception location. This is separate from Google API errors; use the server PHP log for the full cause.', 'gemini-chat-assistant' ); ?></p>
 							<table style="width: 100%; table-layout: fixed;">
-							<?php foreach ( [ 'checked_at' => 'Recorded At', 'request_id' => 'Request ID', 'error_class' => 'PHP Error Type', 'file' => 'File', 'line' => 'Line' ] as $field => $label ) : ?>
-							<tr><td><?php echo esc_html( $label ); ?></td><td style="overflow-wrap: anywhere;"><?php echo esc_html( $chat_server_error[ $field ] ?? '' ); ?></td></tr>
+							<?php foreach ( [
+								'error_class'  => __( 'PHP Error Type', 'gemini-chat-assistant' ),
+								'safe_message' => __( 'Safe PHP Error Message', 'gemini-chat-assistant' ),
+								'file'         => __( 'File', 'gemini-chat-assistant' ),
+								'line'         => __( 'Line', 'gemini-chat-assistant' ),
+								'failed_stage' => __( 'Failed Stage', 'gemini-chat-assistant' ),
+								'failed_step'  => __( 'Failed Step', 'gemini-chat-assistant' ),
+								'request_id'   => __( 'Request ID', 'gemini-chat-assistant' ),
+								'checked_at'   => __( 'Recorded At', 'gemini-chat-assistant' ),
+							] as $field => $label ) : ?>
+							<tr><td><strong><?php echo esc_html( $label ); ?>:</strong></td><td style="overflow-wrap: anywhere;"><?php echo esc_html( $chat_server_error[ $field ] ?? '' ); ?></td></tr>
 							<?php endforeach; ?>
 							</table>
 							<?php endif; ?>
 							<h4><?php esc_html_e( 'Latest Chat Generation', 'gemini-chat-assistant' ); ?></h4>
+							<?php $pipeline = get_option( 'gca_chat_pipeline', [] ); ?>
+							<?php if ( is_array( $pipeline ) && ! empty( $pipeline ) ) : ?>
+							<p><?php esc_html_e( 'Latest request pipeline. Compare its Request ID with the generation record below; different IDs describe different requests. An unfinished stage may indicate an interrupted server lifecycle, not a proven Gemini failure.', 'gemini-chat-assistant' ); ?></p>
+							<table style="width:100%;font-size:13px;text-align:left;table-layout:fixed;">
+							<?php foreach ( [ 'checked_at' => 'Recorded At', 'request_id' => 'Request ID', 'rest_status' => 'REST Status (application)', 'provider_called' => 'Provider Called', 'local_rate_limit' => 'Local Rate Limit', 'local_retry_after' => 'Local Retry After (seconds)', 'provider_status' => 'Provider Status', 'provider_quota' => 'Provider Quota', 'provider_retry_after' => 'Provider Retry After (seconds)', 'model' => 'Model', 'gemini_ms' => 'Gemini Time (ms)', 'local_processing_ms' => 'Local Processing Time (ms)', 'database_ms' => 'Database Time (ms)', 'total_ms' => 'Total Chat Time (ms)', 'rag_ms' => 'RAG Time (ms)', 'integration_ms' => 'Integration Time (ms)', 'prompt_build_ms' => 'Prompt Build Time (ms)', 'post_processing_ms' => 'Post-Processing Time (ms)', 'active_stage' => 'Active Stage', 'failure_stage' => 'Failure Stage', 'failure_step' => 'Failure Step', 'failure_kind' => 'Failure Type', 'php_error_type' => 'PHP Error Type', 'safe_error_message' => 'Safe PHP Error Message', 'error_file' => 'Error File', 'error_line' => 'Error Line', 'validation_ms' => 'Validation Time (ms)', 'rate_limit_ms' => 'Rate Limit Time (ms)', 'conversation_load_ms' => 'Conversation Load Time (ms)', 'profile_ms' => 'Profile Time (ms)', 'message_save_ms' => 'Message Save Time (ms)', 'conversation_update_ms' => 'Conversation Update Time (ms)', 'response_parsing_ms' => 'Response Parsing Time (ms)', 'rest_response_ms' => 'REST Response Time (ms)', 'analytics_ms' => 'Analytics Time (ms; no analytics step)', 'system_prompt_characters' => 'Base System Prompt Characters', 'conversation_messages_count' => 'History Message Count', 'conversation_context_characters' => 'History Characters', 'rag_chunks_count' => 'RAG Chunk Count', 'rag_context_characters' => 'RAG Characters', 'integration_context_characters' => 'Integration Characters', 'final_request_characters' => 'Final Request Characters', 'thinking_level' => 'Thinking Level', 'http_timeout_seconds' => 'HTTP Timeout (seconds)', 'php_max_execution_time' => 'PHP max_execution_time (seconds; 0 means unlimited)' ] as $key => $label ) : ?>
+							<tr><td><?php echo esc_html( $label ); ?></td><td style="overflow-wrap:anywhere;"><?php echo esc_html( $pipeline[ $key ] ?? 'Not recorded' ); ?></td></tr>
+							<?php endforeach; ?>
+							</table>
+							<?php endif; ?>
 							<p class="description"><?php esc_html_e( 'This is the chat request result, separate from Test Connection. Send a chat message, then reload this settings page.', 'gemini-chat-assistant' ); ?></p>
 							<?php $gemini_chat_diag = get_option( 'gca_gemini_last_chat', [] ); ?>
 							<?php if ( empty( $gemini_chat_diag ) ) : ?>
@@ -475,8 +503,48 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<?php endif; ?>
 							<?php if ( is_array( $gemini_chat_diag ) && ! empty( $gemini_chat_diag ) ) : ?>
 							<table style="width: 100%; font-size: 13px; text-align: left; table-layout: fixed;">
-								<?php foreach ( [ 'checked_at' => __( 'Recorded At', 'gemini-chat-assistant' ), 'generation_result' => __( 'Generation Result', 'gemini-chat-assistant' ), 'request_id' => __( 'Request ID', 'gemini-chat-assistant' ), 'selected_model' => __( 'Selected Model', 'gemini-chat-assistant' ), 'http_status' => __( 'Google HTTP Status', 'gemini-chat-assistant' ), 'google_error_code' => __( 'Google Error Code', 'gemini-chat-assistant' ), 'google_error_status' => __( 'Google Error Status', 'gemini-chat-assistant' ), 'google_error_message' => __( 'Google Error Message', 'gemini-chat-assistant' ), 'connection_error' => __( 'Connection Error', 'gemini-chat-assistant' ), 'last_error' => __( 'Last Error', 'gemini-chat-assistant' ), 'endpoint' => __( 'Endpoint', 'gemini-chat-assistant' ) ] as $diag_key => $diag_label ) : ?>
-								<tr><td><strong><?php echo esc_html( $diag_label ); ?>:</strong></td><td style="overflow-wrap: anywhere;"><?php echo esc_html( $gemini_chat_diag[ $diag_key ] ?? 'Not recorded' ); ?></td></tr>
+								<?php
+								$latest_diag_fields = [
+									'primary_model'                   => __( 'Primary Model', 'gemini-chat-assistant' ),
+									'model'                           => __( 'MODEL', 'gemini-chat-assistant' ),
+									'final_model'                     => __( 'Final Model', 'gemini-chat-assistant' ),
+									'fallback_used'                   => __( 'Fallback Used', 'gemini-chat-assistant' ),
+									'provider_status'                 => __( 'PROVIDER STATUS', 'gemini-chat-assistant' ),
+									'provider_quota'                  => __( 'PROVIDER QUOTA', 'gemini-chat-assistant' ),
+									'provider_retry_after'            => __( 'PROVIDER RETRY AFTER (seconds)', 'gemini-chat-assistant' ),
+									'generation_elapsed_seconds'      => __( 'GEMINI TIME (seconds)', 'gemini-chat-assistant' ),
+									'attempt_count'                   => __( 'Attempts', 'gemini-chat-assistant' ),
+									'attempts_breakdown'              => __( 'Diagnostic Attempts', 'gemini-chat-assistant' ),
+									'retry_count'                     => __( 'Retry Count', 'gemini-chat-assistant' ),
+									'final_result'                    => __( 'Final Result', 'gemini-chat-assistant' ),
+									'checked_at'                      => __( 'Recorded At', 'gemini-chat-assistant' ),
+									'request_id'                      => __( 'Request ID', 'gemini-chat-assistant' ),
+									'google_http_status'              => __( 'Google HTTP Status', 'gemini-chat-assistant' ),
+									'is_transport_error'              => __( 'Transport Error', 'gemini-chat-assistant' ),
+									'wp_error_code'                   => __( 'WP_Error Code', 'gemini-chat-assistant' ),
+									'wp_error_message'                => __( 'WP_Error Safe Message', 'gemini-chat-assistant' ),
+									'google_api_error_status'         => __( 'Google API Error Status', 'gemini-chat-assistant' ),
+									'google_api_error_code'           => __( 'Google API Error Code', 'gemini-chat-assistant' ),
+									'provider_failure_classification' => __( 'Provider Failure Classification', 'gemini-chat-assistant' ),
+									'google_error_message'            => __( 'Google Error Message', 'gemini-chat-assistant' ),
+									'connection_error'                => __( 'Connection Error', 'gemini-chat-assistant' ),
+									'last_error'                      => __( 'Last Error', 'gemini-chat-assistant' ),
+									'endpoint'                        => __( 'Endpoint', 'gemini-chat-assistant' ),
+								];
+								foreach ( $latest_diag_fields as $diag_key => $diag_label ) :
+									$diag_val = $gemini_chat_diag[ $diag_key ] ?? null;
+									if ( 'final_result' === $diag_key && empty( $diag_val ) ) {
+										$diag_val = ( 'Passed' === ( $gemini_chat_diag['generation_result'] ?? '' ) ) ? 'PASS' : ( ( 'Failed' === ( $gemini_chat_diag['generation_result'] ?? '' ) ) ? 'FAIL' : 'Not recorded' );
+									}
+									if ( 'attempts_breakdown' === $diag_key && empty( $diag_val ) ) {
+										$diag_val = $gemini_chat_diag['attempt_summary'] ?? 'Not recorded';
+									}
+									$val_text = ( null !== $diag_val && '' !== $diag_val ) ? (string) $diag_val : 'Not recorded';
+								?>
+								<tr>
+									<td><strong><?php echo esc_html( $diag_label ); ?>:</strong></td>
+									<td style="overflow-wrap: anywhere;"><?php echo nl2br( esc_html( $val_text ) ); ?></td>
+								</tr>
 								<?php endforeach; ?>
 							</table>
 							<?php endif; ?>

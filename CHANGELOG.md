@@ -1,11 +1,16 @@
 # Changelog
 
+Normal-chat follow-up: 45s Gemini chat timeout; safe stage timings and prompt-size metadata; request-header correlation; newest bounded history; oversized first RAG chunk cap; greeting skips retrieval/handoff; database persistence failures identified separately from generation; admin pipeline diagnostics and PHP limit reporting. Credentials, hosting settings and public timeout text unchanged.
+
+Timeout investigation: remove automatic retries; add staged authenticated models/generation diagnostics, independent timings and redacted transport evidence. Use a 45s explicit test and low thinking for gemini-3.8-flash. Normalize upstream auth to GEMINI_AUTH_FAILED/502, quota to GEMINI_RATE_LIMITED/429, timeout to GEMINI_TIMEOUT/504, and model-unavailable provider mapping. No layout changes; no live verification.
+
 All notable changes to the **Gemini Chat Assistant** plugin will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased - Node 24 (2026-09-10)
+- September 11: retry Gemini HTTP 500/502/503/504 up to three total attempts with 1s/2s backoff inside one timeout budget, retaining the selected model and recording attempt count. Persistent outages still return an error.
 - Critical-error follow-up: return structured JSON for catchable chat-service exceptions, expose an admin-only file/line/request-ID diagnostic, suppress WordPress fatal HTML in the widget, and handle non-JSON 504 responses as timeouts. The underlying hosting/PHP failure remains unproven without its log entry.
 - Follow-up: show Latest Chat Generation separately in admin, preserving frontend failures across successful connection tests; record UTC time/request ID and correct the missing-key hint when server fallback is configured. Live frontend cause remains unproven pending this diagnostic.
 - Shared admin/frontend Gemini generateContent transport and text validation; removed legacy interaction payload fields and one-token diagnostic limit.

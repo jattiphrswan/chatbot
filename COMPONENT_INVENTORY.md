@@ -1,5 +1,7 @@
 # Component Inventory: Gemini Chat Assistant
 
+Existing ChatService, RestController, GeminiClient, MessageRepository, KnowledgeRetriever and KnowledgeContextBuilder updated for normal-chat timing, latest bounded context and correlation; no new runtime component.
+
 | Component Class / File | Namespace / Layer | Primary Responsibility | Dependencies |
 | :--- | :--- | :--- | :--- |
 | `Plugin` | `SkyFish\GeminiChat\Core` | Bootstraps plugin, hooks into WP lifecycle, registers services. | `Activator`, `Deactivator`, `RestServer`, `AdminMenu`, `ChatShortcode` |

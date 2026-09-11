@@ -64,6 +64,11 @@ class KnowledgeContextBuilder {
 
 		$lines[] = '=== END WEBSITE REFERENCE CONTEXT ===';
 
-		return implode( "\n", $lines );
+		// Bound reference metadata and framing too, not just retrieved chunk bodies.
+		$context = implode( "\n", $lines );
+		$budget = 2000 + max( 500, min( 12000, (int) \SkyFish\GeminiChat\Admin\SettingsService::get( 'knowledge_max_context_chars', 6000 ) ) );
+		return mb_strlen( $context, 'UTF-8' ) > $budget
+			? mb_substr( $context, 0, $budget - 40, 'UTF-8' ) . "\n=== END WEBSITE REFERENCE CONTEXT ==="
+			: $context;
 	}
 }

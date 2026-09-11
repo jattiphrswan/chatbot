@@ -19,6 +19,7 @@ $tests = [
     'test-appearance.php',
     'test-assets.php',
     'test-chat-service.php',
+    'test-chat-pipeline.php',
     'test-chat-ux.php',
     'test-conversation-memory.php',
     'test-conversations-page.php',
@@ -28,6 +29,7 @@ $tests = [
     'test-email-notifications.php',
     'test-faqs.php',
     'test-gemini-client.php',
+    'test-gemini-resilience.php',
     'test-handoff-service.php',
     'test-integrations-framework.php',
     'test-knowledge-indexer.php',
@@ -42,6 +44,7 @@ $tests = [
     'test-shortcode.php',
     'test-validator.php',
     'test-woocommerce-integration.php',
+    'test-conversation-update.php',
 ];
 
 $total_suites = count($tests);

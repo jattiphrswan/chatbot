@@ -1,5 +1,7 @@
 # Security Architecture & Policies: Gemini Chat Assistant
 
+Pipeline diagnostics store only timings, counts, safe request identifiers, exception class/stage and existing redacted error locations. No prompts, credentials, user/session identifiers or raw database exceptions. X-GCA-Request-ID is strictly format-validated and confers no privileges. Metadata is shown only in the existing administrator settings diagnostics.
+
 Chat-service exceptions now return a generic CHAT_SERVER_ERROR response. Their class, source location and request ID are stored only in the admin error record; exception messages/traces are never included. Frontend error rendering rejects HTML-bearing server messages. Existing access checks remain before the guarded service dispatch.
 
 Node 24: Gemini credentials travel only in the server-side `x-goog-api-key` header, not request URLs. Upstream diagnostic messages redact the resolved credential and Google key patterns before storage/display. Admin diagnostic values are escaped; no raw response body or request header is added to diagnostics. Existing admin capabilities/nonces and public route access checks are unchanged.

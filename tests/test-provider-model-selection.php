@@ -243,7 +243,7 @@ class TestProviderModelSelection {
 		$this->assert( in_array( $default_provider, SettingsService::ALLOWED_PROVIDERS, true ), '16. Default provider resolves correctly' );
 
 		$default_model = ModelRegistry::get_default_model( 'gemini' );
-		$this->assert( $default_model === 'gemini-2.5-flash', '17. Provider default model resolves correctly' );
+		$this->assert( $default_model === 'gemini-3.5-flash-lite', '17. Provider default model resolves correctly' );
 
 		$gemini_models = ModelRegistry::get_models_for_provider( 'gemini' );
 		$openai_models = ModelRegistry::get_models_for_provider( 'openai' );

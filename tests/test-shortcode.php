@@ -165,6 +165,14 @@ if ( ! function_exists( 'update_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( $option ) {
+		global $mock_options;
+		unset( $mock_options[ $option ] );
+		return true;
+	}
+}
+
 require_once __DIR__ . '/../includes/Admin/SettingsService.php';
 require_once __DIR__ . '/../includes/Admin/AppearanceService.php';
 require_once __DIR__ . '/../includes/class-assets.php';

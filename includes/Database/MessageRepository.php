@@ -138,7 +138,7 @@ class MessageRepository {
 	 * @return array<int, array{role: string, content: string}>
 	 */
 	public function get_context_messages( int $conversation_id, int $limit = 20 ): array {
-		$raw_messages = $this->get_by_conversation_id( $conversation_id, $limit, 'ASC' );
+		$raw_messages = array_reverse( $this->get_by_conversation_id( $conversation_id, max( 1, min( 20, $limit ) ), 'DESC' ) );
 		$context      = [];
 
 		foreach ( $raw_messages as $msg ) {

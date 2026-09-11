@@ -12,4 +12,7 @@ assert.equal(resolve({ error: { code: 'CHAT_SERVER_ERROR', message: 'Private int
 assert.equal(resolve({ message: '<p>Hosting proxy failure</p>' }), 'Please try again later.');
 assert.equal(resolve({ error: { message: 'Message is too long.' } }), 'Message is too long.');
 assert.match(resolve({ error: { code: 'GEMINI_TIMEOUT' } }), /too long/);
-console.log('5 chat error-message assertions passed.');
+assert.equal(resolve({ error: { code: 'GEMINI_AUTH_FAILED', message: 'secret Google detail' } }), 'The assistant is not configured correctly.');
+assert.equal(resolve({ error: { code: 'GEMINI_RATE_LIMITED', message: 'secret quota detail' } }), 'The assistant is temporarily busy. Please try again shortly.');
+assert.match(resolve({ error: { code: 'CHAT_RATE_LIMITED' } }), /sending messages too quickly/);
+console.log('8 chat error-message assertions passed.');

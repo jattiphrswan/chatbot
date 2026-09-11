@@ -1,5 +1,9 @@
 # API Contract: Gemini Chat Assistant
 
+Chat requests optionally carry X-GCA-Request-ID (gca_ plus 16?64 lowercase hex/hyphen characters); invalid values are replaced by a server-generated ID. This identifier is correlation metadata, not authorization. Browser request headers retain it even if a proxy returns 504. The same ID travels through REST, ChatService, generation diagnostics, and safe application errors. No automatic resend. Application status is distinguished from the browser/proxy HTTP status in admin diagnostics.
+
+Upstream chat failures: GEMINI_TIMEOUT=504; GEMINI_AUTH_FAILED=502 (upstream credential failure, not visitor authentication); GEMINI_RATE_LIMITED=429; GEMINI_MODEL_UNAVAILABLE=503; GEMINI_UNAVAILABLE=503. Local visitor rate limiting remains RATE_LIMITED/429. Public text is safe and excludes Google details. Existing admin Test Connection persists staged diagnostics through the WordPress runtime.
+
 ## 1. Overview
 - **REST Namespace:** `gca/v1`
 - **Base URL:** `/wp-json/gca/v1`

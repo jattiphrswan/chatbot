@@ -212,12 +212,24 @@ class MockMessageRepo extends MessageRepository {
 		];
 		return $id;
 	}
+
+	public function get_by_conversation_id( int $conversation_id, int $limit = 50, string $order = 'ASC' ): array {
+		$filtered = array_filter( $this->messages, static fn( $m ) => (int) $m['conversation_id'] === $conversation_id );
+		if ( 'DESC' === strtoupper( $order ) ) {
+			$filtered = array_reverse( array_values( $filtered ) );
+		}
+		return array_slice( array_values( $filtered ), 0, $limit );
+	}
 }
 
 class MockGeminiClient extends GeminiClient {
 	public $next_response = null;
+	public $last_input     = null;
+	public $last_options   = null;
 
 	public function create_interaction( string $input, ?string $previous_interaction_id = null, array $options = [] ) {
+		$this->last_input   = $input;
+		$this->last_options = $options;
 		return $this->next_response;
 	}
 }
@@ -250,6 +262,9 @@ class ChatServiceTest {
 		$this->test_error_mapping_auth_error();
 		$this->test_error_mapping_timeout();
 		$this->test_error_mapping_quota();
+		$this->test_error_mapping_503_unavailable();
+		$this->test_simple_greeting_bypasses_rag_and_history();
+		$this->test_try_again_deduplicates_user_message();
 		$this->test_reset_session();
 
 		echo "\n========================================\n";
@@ -274,9 +289,10 @@ class ChatServiceTest {
 	private function test_successful_chat_turn(): void {
 		global $mock_options;
 		$mock_options['gca_settings'] = [
-			'enabled'        => true,
-			'store_messages' => true,
-			'model'          => 'gemini-3.8-flash',
+			'enabled'               => true,
+			'store_messages'        => true,
+			'model'                 => 'gemini-3.8-flash',
+			'provider_gemini_model' => 'gemini-3.8-flash',
 		];
 
 		$conv_repo = new MockConversationRepo();
@@ -298,7 +314,7 @@ class ChatServiceTest {
 		$this->assert( 'This is the Gemini response.' === $res['message'], 'Assistant message returned' );
 		$this->assert( 'req_uuid_123' === $res['request_id'], 'Request ID preserved' );
 		$this->assert( ! empty( $res['conversation_id'] ) && is_string( $res['conversation_id'] ), 'Safe public conversation ID returned' );
-		$this->assert( 'gemini-3.8-flash' === $res['meta']['model'], 'Model metadata returned' );
+		$this->assert( SettingsService::get_provider_model( 'gemini' ) === $res['meta']['model'], 'Model metadata returned' );
 		$this->assert( 2 === count( $msg_repo->messages ), 'User and Assistant messages persisted when store_messages is true' );
 	}
 
@@ -339,10 +355,10 @@ class ChatServiceTest {
 		$gemini->next_response = new WP_Error( 'GCA_GEMINI_AUTH_ERROR', 'Bad key', [ 'status' => 401 ] );
 
 		$service = new ChatService( null, null, $conv_repo, $msg_repo, $gemini );
-		$res     = $service->handle_chat( 'Hello', 'gca_sess_0123456789abcdef0123456789abcdef' );
+		$res     = $service->handle_chat( 'What is your pricing?', 'gca_sess_0123456789abcdef0123456789abcdef' );
 
 		$this->assert( is_wp_error( $res ), 'Auth failure returns WP_Error' );
-		$this->assert( 'AI_AUTH_ERROR' === $res->get_error_code(), 'Mapped to public AI_AUTH_ERROR' );
+		$this->assert( 'GEMINI_AUTH_FAILED' === $res->get_error_code(), 'Mapped to public GEMINI_AUTH_FAILED' );
 	}
 
 	private function test_error_mapping_timeout(): void {
@@ -355,9 +371,9 @@ class ChatServiceTest {
 		$gemini->next_response = new WP_Error( 'GCA_GEMINI_TIMEOUT', 'Timed out', [ 'status' => 504 ] );
 
 		$service = new ChatService( null, null, $conv_repo, $msg_repo, $gemini );
-		$res     = $service->handle_chat( 'Hello', 'gca_sess_0123456789abcdef0123456789abcdef' );
+		$res     = $service->handle_chat( 'What is your pricing?', 'gca_sess_0123456789abcdef0123456789abcdef' );
 
-		$this->assert( is_wp_error( $res ) && 'AI_TIMEOUT' === $res->get_error_code(), 'Mapped to public AI_TIMEOUT' );
+		$this->assert( is_wp_error( $res ) && 'GEMINI_TIMEOUT' === $res->get_error_code() && 504 === $res->get_error_data()['status'], 'Mapped to public GEMINI_TIMEOUT' );
 	}
 
 	private function test_error_mapping_quota(): void {
@@ -370,9 +386,112 @@ class ChatServiceTest {
 		$gemini->next_response = new WP_Error( 'GCA_GEMINI_QUOTA_ERROR', 'Quota exceeded', [ 'status' => 429 ] );
 
 		$service = new ChatService( null, null, $conv_repo, $msg_repo, $gemini );
-		$res     = $service->handle_chat( 'Hello', 'gca_sess_0123456789abcdef0123456789abcdef' );
+		$res     = $service->handle_chat( 'What is your pricing?', 'gca_sess_0123456789abcdef0123456789abcdef' );
 
-		$this->assert( is_wp_error( $res ) && 'AI_QUOTA_ERROR' === $res->get_error_code(), 'Mapped to public AI_QUOTA_ERROR' );
+		$this->assert( is_wp_error( $res ) && 'GEMINI_RATE_LIMITED' === $res->get_error_code(), 'Mapped to public GEMINI_RATE_LIMITED' );
+	}
+
+	private function test_error_mapping_503_unavailable(): void {
+		global $mock_options;
+		$mock_options['gca_settings'] = [ 'enabled' => true ];
+
+		$conv_repo = new MockConversationRepo();
+		$msg_repo  = new MockMessageRepo();
+		$gemini    = new MockGeminiClient();
+		$gemini->next_response = new WP_Error( 'GCA_GEMINI_UNAVAILABLE', 'Service down', [ 'status' => 503 ] );
+
+		$service = new ChatService( null, null, $conv_repo, $msg_repo, $gemini );
+		$res     = $service->handle_chat( 'What is your pricing?', 'gca_sess_0123456789abcdef0123456789abcdef' );
+
+		$this->assert( is_wp_error( $res ) && in_array( $res->get_error_code(), [ 'GEMINI_UNAVAILABLE', 'GEMINI_SERVICE_UNAVAILABLE' ], true ) && 503 === ( $res->get_error_data()['status'] ?? 0 ), 'Mapped to public GEMINI_UNAVAILABLE (503)' );
+	}
+
+	private function test_simple_greeting_bypasses_rag_and_history(): void {
+		global $mock_options;
+		$mock_options['gca_settings'] = [
+			'enabled'               => true,
+			'store_messages'        => true,
+			'model'                 => 'gemini-3.8-flash',
+			'provider_gemini_model' => 'gemini-3.8-flash',
+		];
+
+		$conv_repo = new MockConversationRepo();
+		$msg_repo  = new MockMessageRepo();
+		$gemini    = new MockGeminiClient();
+		$session   = new SessionService( $conv_repo, $msg_repo );
+
+		$sess_token = 'gca_sess_0123456789abcdef0123456789abcdef';
+		$sess_info  = $session->get_or_create_session( $sess_token );
+		$conv_id    = (int) $sess_info['conversation_id'];
+
+		// Seed dummy prior history.
+		$msg_repo->create( $conv_id, 'user', 'What is your refund policy?' );
+		$msg_repo->create( $conv_id, 'model', 'Our refund policy is 30 days.' );
+
+		$gemini->next_response = [
+			'interaction_id' => 'inter_greet_456',
+			'model'          => 'gemini-3.8-flash',
+			'text'           => 'Hi there! How can I assist you today?',
+			'usage'          => [ 'input_tokens' => 5, 'output_tokens' => 10, 'total_tokens' => 15 ],
+			'raw'            => [],
+		];
+
+		$service = new ChatService( null, $session, $conv_repo, $msg_repo, $gemini );
+		$res     = $service->handle_chat( 'hi', $sess_token );
+
+		$this->assert( ! is_wp_error( $res ), 'Greeting request succeeded' );
+		$this->assert( false === ( $res['provider_called'] ?? true ), 'Greeting fast path did not call Gemini' );
+		$this->assert( 'Hello! How can I help you today?' === ( $res['message'] ?? '' ), 'Greeting returns instant friendly response' );
+		$this->assert( null === $gemini->last_input, 'Gemini client was never invoked for greeting' );
+
+		// Test courtesy fast-paths
+		$res_thanks = $service->handle_chat( 'thank you', $sess_token );
+		$this->assert( false === ( $res_thanks['provider_called'] ?? true ), 'Thank you fast path did not call Gemini' );
+		$this->assert( "You're welcome! Let me know if you need anything else." === ( $res_thanks['message'] ?? '' ), 'Thank you returns courtesy message' );
+
+		$res_bye = $service->handle_chat( 'bye', $sess_token );
+		$this->assert( false === ( $res_bye['provider_called'] ?? true ), 'Bye fast path did not call Gemini' );
+		$this->assert( 'Goodbye! Have a great day!' === ( $res_bye['message'] ?? '' ), 'Bye returns farewell message' );
+	}
+
+	private function test_try_again_deduplicates_user_message(): void {
+		global $mock_options;
+		$mock_options['gca_settings'] = [
+			'enabled'               => true,
+			'store_messages'        => true,
+			'model'                 => 'gemini-3.8-flash',
+			'provider_gemini_model' => 'gemini-3.8-flash',
+		];
+
+		$conv_repo = new MockConversationRepo();
+		$msg_repo  = new MockMessageRepo();
+		$gemini    = new MockGeminiClient();
+		$session   = new SessionService( $conv_repo, $msg_repo );
+		$service   = new ChatService( null, $session, $conv_repo, $msg_repo, $gemini );
+
+		$sess_token = 'gca_sess_0123456789abcdef0123456789abcdef';
+
+		// First attempt fails with 503
+		$gemini->next_response = new WP_Error( 'GCA_GEMINI_UNAVAILABLE', 'Service Unavailable', [ 'status' => 503 ] );
+		$res1 = $service->handle_chat( 'What services do you offer?', $sess_token );
+		$this->assert( is_wp_error( $res1 ), 'Initial chat failed with 503' );
+		$this->assert( 1 === count( $msg_repo->messages ), 'Original user message was persisted once' );
+
+		// Second attempt (Try Again) with same message
+		$gemini->next_response = [
+			'interaction_id' => 'inter_retry_123',
+			'model'          => 'gemini-3.8-flash',
+			'text'           => 'We offer web design and development services.',
+			'usage'          => [],
+			'raw'            => [],
+		];
+		$res2 = $service->handle_chat( 'What services do you offer?', $sess_token );
+		$this->assert( ! is_wp_error( $res2 ), 'Try Again succeeds' );
+
+		// Check messages: should be exactly 1 user message and 1 assistant message (total 2), NOT 2 user messages!
+		$user_msgs = array_filter( $msg_repo->messages, static fn( $m ) => 'user' === $m['role'] );
+		$this->assert( 1 === count( $user_msgs ), 'User message was not duplicated on Try Again' );
+		$this->assert( 2 === count( $msg_repo->messages ), 'Total conversation contains exactly 1 user message and 1 assistant message' );
 	}
 
 	private function test_reset_session(): void {

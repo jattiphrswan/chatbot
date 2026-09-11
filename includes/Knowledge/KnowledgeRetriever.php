@@ -223,6 +223,10 @@ class KnowledgeRetriever {
 				break;
 			}
 
+			if ( $chunk_len > $max_chars - $current_chars ) {
+				$chunk['content'] = mb_substr( (string) $chunk['content'], 0, $max_chars - $current_chars, 'UTF-8' );
+				$chunk_len = mb_strlen( $chunk['content'], 'UTF-8' );
+			}
 			$selected_chunks[] = $chunk;
 			$current_chars    += $chunk_len;
 		}

@@ -173,10 +173,10 @@ class RateLimiterTest {
 	}
 
 	public function run_all(): bool {
-		echo "========================================\n";
-		echo "Running Node N8 RateLimiter Tests\n";
-		echo "========================================\n\n";
+		echo "Starting RateLimiter & Abuse Prevention Test Suite (Node N8)...\n\n";
 
+		$this->test_min_interval_cooldown();
+		$this->test_1m_short_window_limit();
 		$this->test_5m_session_limit();
 		$this->test_1h_session_limit();
 		$this->test_ip_abuse_ceiling_with_rotating_sessions();
@@ -197,13 +197,73 @@ class RateLimiterTest {
 		$mock_options    = [];
 	}
 
+	private function test_min_interval_cooldown(): void {
+		$this->reset_env();
+		global $mock_options;
+		$mock_options['gca_settings'] = [
+			'rate_limit_enabled'      => true,
+			'rate_limit_min_interval' => 2,
+			'rate_limit_1m'           => 10,
+			'rate_limit_1h'           => 50,
+		];
+
+		$limiter    = new RateLimiter();
+		$session_id = 'gca_sess_test_cooldown_123';
+		$client_ip  = '198.51.100.1';
+
+		$res1 = $limiter->check_and_consume( $session_id, $client_ip );
+		$this->assert( true === $res1, 'First request passes min interval check' );
+
+		// Immediate second request without delay must hit cooldown
+		$res2 = $limiter->check_and_consume( $session_id, $client_ip );
+		$this->assert( is_wp_error( $res2 ), 'Second immediate request blocked by 2s cooldown' );
+		if ( is_wp_error( $res2 ) ) {
+			$this->assert( 'CHAT_RATE_LIMITED' === $res2->get_error_code(), 'Cooldown error code is CHAT_RATE_LIMITED' );
+			$data = $res2->get_error_data();
+			$this->assert( 429 === ( $data['status'] ?? 0 ), 'Status is 429' );
+			$this->assert( isset( $data['retry_after'] ) && $data['retry_after'] <= 2 && $data['retry_after'] > 0, 'Retry-After reflects cooldown (<= 2s)' );
+		}
+
+		// Fast-path turns skip cooldown check
+		$res3 = $limiter->check_and_consume( $session_id, $client_ip, true );
+		$this->assert( true === $res3, 'Fast-path greeting skips cooldown' );
+	}
+
+	private function test_1m_short_window_limit(): void {
+		$this->reset_env();
+		global $mock_options;
+		$mock_options['gca_settings'] = [
+			'rate_limit_enabled'      => true,
+			'rate_limit_min_interval' => 0,
+			'rate_limit_1m'           => 3,
+			'rate_limit_1h'           => 50,
+		];
+
+		$limiter    = new RateLimiter();
+		$session_id = 'gca_sess_test_1m_window';
+		$client_ip  = '198.51.100.1';
+
+		$res1 = $limiter->check_and_consume( $session_id, $client_ip );
+		$res2 = $limiter->check_and_consume( $session_id, $client_ip );
+		$res3 = $limiter->check_and_consume( $session_id, $client_ip );
+		$res4 = $limiter->check_and_consume( $session_id, $client_ip );
+
+		$this->assert( true === $res1 && true === $res2 && true === $res3, 'First 3 requests pass 1m limit' );
+		$this->assert( is_wp_error( $res4 ), '4th request blocked by 1m short window' );
+		if ( is_wp_error( $res4 ) ) {
+			$this->assert( 'CHAT_RATE_LIMITED' === $res4->get_error_code(), 'Error code is CHAT_RATE_LIMITED' );
+		}
+	}
+
 	private function test_5m_session_limit(): void {
 		$this->reset_env();
 		global $mock_options;
 		$mock_options['gca_settings'] = [
-			'rate_limit_enabled' => true,
-			'rate_limit_5m'      => 3,
-			'rate_limit_1h'      => 50,
+			'rate_limit_enabled'      => true,
+			'rate_limit_min_interval' => 0,
+			'rate_limit_1m'           => 20,
+			'rate_limit_5m'           => 3,
+			'rate_limit_1h'           => 50,
 		];
 
 		$limiter    = new RateLimiter();
@@ -223,7 +283,7 @@ class RateLimiterTest {
 		$res4 = $limiter->check_and_consume( $session_id, $client_ip );
 		$this->assert( is_wp_error( $res4 ), 'Request 4/3 blocked by 5m session limit' );
 		if ( is_wp_error( $res4 ) ) {
-			$this->assert( 'RATE_LIMITED' === $res4->get_error_code(), 'Error code is RATE_LIMITED' );
+			$this->assert( 'CHAT_RATE_LIMITED' === $res4->get_error_code(), 'Error code is CHAT_RATE_LIMITED' );
 			$data = $res4->get_error_data();
 			$this->assert( 429 === $data['status'], 'Status code is 429' );
 			$this->assert( isset( $data['retry_after'] ) && $data['retry_after'] > 0, 'Retry-After is positive' );
@@ -234,9 +294,11 @@ class RateLimiterTest {
 		$this->reset_env();
 		global $mock_options;
 		$mock_options['gca_settings'] = [
-			'rate_limit_enabled' => true,
-			'rate_limit_5m'      => 10,
-			'rate_limit_1h'      => 2,
+			'rate_limit_enabled'      => true,
+			'rate_limit_min_interval' => 0,
+			'rate_limit_1m'           => 50,
+			'rate_limit_5m'           => 50,
+			'rate_limit_1h'           => 2,
 		];
 
 		$limiter    = new RateLimiter();
@@ -250,15 +312,20 @@ class RateLimiterTest {
 		$this->assert( true === $res1, 'Request 1 permitted within 1h window' );
 		$this->assert( true === $res2, 'Request 2 permitted within 1h window' );
 		$this->assert( is_wp_error( $res3 ), 'Request 3 blocked by 1h session limit' );
+		if ( is_wp_error( $res3 ) ) {
+			$this->assert( 'CHAT_RATE_LIMITED' === $res3->get_error_code(), 'Error code is CHAT_RATE_LIMITED' );
+		}
 	}
 
 	private function test_ip_abuse_ceiling_with_rotating_sessions(): void {
 		$this->reset_env();
 		global $mock_options;
 		$mock_options['gca_settings'] = [
-			'rate_limit_enabled' => true,
-			'rate_limit_5m'      => 2,  // IP ceiling = 2 * 3 = 6
-			'rate_limit_1h'      => 50,
+			'rate_limit_enabled'      => true,
+			'rate_limit_min_interval' => 0,
+			'rate_limit_1m'           => 20,
+			'rate_limit_5m'           => 2,  // IP ceiling = 2 * 3 = 6
+			'rate_limit_1h'           => 50,
 		];
 
 		$limiter   = new RateLimiter();
@@ -275,6 +342,9 @@ class RateLimiterTest {
 		$sess7 = 'gca_sess_attacker_session_7_abcdef123';
 		$res7  = $limiter->check_and_consume( $sess7, $client_ip );
 		$this->assert( is_wp_error( $res7 ), 'Request 7 blocked by IP abuse ceiling despite rotating session tokens' );
+		if ( is_wp_error( $res7 ) ) {
+			$this->assert( 'CHAT_RATE_LIMITED' === $res7->get_error_code(), 'IP ceiling error code is CHAT_RATE_LIMITED' );
+		}
 	}
 
 	private function test_disabled_rate_limiter(): void {
@@ -282,6 +352,7 @@ class RateLimiterTest {
 		global $mock_options;
 		$mock_options['gca_settings'] = [
 			'rate_limit_enabled' => false,
+			'rate_limit_min_interval' => 0,
 			'rate_limit_5m'      => 1,
 			'rate_limit_1h'      => 1,
 		];
@@ -301,9 +372,11 @@ class RateLimiterTest {
 		$this->reset_env();
 		global $mock_options;
 		$mock_options['gca_settings'] = [
-			'rate_limit_enabled' => true,
-			'rate_limit_5m'      => 1,
-			'rate_limit_1h'      => 10,
+			'rate_limit_enabled'      => true,
+			'rate_limit_min_interval' => 0,
+			'rate_limit_1m'           => 1,
+			'rate_limit_5m'           => 1,
+			'rate_limit_1h'           => 10,
 		];
 
 		$limiter    = new RateLimiter();
@@ -315,8 +388,9 @@ class RateLimiterTest {
 
 		$this->assert( is_wp_error( $blocked ), 'Blocked request is WP_Error' );
 		if ( is_wp_error( $blocked ) ) {
+			$this->assert( 'CHAT_RATE_LIMITED' === $blocked->get_error_code(), 'Error code is CHAT_RATE_LIMITED' );
 			$data = $blocked->get_error_data();
-			$this->assert( isset( $data['retry_after'] ) && $data['retry_after'] <= 300 && $data['retry_after'] > 0, 'Retry-After accurately reflects remaining TTL (<= 300s)' );
+			$this->assert( isset( $data['retry_after'] ) && $data['retry_after'] <= 300 && $data['retry_after'] > 0, 'Retry-After accurately reflects remaining TTL' );
 		}
 	}
 

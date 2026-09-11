@@ -1,5 +1,7 @@
 # Components Guide: Gemini Chat Assistant
 
+ChatService now owns safe per-request pipeline timers/checkpoints; RestController brackets validation through response creation and shares its request ID. Existing admin settings show pipeline metrics separately from the matching Gemini generation record.
+
 ## 1. Architectural Component Map
 
 ```

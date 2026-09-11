@@ -101,6 +101,9 @@ if ( ! class_exists( 'WP_REST_Controller' ) ) {
 if ( ! class_exists( 'WP_REST_Request' ) ) {
 	class WP_REST_Request {
 		private array $params = [];
+		private array $request_headers = [];
+		public function set_header( string $key, string $value ): void { $this->request_headers[$key] = $value; }
+		public function get_header( string $key ): string { return $this->request_headers[$key] ?? ''; }
 
 		public function __construct( string $method = 'GET', string $route = '' ) {
 			$this->params = [];
@@ -354,8 +357,9 @@ class RestControllerTest {
 	private function test_handle_chat_valid(): void {
 		global $mock_options;
 		$mock_options['gca_settings'] = [
-			'enabled'            => true,
-			'max_message_length' => 1000,
+			'enabled'                 => true,
+			'max_message_length'      => 1000,
+			'rate_limit_min_interval' => 0,
 		];
 
 		// Mock chat service
@@ -377,6 +381,12 @@ class RestControllerTest {
 
 		$res = $controller->handle_chat( $request );
 		$this->assert( 200 === $res->get_status(), 'Valid chat request returns 200' );
+		$request->set_header( 'X-GCA-Request-ID', 'gca_0123456789abcdef' );
+		$res = $controller->handle_chat( $request );
+		$this->assert( 'gca_0123456789abcdef' === get_option( 'gca_chat_pipeline' )['request_id'] && 'gca_0123456789abcdef' === $res->get_data()['data']['request_id'], 'Browser ID correlates REST and pipeline' );
+		$request->set_header( 'X-GCA-Request-ID', 'private invalid input' );
+		$res = $controller->handle_chat( $request );
+		$this->assert( 'private invalid input' !== get_option( 'gca_chat_pipeline' )['request_id'], 'Invalid correlation headers are discarded' );
 		$data = $res->get_data();
 		$this->assert( true === $data['success'], 'Response success flag is true' );
 		$this->assert( 'Hello there! I am the Gemini assistant.' === $data['data']['message'], 'Response assistant text matched' );
@@ -447,7 +457,7 @@ class RestControllerTest {
 		$this->assert( 429 === $res->get_status(), 'Rate limited request returns 429' );
 		$data = $res->get_data();
 		$this->assert( false === $data['success'], 'Rate limit response success is false' );
-		$this->assert( 'RATE_LIMITED' === $data['error']['code'], 'Rate limit error code is RATE_LIMITED' );
+		$this->assert( 'CHAT_RATE_LIMITED' === $data['error']['code'], 'Rate limit error code is CHAT_RATE_LIMITED' );
 		$this->assert( isset( $data['error']['retry_after'] ) && $data['error']['retry_after'] > 0, 'retry_after is present in error payload' );
 	}
 

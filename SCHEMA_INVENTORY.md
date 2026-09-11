@@ -1,5 +1,9 @@
 # Schema Inventory: Gemini Chat Assistant
 
+Admin-only gca_chat_pipeline option: checked_at, request_id, active_stage, failure_stage/step/kind, application rest_status, php_max_execution_time, http_timeout_seconds, per-stage *_ms timings, total_ms, post_processing_ms and context character/count fields. It contains no message, prompt, session token, API key or database error text. Latest generation begins as In progress with the same ID and null HTTP status, then completes independently. No table migration.
+
+No table/schema change. Admin-only gca_gemini_diagnostics adds models_elapsed_seconds, models_http_status, models_wp_error_code/message, models_timeout_seconds, generation_elapsed_seconds, generation_timeout_seconds, generation_wp_error_code/message, thinking_level and failure_layer. Generation records retain attempt_count=1. Unknown timings/status are null, not invented.
+
 ## 1. REST API Schemas
 
 ### 1.1 `POST /wp-json/gca/v1/chat` Request Schema
